@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智慧监考时钟</title>
+    <!-- 引入高美感字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================
+           1. 设计系统与变量定义 (马卡龙玻璃拟态)
+           ========================================== */
+        :root {
+            /* 马卡龙配色方案 */
+            --m-pink: #ffb7b2;
+            --m-blue: #b5e2fa;
+            --m-yellow: #ffdac1;
+            --m-green: #e2f0cb;
+            --m-purple: #e8d7ff;
+            --m-salmon: #ffc6ff;
+            
+            /* 玻璃拟态基础变量 */
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-bg-hover: rgba(255, 255, 255, 0.55);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 12px 40px 0 rgba(165, 178, 204, 0.12),
+                            inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --font-family: 'Outfit', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        /* ==========================================
+           2. 基础重置与背景动画
+           ========================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: linear-gradient(135deg, #f7f9fc 0%, #e2eafc 50%, #edf2f4 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 动态彩色背景光斑 (马卡龙色) */
+        .bg-glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .bg-glow-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--m-pink) 0%, rgba(255,255,255,0) 70%);
+            top: -100px;
+            left: -100px;
+            animation: drift 25s infinite alternate ease-in-out;
+        }
+
+        .bg-glow-2 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--m-blue) 0%, rgba(255,255,255,0) 70%);
+            bottom: -150px;
+            right: -100px;
+            animation: drift 30s infinite alternate-reverse ease-in-out;
+        }
+
+        .bg-glow-3 {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, var(--m-yellow) 0%, rgba(255,255,255,0) 70%);
+            top: 40%;
+            right: 15%;
+            animation: drift 28s infinite alternate ease-in-out;
+        }
+
+        .bg-glow-4 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--m-purple) 0%, rgba(255,255,255,0) 70%);
+            bottom: 20%;
+            left: 20%;
+            animation: drift 22s infinite alternate-reverse ease-in-out;
+        }
+
+        @keyframes drift {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(60px, 40px) scale(1.1); }
+            100% { transform: translate(-40px, 80px) scale(0.95); }
+        }
+
+        /* ==========================================
+           3. 主应用容器与布局
+           ========================================== */
+        .app-container {
+            width: 95vw;
+            max-width: 1400px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+            position: relative;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ==========================================
+           4. 顶部学校 Header (毛玻璃)
+           ========================================== */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 28px;
+            height: 80px;
+            border-radius: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+        }
+
+        .school-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-grow: 1;
+            margin-right: 20px;
+        }
+
+        /* 虚拟校徽 SVG */
+        .school-logo-wrapper {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #fff 0%, #e2f0cb 100%);
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255,255,255,0.8);
+            color: #4a5568;
+        }
+
+        .school-logo {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* 可编辑的学校名称 */
+        .school-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 2px;
+            border-bottom: 2px dashed transparent;
+            padding: 2px 8px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            outline: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 800px;
+        }
+
+        .school-name:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-bottom-color: var(--m-blue);
+            cursor: pointer;
+        }
+
+        .school-name:focus {
+            background: rgba(255, 255, 255, 0.6);
+            border-bottom-color: var(--m-pink);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        /* 顶部操作按钮 */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(5px);
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.7);
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .btn-icon:active {
+            transform: scale(0.95);
+        }
+
+        .btn-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        /* ==========================================
+           5. 主显示区域 (左侧时钟 + 右侧设置)
+           ========================================== */
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            height: calc(100% - 100px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 左侧面板 */
+        .left-section {
+            flex: 1.3;
+            border-radius: 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 时钟区域 */
+        .clock-wrapper {
+            text-align: center;
+            margin: auto 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 等宽数字防止抖动 */
+        .clock-time {
+            font-size: 10rem;
+            font-weight: 500;
+            color: var(--text-main);
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .time-seconds-wrapper {
+            font-size: 6.2rem;
+            color: var(--text-muted);
+            margin-left: 5px;
+            align-self: flex-end;
+            margin-bottom: 0.8rem;
+            font-weight: 300;
+        }
+
+        .clock-date {
+            margin-top: 12px;
+            font-size: 1.8rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            letter-spacing: 3px;
+        }
+
+        /* 专注模式下的紧凑时间横条 */
+        .focus-exam-bar {
+            display: none;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.4);
+            margin-top: 10px;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.4);
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: var(--text-main);
+            flex-wrap: wrap;
+        }
+
+        .focus-exam-bar .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .focus-exam-bar .bar-item span.highlight {
+            font-weight: 700;
+            color: #3182ce;
+        }
+
+
+        /* 考场标语 */
+        .exam-slogan {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #ec4899 100%); /* 活泼明亮的太妃糖粉蓝渐变 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 6px;
+            text-align: center;
+            border-bottom: 2px dashed transparent;
+            padding: 4px 16px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            outline: none;
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 10px;
+        }
+
+        .exam-slogan:hover {
+            border-bottom-color: var(--m-pink);
+            cursor: pointer;
+        }
+
+        .exam-slogan:focus {
+            border-bottom-color: var(--m-blue);
+        }
+
+        /* ==========================================
+           6. 右侧设置面板 (毛玻璃)
+           ========================================== */
+        .right-section {
+            flex: 0.7;
+            border-radius: 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: right center;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 40px;
+            height: 4px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--m-pink) 0%, var(--m-blue) 100%);
+        }
+
+        .config-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+            margin-bottom: 20px;
+        }
+
+        /* 自定义滚动条 */
+        .config-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .config-grid::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .config-grid::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .config-item-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .config-item-row .config-item {
+            flex: 1;
+        }
+
+        .config-item label {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* 扁平玻璃化输入框 */
+        input[type="text"],
+        input[type="number"],
+        input[type="time"],
+        select {
+            width: 100%;
+            height: 50px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.4);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            font-size: 1.15rem;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.3s;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        input[type="text"]:hover,
+        input[type="number"]:hover,
+        input[type="time"]:hover,
+        select:hover {
+            background: rgba(255, 255, 255, 0.6);
+            border-color: var(--m-blue);
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="time"]:focus,
+        select:focus {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: var(--m-pink);
+            box-shadow: 0 0 0 3px rgba(255, 183, 178, 0.3);
+        }
+
+        /* 带下拉的可编辑选择框 */
+        .select-editable-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .select-editable-wrapper select {
+            position: absolute;
+            width: 100%; /* 复原为 100% 宽度，使弹出的原生下拉列表与 input 对齐居中 */
+            height: 100%;
+            left: 0;
+            top: 0;
+            opacity: 0; /* 彻底透明以根除双重文字重影问题 */
+            z-index: 2;
+            cursor: pointer;
+        }
+
+        .select-editable-wrapper input[type="text"] {
+            position: relative;
+            z-index: 1;
+            padding-right: 60px;
+        }
+
+        /* 当 input 获得焦点时，把层级提到最前面，避免被透明 select 拦截导致无法定位光标 */
+        .select-editable-wrapper input[type="text"]:focus {
+            z-index: 3;
+        }
+
+        /* 下拉三角指示器 */
+        .select-editable-wrapper::after {
+            content: '▾';
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+            pointer-events: none;
+            color: var(--text-muted);
+            font-size: 1.7rem;
+        }
+
+        .time-inputs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .time-inputs span {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .input-with-unit {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-with-unit input {
+            padding-right: 40px;
+        }
+
+        .input-with-unit span {
+            position: absolute;
+            right: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.95rem;
+            pointer-events: none;
+        }
+
+        .invigilator-inputs {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* 快捷时间按钮 */
+        .quick-durations {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .btn-quick {
+            flex: 1;
+            min-width: 55px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.25);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-quick:hover {
+            background: var(--m-blue);
+            color: var(--text-main);
+            border-color: rgba(255,255,255,0.9);
+            transform: translateY(-1px);
+        }
+
+        .btn-quick:active {
+            transform: translateY(0);
+        }
+
+        /* 底部主按钮区 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            height: 48px;
+            border-radius: 14px;
+            border: none;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--m-blue) 0%, var(--m-purple) 100%);
+            color: #1a202c;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(181, 226, 250, 0.4);
+            filter: brightness(1.02);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.4);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.7);
+            transform: translateY(-2px);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* ==========================================
+           7. 专注模式与全屏状态控制 (CSS 变换)
+           ========================================== */
+        /* 当处于专注模式时，隐藏右侧配置面板，左侧面板占满宽度并居中 */
+        .focus-mode .right-section {
+            display: none !important;
+        }
+
+        .focus-mode .left-section {
+            flex: 1;
+            padding: 40px 60px;
+        }
+
+        .focus-mode .clock-time {
+            font-size: 15.0rem; /* 再放大 30% 展现更宏伟的极致醒目效果 */
+        }
+
+        .focus-mode .time-seconds-wrapper {
+            font-size: 9.1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .focus-mode .clock-date {
+            display: none !important; /* 专注监考模式下隐藏日期以保持极其简练 the 页面 */
+        }
+
+        .focus-mode .focus-exam-bar {
+            display: flex; /* 显示紧凑考试信息条 */
+            font-size: 2.04rem; /* 增加20%后的标签大小 */
+        }
+
+
+        .focus-mode .exam-slogan {
+            font-size: 3.5rem; /* 标语极大化 */
+            margin-bottom: 15px;
+        }
+
+        /* 全屏时的特殊铺满背景 */
+        body:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 音频静音控制按钮 */
+        .btn-mute {
+            position: relative;
+        }
+
+        .btn-mute.is-muted::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 2px;
+            background-color: #f56565;
+            transform: rotate(-45deg);
+            z-index: 10;
+        }
+
+
+
+        /* 监考专注模式下右下角的微型结束按钮 */
+        .btn-mini-end {
+            display: none;
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(255, 182, 193, 0.35);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #d63031;
+            font-size: 0.65rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.5px;
+            opacity: 0.55; /* 默认半透明，降低存在感，缩小视觉体量 */
+        }
+
+        .btn-mini-end:hover {
+            opacity: 1; /* hover 时完全显现 */
+            background: rgba(255, 182, 193, 0.65);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 182, 193, 0.25);
+        }
+
+        .btn-mini-end:active {
+            transform: translateY(0);
+        }
+
+        .focus-mode .btn-mini-end {
+            display: block; /* 在专注模式下浮现 */
+        }
+
+        /* 行内对齐样式 */
+        .config-item-inline {
+            flex-direction: row !important;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .config-item-inline label {
+            white-space: nowrap;
+            min-width: 60px;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .config-item-inline .select-editable-wrapper {
+            flex-grow: 1;
+        }
+
+        /* 试卷与页数行内一体化输入框 */
+        .paper-page-inline {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            height: 50px;
+            flex-grow: 1;
+            transition: all 0.3s;
+        }
+
+        .paper-page-inline span {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .paper-page-inline input[type="number"] {
+            position: relative; /* 允许 spin-button 绝对定位不影响文字居中 */
+            border: none !important;
+            background: transparent !important;
+            height: 100% !important;
+            padding: 0 !important;
+            width: 50px !important; /* 固定宽度，预留好位置，保证汉字间隔一样且对称不抖动 */
+            text-align: center;
+            font-size: 1.25rem !important;
+            font-weight: 700 !important;
+            color: var(--text-main);
+            box-shadow: none !important;
+            -moz-appearance: textfield;
+        }
+
+        /* 默认隐藏 number 的上下箭头 */
+        .paper-page-inline input[type="number"]::-webkit-outer-spin-button,
+        .paper-page-inline input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+            position: absolute; /* 脱离文档流定位，避免挤压数字 */
+            right: 0;
+            top: 0;
+            bottom: 0;
+        }
+
+        /* 仅在鼠标 hover 靠近容器时才展现上下箭头 */
+        .paper-page-inline:hover input[type="number"] {
+            -moz-appearance: number-input;
+        }
+        .paper-page-inline:hover input[type="number"]::-webkit-outer-spin-button,
+        .paper-page-inline:hover input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: auto;
+        }
+
+        /* 触屏一体机文本直接可选并确保编辑唤起系统键盘 */
+        [contenteditable="true"] {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+
+        /* ==========================================
+           9. 深色主题适配 (Dark Theme)
+           ========================================== */
+        body.dark-theme {
+            --glass-bg: rgba(22, 28, 41, 0.55);
+            --glass-bg-hover: rgba(30, 38, 56, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4),
+                            inset 0 1px 1px 0 rgba(255, 255, 255, 0.06);
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            background: linear-gradient(135deg, #020813 0%, #0A192F 50%, #112A46 100%);
+        }
+
+        body.dark-theme .bg-glow {
+            opacity: 0.25; /* 降低深色模式下的彩斑亮度 */
+        }
+
+        body.dark-theme .btn-action-text {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .btn-action-text:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        body.dark-theme input[type="text"],
+        body.dark-theme input[type="number"],
+        body.dark-theme input[type="time"],
+        body.dark-theme select,
+        body.dark-theme .paper-page-inline {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #f0f6fc;
+        }
+
+        body.dark-theme input[type="text"]:focus,
+        body.dark-theme input[type="number"]:focus,
+        body.dark-theme input[type="time"]:focus,
+        body.dark-theme select:focus {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: var(--m-blue);
+        }
+
+        body.dark-theme .focus-exam-bar {
+            background: rgba(22, 28, 41, 0.5);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+
+        body.dark-theme .school-logo-wrapper {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .school-name:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        body.dark-theme .school-name:focus {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        body.dark-theme .exam-slogan {
+            background: linear-gradient(135deg, #00f2fe 0%, #ff758c 100%); /* 适合深海蓝背景的极光发光渐变 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+
+        body.dark-theme .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        /* ==========================================
+           10. 跨设备自适应媒体查询 (PC, 平板, 一体机自适应)
+           ========================================== */
+        @media (max-width: 1024px) {
+            /* 针对中小屏幕平板设备，适当调小时钟与标语，防止折行溢出 */
+            .focus-mode .clock-time {
+                font-size: 11.5rem !important;
+            }
+            .focus-mode .time-seconds-wrapper {
+                font-size: 7.0rem !important;
+                margin-bottom: 0.9rem !important;
+            }
+            .focus-mode .exam-slogan {
+                font-size: 2.8rem !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            /* 针对竖屏平板或极窄屏设备，进行智能兜底缩放 */
+            .focus-mode .clock-time {
+                font-size: 8.0rem !important;
+            }
+            .focus-mode .time-seconds-wrapper {
+                font-size: 5.0rem !important;
+                margin-bottom: 0.6rem !important;
+            }
+            .focus-mode .exam-slogan {
+                font-size: 2.0rem !important;
+            }
+            /* 微调面板窄屏自适应，防止数字溢出 */
+            .adjust-num {
+                font-size: 3.6rem !important;
+            }
+            .adjust-colon {
+                font-size: 3.0rem !important;
+                margin-bottom: 10px !important;
+            }
+            .adjust-unit {
+                width: 36px !important;
+            }
+            .btn-adjust {
+                width: 30px !important;
+                height: 30px !important;
+                margin: 4px 0 !important;
+            }
+            .btn-adjust svg {
+                width: 14px !important;
+                height: 14px !important;
+            }
+            .adjust-title {
+                font-size: 1.3rem !important;
+            }
+            .adjust-label {
+                font-size: 1.0rem !important;
+                margin-top: 10px !important;
+            }
+        }
+
+        /* ==========================================
+           11. 倒计时微调面板样式 (马卡龙毛玻璃)
+           ========================================== */
+        .countdown-adjust-wrapper {
+            display: none; /* 默认隐藏，在倒计时未开始且未确定时通过 JS 设为 flex */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: auto 0;
+            padding: 30px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            width: 100%;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .adjust-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 2px;
+        }
+
+        .adjust-time-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .adjust-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 50px;
+        }
+
+        .adjust-num {
+            font-size: 5.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .adjust-label {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-top: 15px;
+            margin-left: 5px;
+            align-self: center;
+        }
+
+        .adjust-colon {
+            font-size: 4.5rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            line-height: 1;
+            margin-bottom: 15px;
+        }
+
+        .btn-adjust {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid var(--glass-border);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            transition: all 0.2s;
+            margin: 8px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            touch-action: manipulation; /* 消除触屏300ms点击判定延迟 */
+        }
+
+        .btn-adjust:hover {
+            background: var(--m-blue);
+            transform: scale(1.1);
+        }
+
+        .btn-adjust:active {
+            transform: scale(0.9);
+        }
+
+        .btn-adjust svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .btn-adjust-confirm {
+            width: 180px;
+            height: 48px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            text-indent: 4px; /* 居中微调 */
+            margin-top: 10px;
+        }
+
+        /* 深色主题下的调整器 */
+        body.dark-theme .countdown-adjust-wrapper {
+            background: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+        body.dark-theme .btn-adjust {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f0f6fc;
+        }
+        body.dark-theme .btn-adjust:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+    </style>
+</head>
+<body>
+    <!-- 动态浮动光斑 -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+    <div class="bg-glow bg-glow-4"></div>
+
+    <div class="app-container" id="appContainer">
+        <!-- 顶部 Header -->
+        <header class="main-header">
+            <div class="school-info">
+                <div class="school-logo-wrapper">
+                    <!-- 精致矢量校徽图标 -->
+                    <svg class="school-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                        <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                    </svg>
+                </div>
+                <div class="school-name" contenteditable="true" id="schoolName" title="双击或点击编辑学校名称">XX市XX小学</div>
+            </div>
+            
+            <div class="header-actions">
+                <!-- 静音/声音切换 -->
+                <button class="btn-icon btn-mute" id="btnMute" title="开启/关闭铃声提示">
+                    <svg viewBox="0 0 24 24">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                </button>
+                <!-- 主题切换 (浅色/深色) -->
+                <button class="btn-icon" id="btnTheme" title="切换深色/浅色模式">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+                <!-- 全屏/窗口切换 -->
+                <button class="btn-icon" id="btnFullscreen" title="全屏显示">
+                    <svg viewBox="0 0 24 24" id="svgFullscreen">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 左侧核心展示 -->
+            <section class="left-section">
+                <!-- 倒计时状态下，专注模式会额外展示简洁科目与时间条 -->
+                <div class="focus-exam-bar" id="focusExamBar">
+                    <div class="bar-item">科目: <span class="highlight" id="focusSubject">数学</span></div>
+                    <div class="bar-item">时间: <span class="highlight" id="focusTimeSpan">09:00 至 11:00</span></div>
+                    <div class="bar-item">试卷: <span id="focusPaperInfo">共 2 张 6 页</span></div>
+                </div>
+
+                <!-- 大时钟 -->
+                <div class="clock-wrapper" id="clockWrapper">
+                    <div class="clock-time" id="clockTime" style="cursor: pointer;" title="点击重新调整倒计时">
+                        <span class="time-hours">00</span>:<span class="time-minutes">00</span><span class="time-seconds-wrapper">:<span class="time-seconds">00</span></span>
+                    </div>
+                    <div class="clock-date" id="clockDate">----年--月--日 星期几</div>
+                    <!-- 倒计时就绪提示 -->
+                    <div class="countdown-ready-tip" id="countdownReadyTip" style="display: none; font-size: 1.4rem; color: var(--text-muted); margin-top: 15px; font-weight: 500; letter-spacing: 1px;">
+                        倒计时已就绪，点击右侧“开始监考”开始计时。 <span style="color: #3182ce; text-decoration: underline; cursor: pointer; margin-left: 10px;" id="lnkReAdjust">重新设定</span>
+                    </div>
+                </div>
+
+                <!-- 倒计时调整面板 -->
+                <div class="countdown-adjust-wrapper" id="countdownAdjustWrapper">
+                    <div class="adjust-title">设置监考倒计时时长</div>
+                    <div class="adjust-time-display">
+                        <!-- 小时十位 -->
+                        <div class="adjust-unit">
+                            <button class="btn-adjust" id="btnHourTensUp">
+                                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <span class="adjust-num" id="adjustHourTens">0</span>
+                            <button class="btn-adjust" id="btnHourTensDown">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <!-- 小时个位 -->
+                        <div class="adjust-unit">
+                            <button class="btn-adjust" id="btnHourOnesUp">
+                                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <span class="adjust-num" id="adjustHourOnes">1</span>
+                            <button class="btn-adjust" id="btnHourOnesDown">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <span class="adjust-label">时</span>
+                        <span class="adjust-colon">:</span>
+                        <!-- 分钟十位 -->
+                        <div class="adjust-unit">
+                            <button class="btn-adjust" id="btnMinTensUp">
+                                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <span class="adjust-num" id="adjustMinTens">3</span>
+                            <button class="btn-adjust" id="btnMinTensDown">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <!-- 分钟个位 -->
+                        <div class="adjust-unit">
+                            <button class="btn-adjust" id="btnMinOnesUp">
+                                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <span class="adjust-num" id="adjustMinOnes">0</span>
+                            <button class="btn-adjust" id="btnMinOnesDown">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <span class="adjust-label">分</span>
+                        <span class="adjust-colon">:</span>
+                        <!-- 固定秒数十位 -->
+                        <div class="adjust-unit">
+                            <button class="btn-adjust" style="visibility: hidden;">
+                                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <span class="adjust-num" style="color: var(--text-muted); opacity: 0.6;">0</span>
+                            <button class="btn-adjust" style="visibility: hidden;">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <!-- 固定秒数个位 -->
+                        <div class="adjust-unit">
+                            <button class="btn-adjust" style="visibility: hidden;">
+                                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <span class="adjust-num" style="color: var(--text-muted); opacity: 0.6;">0</span>
+                            <button class="btn-adjust" style="visibility: hidden;">
+                                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <span class="adjust-label" style="color: var(--text-muted); opacity: 0.6;">秒</span>
+                    </div>
+                    <button class="btn btn-primary btn-adjust-confirm" id="btnAdjustConfirm">确定</button>
+                </div>
+
+
+
+                <!-- 底部考场标语 -->
+                <div class="exam-slogan" contenteditable="true" id="examSlogan" title="双击或点击编辑考场标语">严肃考风考纪 认真规范答题</div>
+                
+                <!-- 监考模式下右下角的微型结束按钮 -->
+                <button class="btn-mini-end" id="btnMiniEnd" title="恢复常规配置模式">结束监考</button>
+            </section>
+
+            <!-- 右侧配置面板 -->
+            <section class="right-section" id="configPanel">
+                <div>
+                    <h2 class="section-title">监考配置中心</h2>
+                    
+                    <div class="config-grid">
+                        <!-- 科目选择 (行内) -->
+                        <div class="config-item config-item-inline">
+                            <label for="subjectInput">科目：</label>
+                            <div class="select-editable-wrapper">
+                                <select id="subjectSelect">
+                                    <option value="" disabled>选择预设科目</option>
+                                    <option value="语文">语文</option>
+                                    <option value="数学" selected>数学</option>
+                                    <option value="英语">英语</option>
+                                    <option value="科学">科学</option>
+                                    <option value="物理">物理</option>
+                                    <option value="化学">化学</option>
+                                    <option value="生物">生物</option>
+                                    <option value="道德与法制">道德与法制</option>
+                                    <option value="音乐">音乐</option>
+                                    <option value="美术">美术</option>
+                                    <option value="体育">体育</option>
+                                    <option value="自定义">自定义/手动输入</option>
+                                </select>
+                                <input type="text" id="subjectInput" placeholder="请输入或下拉选择科目" value="数学">
+                            </div>
+                        </div>
+
+                        <!-- 时间范围 (行内) -->
+                        <div class="config-item config-item-inline">
+                            <label>时间段：</label>
+                            <div class="time-inputs" style="flex-grow: 1;">
+                                <input type="time" id="examStartTime" value="09:00" style="flex: 1;">
+                                <span style="margin: 0 4px;">至</span>
+                                <input type="time" id="examEndTime" value="11:00" style="flex: 1;">
+                            </div>
+                        </div>
+
+                        <!-- 试卷张数与页数 (合并行内一体化) -->
+                        <div class="config-item config-item-inline">
+                            <label>试卷：</label>
+                            <div class="paper-page-inline">
+                                <span>共</span>
+                                <input type="number" id="paperCount" min="1" max="99" value="2">
+                                <span>张，共</span>
+                                <input type="number" id="pageCount" min="1" max="99" value="6">
+                                <span>页</span>
+                            </div>
+                        </div>
+
+                        <!-- 计时模式选择 (时钟 / 倒计时) -->
+                        <div class="config-item config-item-inline">
+                            <label>模式：</label>
+                            <div style="display: flex; gap: 16px; flex-grow: 1; justify-content: flex-start;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600;">
+                                    <input type="radio" name="timingMode" value="clock" checked style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                                    时钟
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600;">
+                                    <input type="radio" name="timingMode" value="countdown" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                                    倒计时
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮区 -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="btnStartStop">开始监考</button>
+                    <button class="btn btn-secondary" id="btnReset">重置信息</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ==========================================
+       8. JavaScript 核心交互与逻辑
+       ========================================== -->
+    <script>
+    
+   var _0xodz='jsjiami.com.v7';const _0x4cb242=_0x3fdf;if(function(_0x5b99a3,_0x409192,_0x3ff78e,_0x512d1c,_0x239ad9,_0x1be589,_0x141c17){return _0x5b99a3=_0x5b99a3>>0x2,_0x1be589='hs',_0x141c17='hs',function(_0x2222d8,_0x39f831,_0x46f895,_0x170b17,_0x49826e){const _0x14319a=_0x3fdf;_0x170b17='tfi',_0x1be589=_0x170b17+_0x1be589,_0x49826e='up',_0x141c17+=_0x49826e,_0x1be589=_0x46f895(_0x1be589),_0x141c17=_0x46f895(_0x141c17),_0x46f895=0x0;const _0x204e5e=_0x2222d8();while(!![]&&--_0x512d1c+_0x39f831){try{_0x170b17=parseInt("15883uKdiDS")/0x1*(parseInt("26SdfuCN")/0x2)+-parseInt("9Epqfia")/0x3*(parseInt("916372DzCpJU")/0x4)+parseInt("5HihCha")/0x5*(-parseInt("3970374CvViog")/0x6)+parseInt("5362665ydBMAf")/0x7+-parseInt("138800PxDfqW")/0x8*(parseInt("675InOZaH")/0x9)+-parseInt("953790IqriBe")/0xa*(-parseInt("132UOgqRP")/0xb)+-parseInt("17320992dclKsn")/0xc*(-parseInt("13IuoBeL")/0xd);}catch(_0x399a05){_0x170b17=_0x46f895;}finally{_0x49826e=_0x204e5e[_0x1be589]();if(_0x5b99a3<=_0x512d1c)_0x46f895?_0x239ad9?_0x170b17=_0x49826e:_0x239ad9=_0x49826e:_0x46f895=_0x49826e;else{if(_0x46f895==_0x239ad9['replace'](/[rqQMVeFPtwDnAgKWYkRfN=]/g,'')){if(_0x170b17===_0x39f831){_0x204e5e['un'+_0x1be589](_0x49826e);break;}_0x204e5e[_0x141c17](_0x49826e);}}}}}(_0x3ff78e,_0x409192,function(_0x379072,_0x38b53d,_0x5d1586,_0x1749e7,_0x126499,_0x4f7fb2,_0x1057e2){return _0x38b53d='\x73\x70\x6c\x69\x74',_0x379072=arguments[0x0],_0x379072=_0x379072[_0x38b53d](''),_0x5d1586='\x72\x65\x76\x65\x72\x73\x65',_0x379072=_0x379072[_0x5d1586]('\x76'),_0x1749e7='\x6a\x6f\x69\x6e',(0x331f2a,_0x379072[_0x1749e7](''));});}(0x2f4,0xde3c8,_0x3b31,0xbf),_0x3b31){}function _0x3b31(){const _0x903123=(function(){return[_0xodz,'FPjDWnsqQVjiwVaktmMiAe.RcYogAfmK.rPvQN7D==','W7OXh8kCW4K','W4WUhmk0W4S','W6OcfSkWnG','WONcNrBdPCox','utjPdSotW5i0W7JdGw7dP8o+WOm0fCkf','o8o8b8kAdCkntNRdKW','d8k4WQtdNr8','jCkBtZVdGulcM8km','WO/cTetcRG','ouFcMGfxkSkJWPCiW4i','WQGJeSoMD8kgWPVcJ8oVWPNcPXr2s8kjW4VcMCkChqtcLva2qmoQ','WO7dJZrhW7W','e2ZdQLrpW57dOLWBf8o1oIZdSCkGzmo+FSo2WPizW5W+WQFdStvOfg1CW7/cQG','nCoQj8kloG','eMT8Dra','WO0jyCkgoq','B8kgoCkkstqNW5pcLq','DgdcKmoaprCnW4VcPq','WOazxCkYbG','ACosnmkGW7u','W642WOhcICoK','W5bDW4zZWQzIjSoOWQ9UW5xdV8kLW5a','vWPUWRL0','mNH+uGS','W7G3bffOWR7cMmkNW5pdKLi6WQvwWOy','n8oKhmkuea','f0ZdKePO','W6SntXJcQG','WO/cMchdLCo+','W4C2mSkSna','W7qkxuzbeSopWPpcGMtdJcS','mxiocCkEW5OZ','WOJcHt7dL8ovW6ODi8otnae','o3e1lCkD','kaBdHMtdJq','W4GYdvfN','W5yIexzZ','54Yi5Ag15QoP6AIx5AEF6lEh776H56Ax5Q2V5P215z6L5OMC5B+I','WO7cI8k/gMy','pJxdVcfc','kuaCvSoy','W4OUWQhcQ8oT','Fw4gWPhcTa','evhdTwPc','amkwW4iSWPq','WP7cU0FcMe3dJCoQyG','WQ7dOX9YW5G','WPVcOghcR1C','xJrYbCogW4r2W6JdNuldQSo5WPmUbmoEWPbwwhCCEmoOreenW5xdObbZW7X+W5mQxaRdUfpdRh/dVSoAqsWDnmkdWPNcJetcV8oPAIZcKt3cL0/cOmk0W5uDoG','igm0r8oZ','wLtcJMCz','pexcNHTD','WQb9W6ZdH2GhW5rvWP3dNd7cQmorBCo/nb1qbbCaWO7cNCk4WR/dRGKuhHVcUNa','W4u8shv7','jK3cNaTznmoaWPexW4BdJGBcQZpdISo7WOJdRmoojt4AfG/dS8kVW4hdTNXwzt/dSSkhWP7cTmk7brugWRZcO8kAW4JcI8koW43dVKqvWQ48WOGGW4dcQSk/WRJcLsnXW5K5','emkcnJJdVq','WQT0W47dI30','WOJcIt7dGSoEW6GzmW','W7rfCCkGba','rvZcQ8olkG','WQtcKW7dUmoN','WPBcQIxdK8on','jqhdIHzZWQFdLatdNrddSdvFWO7cQtm','hMVdQubzW6NdQvK','WPaQE8kAWP/dUcxcTXf5x3ZdLmo5WPm','ibddJeddNmk5','WOKxktXG','W64wdHBcVW','jeuYzCkN','WRyQWPm3WR0','5yQeW6ldLq','W5u3jCktW48','WQ/cU8kgjLO','uuHFWRTRWPxdHSoQWRW','pCkgxZ/dQ0lcISk7W4BcSvO2rc8','qCkSWQpcRw0','mmofk8kjwXzWWPRdNCktWPyJhSocW4/cU37cMGddICoPWQySWOxcHZxdOmoLWO/cTSkZWPLCWQhdHq','rmo0WRhdJGyuvSkLbSo2WOuqrmoQaeDWWPqnW6hdVf3dPx3cLH/cMXVdL8oXW7pdKITyWOq','W7OsWOpcQCo1WQXGAbSO','W6aAWQtcV8ov','W4hdQYHxW5C','sfZcKwiqWOZdIG','W4eruhbb','WO7cTfdcR1pcKSoIWRDZ','W4qkqYVcOSo2mSksWO0/W67dOt7cQG','ahqwuSop','xw9qWQvQ','W4mQWQq','W5KKeqNcRa','W7yji8knlCkJka','WQtcU3BcNw0','WQpLViW1','sCkpWQJdGxVcTt0','qmkpWRxdPxlcUJC','gSk0WQBdHW','fSoCdmkpnq','cwfwutS','W70coSkyiSk2','zKlcRha7','nhGEja','W48kwqNcUSo7','sCoLe3JcIt9wWRvbWQPMfCoGbCopca','5PUM5P2r5PEx','x8k/oCkAvq','W5aFwWFcUG','Fmk45BMNWQHM5Bky5A65','iCoMemktgG','WQagsSkeca','W50pW7hcMSof','BCkTWRlcNe7cQhHW','BKaQWQFcSSoWi2Trr8kbW4qrWOu','gedcQILn','t8kylSk+BG','W7bACSksgtmdW6ddOmo5aSobW7O','W6pcTmkVW73cLW','t8onW4GWWPa4W4PoW5JdSmo0FmkZWOZdSCkgdmoqcs/cQ8oViYNdN0rFw8kNqLtdVSkcDmoA','WQRcJCk8aMe','W7e3nNrO','W5hcL8kKW67cIW','WPqaEmkUeW','W4meWOpcVCoT','sqqKW63cKCoCW4mDW5K','pmkRW5GzWR0','W6DdDSkHatObW6FdHSoNaSojW7f0WPe','kSo5bCk9la','yMfpWQ9q','kSkfW606WPi','j0i6','x0hcM34z','p8krsIxdR0/cMW','qemOWRRcSW','jMuvoSkfW5iLBCoJqCo0W5rtW68oW53dGmkVWRRcUSkcW7hdKsxcO306','W5JcNh3dN8koW7Hnk8kj','umksdmkD','aSkxW54YWOGfWPeyWOhdOmoWCSkV','WRBcSchdPSoG','AKK3WOhcTq','detdIuH1','mN4jlCkBW5yV','gmkvWRBdThddUY3cU8oRBSkpW5RdGSkAWQRcPCkQWQ7cLYtcTSkaWPBdOCoEW4hcKCkRuSkIjmkfWOisWR/cTaGSWOVdKfRcGCo4jthdJ1KgWR4NWOOfyfxcLJr4k3z4W5VcQSk6p8k4W4pdISohCmo7rSk+W6BdUCoMxCkEqdBdQSkge2hcMSkkyCoJCKyyuWZcJrRcVvD9gCkgW7yfaSkhWOVcNmoGW7BcVJnBW5L7W58sWOBdKmo2ywGbmCkzW78aW7ZcG8kdoCoGhfxdHSkHWPWGBmkFx8oxlCkhWQD9qmkaWPPUybed','nCo3hCkYfSkRB0pdUHK','xSk8WQ/cNuu','xqHPWR9TW7hcLSoiWP4','sfdcQx8A','z8kBkCk6Ea','puCsnmk6','5PIa5P6Q5lUV','WPWGvG','rXzRWRnR','vdj/fCouWPS2W6ddI0y','r8oZkmkaW5O','W54RWPlcOCop','ogy2CmoS','W6SsWORcH8oe','WPVcJ3NcU2e','WPOIu8k2m2/cIHjO','g2BdVMrnW6ddOKK6g8k7Bd3dTSkOFW','W7Kpeq/cP1FcRa','aSkOhdFdSW','luhcHITui8kaWPmlW5pdQbBcHZK','W4qZpCkRW4pdQMhcV0b2','WRSXWOWEWRS','W6P+qSk2cq','e3hcT0XoW7hdQvK','WRyyF8kWnG','fmk1CsFdGq','W7pdIdDZW6G','W73dGWrfW6hcT1nDeM3dRCozhZi','W7a5eCo3DCohWOe','AMqkpmkzWPC1CSkVqCoZWOGfW64uWPddLSo2WRpcOCksWQ7dH2NdUsHUg8kHWR/cKvuTWQlcI1xcPqZdUCk4W6VdK1q3mCk3uL7cTa7dQvvXqWK8WRnqemo7aM/dLSoXW48BWQ3dJuP9oMqiWRivWP3cUKFcNSoXWRVcGCkWWP1oBCojpmocWOicwdZdQx1EDdTnnCoMW4xdPu56hYzkW6OEuraphSoJWPBcPCk+W4fmqgyxncexdJpcIx3cL8ouceHgW4tcOSkOo0NcNSoBWRFcRKVcIc3dPSk0mG','W5bDW4zZWQzIjSoOWQ8','k8kGvGldUa','i8kAWO7dKIaUoCooBCoxWRS8CmkykLfqWQi0WQtcIxJdVL3cU0JcVJxdVmovW4ZdJqKyW4NdRmkGBCoKWR1fwmoqn8oIWRmEWRNcHbpdJ8khoCkqWOrJASknW7qTDCoSjZiPymkWW5HFW6XugCkOodDctxW5shFcN3BdU0ldGZxdPWy3WPe','WRT2W6/dH3e5','rNldU1vtWQxdQabup8oWogVdKmo4BmkIoCkjW51nWPKSW5RdU3SYutXbWQNcG19+W4RdMmk3W7TyW5rfFLddVGRcNa7cRSoXWOXNzCoojKy/ccRdUgriWRj5W688W6biWRD9W5BdJIPwWPe6W7brW7VcImkUhmkieJjfWOCTvmk5dCkTWOnxWPVdH8o1WOFcRSkMW4NdLfLMoSk4W5y','o8o7WO/cOu7cN29p','WRJcJv7cUMq','g1XYW5hcKSo2W7CiW5rrxuWgW5em','isddMqXU','WOpcVfdcHMm','kSk6WQ3dPIy','mNyinSoAW4m+E8kJvW','fe4FcSku','CwnUWRjF','rI91dq','j2RcUavR','W6KsWONcR8oZWQXuEL8XhSk3pqddGgC','W7eMCt7cMG','WPVcQedcIhK','lfhdQuP6','zeWWWRBcU8o7pq','BCkjlmkmwXqlW47cHCk0WO8VfCk2W58','ihe/kCk4','oXmnWOBcUmoGdua','W4PiB8k5aa','jhixmSkbW5i','5BY05AAT55Uw6ioz','W7SbFq/cTa','W6ldLH9mW6G','Emoqf8kRW5pcPmoTzSoxW6tdSmoHnKy','W6faymkM','WPxcJCk+kgu','CrvPmmkUd8kNW7VdLXSjWQyd','W5xdRr92W6K','qKZcPgmz','krBdQYTSWRBdVaxdVrxdScjiWOxcQs8','s1dcLKyvWOddLG','y3XlWQza','bxqrwCol','WOJcQSkhbve','pSk7lsZdKa','fCkbW5WfWRa','W6rjyCkradOcW7BdRCo/jCoDW51+','W4S9WO0uWRlcJCkl','WPRcGshdLSoz','W5S3CaNcVa','jfW7D8oW','5BYY5AEV55UV6iol','lJddGW10','kNr0W4hcIW','sh7cRL0cW7NcUKfhqSk0ictcQmkXpmoSkSohW4GbWO4','smkOp8kFqW','dezZW47cMSoWW60VW7rrxuix','nW3dGeldUCkOW6xdI37dKSoAWRLA','uCoxemkbW4S','kuJcKX1lcSkeWOur','d8k+WQddLq4okCoQxSoSWPOYrCkKf05PWPm','qSkmcSkFta','t0buCWfbAq','WR3cNZxdP8oM','W7u0bSocB8odWPBcL8ocWOpcP10XuCkfW5q','W7JdJbzvW7NcV0LDdxZcHmksbJ4ttXJdVCkHuehdOdBcJq','W7qkxuzb','W4fkW5XvWRy','jSoGamks','kX7dRH1PWP/dUWldHq','n8kDWOpdSYq','o8kvvJZdQW','WPngW53dVMy','W7rEW5LCWPm','CuCyWQ/cQq','WOBcI17cL1K','qCkoaq','r0NcGmoubG','hg7dV1K','WRXLW4/dThO','W4ObwqVcVmohoSkpWPC','W7ekxuPy','e1SKvSoC','a8kdW4KZWPq','W7TdE8kzkq','ruBdJ38jWPNdLGa','W689e21XWR7cMW','W6aPeSoI','WPa2ccfZ','CNtcGCoCid4kW4ZcUbr6WQ0qlZpdT8ozW6ihy8keWRfcW5bni8k9mW','WP95oSkwW4VdQIRdT1z1dM7dGSoMW4GrW7GUW7iAE8oSaCkDd0tcJ8o4qSkbcYy4WPL8wmotW7VdVmkrWQ/dVmkUgH7cTSoAWO9TW6NcLvLYW4ShW6mTeSkowfvOrYldISkTkGVdO8oL','xSkDWOFcLMG','W4a+kmkiW43dOq','W6uwiCoRFa','jSkGhHtdTW','q8kXWORdR30','WQGGcJvrW4Gpsmoa','oSkxBapdMW','W7SkdrdcUq','yCkTWR/cSe7cQMq','WRFcKr7dICo3','DvBcK8occq','gfORwSo6','A8kplmk8vH0JW4xcJ8kuWQq7oCkg','BGBdKu7dHmo8W6FdLwVdTCoaW6KDf8oxaCknoCoiW5eWyIxcI1u','WQlcM2VcVey','AfWSWOtcVmo6o0jhsCk3W7ebW5VcPCoHWPG8oSoIWRLnW5JcPmkBW6uBlSkKta5cWR/cGHzsoq','WOm6WPG+WPa','W646d8o0FW','W68icHBcUq','W5bEW5X+WRLckmoRWQq','W7WcbG','WRtcGwJcQgG','WRldPazJW7u','WPhcMbVdUmoO','wuhcH3OZ','W5fgW51qWRTOimoAWQ9c','W6KvqtZcUa','W40HweHf','W48dWRqpWRW','W495b8kmlMZcUqbu','B1C7WPpcQ8oWig1g','tLNcJxex','z8kNWPFcHeW','WR0HF8k0lq','hepdR0TI','W6efWPGuWQe','WO7cT8kBbeBcMCk0','p8kdkr3dRG','W7z7W5HwWRq','aXD3WR13WPVdISov','WOhcKxFcQeC','jbddRgFdMq','W7uYgdhcPq','naFdJKldQCk0W6xdI0NdQCoxWRe','wdrMWPTr','WO/cT1xcPq','vCk1WRBdP2S','WRlcP07cGxK','k0FcHHTzkSkOWPGbW7pdGWlcQWNdJq','W5ddJZ7dK8oDW6PcA8ojkW7dMConCCk9wmk+BCotWPdcVJ7cPCotWQbIW6RcNxrWW4pcQtZcUhbiWPe+g8oaW6jFrshdHCoup8ofaN1wWQzAW4ZcHSkHW6Dxr3fXW6G7eSomoYNdTX3cSCoclSomW7JcImoTW5FdII/cSJjSifpdJZi','WQiDlIbM','ggpcOX9l','W5mSpmkxkmkfbCo9WOmIrCkVW5FcGancWPT3WRJcV8oTW5RcSNJcQ8ogW7LygtxdImkydZX7cXepW7ldVSk+WQ1Bb3bCWRn3WPqjWP1Ca8k6WRCIWQnaW7tdVJxcJMKQEXJdRI84WOKoWQjrWQOIfmodWQRdTSktWRVdGYlcR8kXgmorW7OqDtBdIYxdJ0tdGXJcObHDian1amklAwpcLaiFmSoMWPfJgu4oW7xdMsH1W6BdSKeMW4i','fL11W4hcH8oCW78','B0OSWQFcV8o2jG','vCkGWOldN20','emkcpIJdPxufW6hdTW','vg3cPxuo','WRT2W6ZdNN0/W58','W7u2cuf3WO/cK8kRW6i','WQiIbsnqW5adq8oa','r8kEWOS8W4aQW4CiW5hdV8k2','WOtcTdFdRCos','lSkBtYFdUKJcKCkiW43cHv4ItcldNSkgWRi','WOhcHGldK8ow','E8oCemkEW5pcOmo5','x8oTe37cRW','W50ChMXn','w8oKg1JcNc5DWQveWQ1Xbmo9','gwruEcK','WQWgbqHG','ySkJWRZdKM0','FGmTCmo8vSkTWOlcNt4qWQGke8oDW43dIXn4W6ToW71BumoWk8oIWPFdNmkyg3nRFmkC','W408b8oPqq','C8oqdCkjW4VcQq','FmkPWQRcOuq','h2aPcSks','W78QaKvXWR7cUCkGW7xdL1S7WQfmWP3dQW','g0uJkmk2','dfmze8kI','oXVdPcrJ','oCkfW74zWQe','uxD0WRHD','b0lcGaXm','fSkNW4eJWQm','bCkdW5C1WPq','nSo7gSkpe8kKyW','WOZcONNcNuC','W6jiF8kHhYSNW7ZdTSo5kmokW7fP','iem6Eq','WQyzibzA','WOBcNrpdImo7W4pdTmklmvCsBb/cLmknWOG','WPVcUv3cQuu','W4O9W4ZcTSo/WPtcKCoSuSoLmMlcPCkg','W5dcMKWo','imkpWOFdPcu','meKZB8oRxq','juKQrCoXxCo+W53dJZKIWRaTvW','E8kkWRdcJNm','W4qoxGa','W6y1d8oOB8od','WPSXW5m8WO96WRtdOa','WP/cLdtdJ8oz','WRFdOWPYW5S','gSkVWQZdSW4upmo6vmo2WReExCkK','WPtcU1BcKW','W4GOiZdcQG','ivO2lSkc','W4eIWQ8cWQ3cVmkglCoe','x1dcLKqDWOhdHGfndSo7h24a','W5uowXVcQW','udj4gq','WORdJtLsW5e','WOhcVvBcNMO','WQ4JqLrmlmoC','W77cOSkUW73cQq','WRmgWOCzWRi','utjYdSocW5uV','ihywkmks','WOVcHtNdP8oDW70','q8oBWOfWW4e','W6e3pSkqW64','pSkxWPJdIte','WP/cLIpdJ8or','W7e7WQOpWQi','WRf3W57dINe','wKvOWPbR','r8kkWQFdPM3cLYFcPmo+','W4xcMCkSW6i','ymkUamkaDa','W6Ktc1jN','BSklo8ksxqOHW5xcJ8ke','WOpcKatdVCoHW4FdOW','CCoAdCkl','5P+R5R6o5RwF55Qb6icG','WOyxWQqGWRW','mCo9b8klhSkSDeq','WOmsWOGDWOG','yuORWPdcISoWih0','WPtcJatdVCoOW4JdVSkAgq','WQpcNmkdbgK','amkBlZ7dPe8fW6hdQNlcQCkDW6RdNSk1W6KwWQCfW6ddGSoWWP4O','W70HfujNWRtcG8kFW67dHemBWPKcWQddU03cJw82W5/dLce9WO3cSCovWP0vWQimW7ZcLeNcLuPz','k0iWzCoVBmo2W4ddLq','W6iXdSoYFa','kSkvuYC','5P246k+l56wW55Ub','wZnYbCovW6i+W7FdMW','e2znBJzYzNKIWOFdV8kVW6JcPCofy8kXnCk1vmo5uHxdQ8oLW4tcKNfCWQlcUtS','ngVdKwHu','r3rgWRLs','efBdVKj5','nx8Bm8kqW5i','paddPGm','W681wt3cGq','WRtcGCksdwW','W4BdTJnZW48','WOpdIX9aW7n3W7FcI8oOFa','sLRcGwCpW4ddNGTOhW','lSkywZRdVwdcL8kmW5C','ECoAeCkRW57cOSoO','W5adWQhcICom','smkdWQddOq','eMDiArzmzMS','W4a6kmkvW5NdIh3cUfe','W7WcbJRcVvpcU1O/W47cTSkLsCkkW7a6','W6bnw8kxfG','CdXRfSoJ','rSksWQJdNxhcRJZcG8oVC8kpWQpcJ8kzWQ0','WOxdIW5aWRLXW7dcM8oRFq','W5fgW51qWRTObSoXWQrvW6/dUG','gM3cVbLI','W5ddLWjjW6lcP0HsfhZdGCoe','WOVcSvFcQexcU8oLWOLUW6G','xgtcGCoNja','aSkBoINdR2OjW77dPN7cS8kTW7VdS8k2W6y','lXFdUYT2WRBdVXtdNWJdGs9KWO8','iSk2W5uoWRu','W7OmWOFcU8oYWOvoEGy','f8k5DX/dQG','muiFgSkX','oehcGGjzjCki'].concat((function(){return['W4u5kSktW5NdKh3cPKbwh2hcJa','WONcT1lcQu3cU8oLWRbcW6ONpSkJW5NcRq','W5uRyeDf','wIvgkCot','WOVcHtNdT8ovW6Kz','W780dKDU','W53cHCkVW5dcIq','W7ldJGDtW77cQe5pfa','l0uWt8oZxCoG','umkjWQhdSNlcVG','bmkpltxdV1Cl','mwyVc8k2','u8k2aSkXwW','W7ufjmk4lCkNpmojWRWbvCkyW7/cIW','vtHOnmooW5S+','B8kcoCklErCQW4xcOmku','W4GiWPOMWPu','egfRvYu','o34ucCksW5KL','imk6CcldNq','W7adrMbgimoqWPFcNgddQYb2W5S','WQuNfYbpW70t','W7SpbaVcRLpcU2mAW4K','dwLpDsThBW','W6b5rCkSkG','qx0YWOtcUq','W6udi8kGW6y','W4tcMSkHW7JcHq','h8khW5uNWOu+','afasnSko','W4e9W5BcLmoNWPK','y2dcUSoaoa','W7CPcsZcHq','WOxcJIpdHSooW4WOgSo2','sNdcJ0mk','WQ1oyCk6qs4AW7RdOmoG','hf3cMc9m','WOpcM2hcG1e','l1ZcMXP+m8kbWPOwW4tdMaRcQZm','FmozaSkDW4ZcJCoPCmon','mh4CkCksW5i4u8kNxa','ehlcQd1l','iua3y8o2','bge0gSkI','WQ1TxXW2WQ7cVCk3W7/dUMq','W6ismmkUW6i','W7FdJGLpW78','g8orl8kxeW','WO/cSCkbhg0','W6DfzSkKad4w','B8kFkSklxXy6W7tcImknWOm','yrXMWP9O','f8khldRdTfujW7y','W6LaF8ksbW','w8oKa2VcNJznWQrmWRDbcmoOdG','WOtcTKhcQvq','WPtcJwlcKvm','W4O9W4ZcVSo6WP/cICo9wCoI','rKBcS8oraq','W7iXzuDd','ufDvWPTX','WOa0q8kKkG','WQb9W7ldL24iW59mWOq','W50kWQ/cGmoy','WOBcPLFcNgFdJCo7vrvCWOtdUcTr','ESklnmkmxW','DxJcN8oNjJ4jW50','WP4RrSkaleBcJGrYW5mJWQ92vG','WOJcOfdcSxpcSSoKWQnMW6G','55QR6icb5Q+55zYj6l+G6koj5lQH','BCkdeSkxEW','ctBdTIzs','lXFdUZPZWR7dTW','vSkdWQVdUMJcVG','6ish5A2c5lQ8','WPtcOfZcOM3dLSo9xH5FWPBdMdC','gwrCAdfLywS7','WPlcKuJcKMFdOSkkWPBcOq','W5m/dI/cRq','WRe8aszgW7iEDmoreSo0jXnl','e3T5EJbcrxCRWOC','wmkamSkmwa','e2ztFJbHxfud','hMdcNH9W','FmkAfCk6AW','qvRcMeazWPZdHGf/dSoPa28jW6ekpCkpFCkZ','WPJcSfpcGLG','W6y1d8oOB8odWRhcL8oRWOC','gv3cHqrZ','ASkFnmkvsrS8W4xcHmkoWQmUfCkpW4NcUwS','W5tdOHvdW5DTW7K','WPFcT0BcN2pdJ8oCzrfiWPhdMs5ike43','WPxcQSkJbNi','W4Cgra/cRmo/oSkt','WQf8W6NdGfmYW59h','WO7cKulcKNpdN8kbWOVcSq','hSkSW7eRWQi','DmkXWPldONm','W6xdTIvdW5O','W7GeWOlcJCo3WQXjFt4VdmkXnGFdI3i','W55BW51sWRXJoG','W7SjaqRcUbVcUeexW4i','rCkqfCkZuCo5WQVdLNlcI8oUta','ebRcKwiDWOpcJvH/cSoogcmgW54ipmkzjCo/W7XFW5hdVdpdVxi7W6VdHcJdTXBdOWz4gSkfahiUWRlcNCovW7JcOmk4WPrLW7D2fLWaWQVcQSo+rv/cTZ0+qSoTnfNcGmkKW78j','DXLKomoR','WRKcbZLO','W5mgEZ7cOG','DKhcOv4x','5lUx6iob6io96AkF6io557QKW7hORkdNNAROP5tOJilNRj/PO5a','WRi6bsjx','W60TaLz8WOJcK8k/W7pdNum4WRj5WP7dTq','z0BcLX3cNmoQWRhdGg7dHmo+WPvz','WPqYWRWlWRe','W5SkW6JcP8ov','hSo1bmkXdW','m1K7CSoKA8o2W5tdHc4uWQyw','WQrDW5BdMu8','vufkWO10WRZdGSo8WQBdH8o9WQWYzG','lSkyuYRdPq','WRRcLrFdTSop','WOqJWPiKWP8','WOZcVfxcMvBcU8oLWRblW68Xj8kJW5NcVmkX','WRP6W7ldLW','hmoiaCkXjW','zCkTWO7cUeK','W7P7ESkJkG','o8kLnqhdVa','WQC7cJnxW7ufxG','m2epnSky','W5C/j8otFa','sh7cOL0oW7NcV0fpdSo5kctcQCo8CCkKzCknWOfkW4uSWOBdUG','k8kyvsBdVa','v8kqcCkzsG','W5SDjSkHW6i','g1KvumoC','W7OElaVcJG','yCkzdCkqAq','d2u6q8oz','WQ7cL3pcO1m','WOlOHR3dOa','g3zBW4lcIW','dgpdTLrE','W5qikfXC','W4j0W7bXWRC','hJ/dT3xdKa','WORcVCkbl0/cN8kTWPldICoXc8oDpZy','x0hcG2ai','cg1oBI9m','5PIi5PYt5lML','W5vDW5bOWQe','W5ftW5b2WRv0jSoQWQ9c','W4bBW5HxWQS','W4nXW4WeWRvPWQddLIu','cSkiWPhdTaG','pglcOWnP','W5atd15c','W7OdfJBcV1pcUa','sCkvWPtdSg/cRIVcPmo+w8kjWOVcJmkDWQdcUSkQW6BcKq','AmoJbmkVW5O','w8o7bSkEW7u','W5ZdRqNdPbpcQ8oaWQbUW4ir','WO/cJcZdKmopW4Gvjmoo','W5tdPaHkW58','W6FdGWPvW6G','d1FcTaPl','fmk7oHZdKa','g8k3WQpdJrq0cCoYxW','5yUY6lYi6yES572b5AAB6lE5WR4','i3BcPqXD','tmkrWR/cOK4','W60hbrRcIfNcOeah','56Y25B6255Ua6ikN5B+/5Awy','hflcKa9z','qfdcJhuiWOu','lH7dOafO','W4awW7lcMmoa','WRJcJLRcPfO','tCkofCkfsSomWRhdLNBcGmk2hc7cQSoPBLj3WOldICkzWRZcNmkaW6biexWJxmovhW','jGFdIei','cmkWwcFdOW','FMlcGCogoGakW5NcVbaRW50fkY7dISoyW5mRymkvWReHW7KJkCk4mZZcPCkumW','eMTKW4BcIq','DKxcT1mA','WPlcKuJcKMFdVSk7WQpcMq','W7u0bG','zCkenSkCsdaAW63cRq','W4aXWRtcM8oX','y8kMWQJcSvpcIw97sa','WPJcQNBcJ1m','quHxWQT9','WOxdGW9kW7zPW73cMG','W6WMvdFcGG','W73dHWHhW7NcJa','ACkUdSk5rG','g8kaW5K2WRa','DSoNj8kTW5i','jKuTCmoXwCoQ','amkApINdOG','WPZcMLlcSNNdK8kcWOVcU1S4WP5oWOy','ESkUlCkRDG','qCotm37cKG','WPGQvSkanKBcJrvqW44sWQjAxepdVW','EvC7WPtcU8o7oKPAvCkIW4G0WPu','WPhdMbnmW6zGW6VcJCkRB8o9ma/dICkrmW','emkzWO7dKYy','i8oge8kpW5hdOCoJB8oyW6pdGCkLxvBdICk+W5yXwCouW7rUmCo/pq','W7CqpSkubW','WOFcSYldQmof','xSoek8kVW6u','W6qss0Lp','qW9JWQ53','W67cNmkNW7RcNa','v0PA','W6KSp8k0W5W','WO7cKX/dLmoq','57Me5PY555UJ6icM','x0dcGhGzWO7dHY1IcSoAaG','W4uWs0LH','W6e4WQhcR8oZ','iCkrvc7dUKq','fmkUbe3cNJqgW7SXWRbLamoRs8ojfSkZWOrMWR3cJCoLihlcPSkcmfm0jYGtWQnOWRW','bJ3dGZTw','WOBcIqFdOCo0','WQxdHtfAW7K','hgrsDda','W7OpWOJcVmoGWQbjEG','WQ/cV1VcSMW','W4aIWQ8cWQ0','vWDRWRy','W6uHcbhcRG','DgDDWQTY','WRaviSoKx2HBW5ddTCoDdSolW7m','WPlcGgJcOKG','pSo3b8kyc8kT','vK1nWRH0WRJdLG','hfXKW4RcI8o3W7ylW78','emkoW5iJWPO','sSoUe0q','W5aIkmkuW57dKh3cPKa','WP3cUCkrovFcM8kYWOm','WOdcT0tcR0xcUSoKWRnP','WROwsSkKdW','WQFcVSktlKC','W4SmmCkkW48','W4CbW5RcTmoC','WQ98W67dT30/W5i','irZdOqTOWOFdTWNdHq','WPhcGsFdVSo6','W7S6W5NcSmoC','5Bs76lAw5PwQWOG8','WQ9/W7pdNw4','W44MWPCNW5P9WQxdVrL1pgKScSoxWQldMgxcUeq7rfldHmkyWQhcHXybgY1momoaW6qsW7PIb2CpqCkkDLq7k8oOB01eWQL9WQtdPu50CmodgKGJnCoxWQSGW4JdVK5EAaW7WOZcGhpdSmkiW58JW5hcSbldMSoeuCoMW6jfjCkeue1AqcBcJKlcUMtdTNRcOdpdO8okA3PKDmkBtSk9x8odWPldItrHsCk9W5VdPvX/tq04WP/dU1ddQSoQWPFcLCkEqa/dISkQEWTiWQhIMBhVU4bF56sE5QYm5P+u5zYC6k686zsj77+K6k6W6ykX57YV6iELW68aWP7cNCkjW4jrFYSCWOVcPmofvCokW7pMNjxLIPNLMQlLKB3MN4RNNOFJG53dMmozBSkataa','W5q5aMPQ','W7vvq8kYcq','W780bLD2WPFcN8kGW6i','g2XzxJrmzMWdWOVcSCo5W7NcOSonEa','l8kBxJa','W74+Dh16','W4SGWQ4eWRtcOmk7dCoT','c8kVWQpdIGi','WO87qCkijq','emkCkqRdJW','B8ohbSkyW5RcR8o0r8oCW7BdK8oTe1y','z8oDo8k9W74','Fmklp8kCErC7W47cLq','W68joZdcJq','tCkiWQJdSgZcJYVcR8o+','W6OuWP/cPmoK','hw1jxI5mzx0HWPBcGmo0W5xcQa','WOlcVCk9bKS','xgGVWOZcJG','WR9YW7ddH3K','oMS0BSo4','WReywSkOnq','CGr0WRrh','WQdcSmkhbea','u8klhmkCAW','W4dcK8k8W4/cH8kpW54','W4mQWQqKWRdcJCkbnmoTebH9W4Czfq8','W5vvF8kvga','WOaqWRS0WQO','x8krWO/cRu8','g1PIW4xcNCo/W7Wy','5PQY5P2h5lQ4','W7uTjSkvoW','hCkJWQpdKZqwb8o4w8oR','t8krW4SHWP92WPCyWOxdSmo3imo/W5JdU8khcmkoeN3dVmoPowBcHa','W7BdHXjLW6hcGuPzdM3dU8ojoZm','f8klW4GWWP03WO0','rmkAg8kWCW','W4yNWRmaWQtcHmkkja','W7GKWQ/cGcXLWOmgWPtdMM/dGCowAG','W4u5kSktW5K','WQ16W6/dK34WW59q','E8oqiSkxW5m','WO/cJctdGmox','W4NcHmkCW67cPG','zCoJo8k8W7W','W5PCW514WQbohCosWO0','WQBcHIpdSmoA','W7qidbRcUwlcSfyh','WONcSCkggK/cM8k5','iqhdMepdJW','WOK8xCkImKBcKbiXW5qvWRDlr1xcRwrdCCohWOHcpXZcTNbUDgu','WQyReb1kW7iFrmorbW','W5mDwaNcVmo2lmkeW448W43dQHNcP8omBW','W4WmCZBcLa','ygNcK8oyjY8LW43cTrX5WRWEldFdHSooW4a','WP0YWOO4WPvGWQi','ieaRCG','WPtcJq7dOCoO','zmkNWQJcSq','hLhdJgnY','WPuNWOOfWPnJWRq','WOVcQgNcUxG','DJLlk8ot','C2xcGSosldCbW5W','WPSVuCkUj1hcJbrYW4m','hSo0gSk6oq','WOddJHHUW6jGW7BcISokCCoVnGtdJSkAjG','hxqDcmkb','yCksc8kwua','iZpdPwxdMq','W7bwW6ZdG3O1W5S','WRXxW6RdL0G','W5GBkmoxBa','ASonj8kBW4S','gCo2dmkgmW','W4GZma','W5S6FcZcIa','WQ52W6JdT3a5W5DrWP7dJuhdS8oSya','uCkRcCkgxa','ua9Zf8oY','rIDoAYnhnIrGWPhcSSoSW7ldSG','WONcLGtdVSoz','WP/cULZcJ3ddT8oQAqq','WOBdJWHUW7HGW7xcM8oOBmoEoYJdHa','W5dcNCkXW7FcUW','W6vdDSkHh3icW7ZdP8oU','vdj/fCouW7mJW67dGMhdR8oI','W4uRWRqPWQNcNCkDmW','WO7cSmkubetcNW','y8oIigFcQq','W40amMbb','WQyRebHmW6KyqW','hw1juY1CEMS','AmkgWO/cMK8','jKuTyCo/vmo2W5W','kH7dJw3dUq','ug0MWQpcLG','nHZdKL/dHSk9W70','W4i/E1Xe','W5O7W4NcHmo8','BCkjlmkmwXqDW5tcGmksWPiwgCkpW4NcG2W','W4iYlCkJW5ZdOxRcV2LShhtcH8oRW4ec','jKKFECoX','mbRdHvy','f0bCqWe','fCoWhSkijW','jbtdJvRdJW','jv8VtSow','qCkWWQxcOLG','wmoZgfRcJt9lWRiGWRr0e8oRaSoehq','t1NcJxex','yh8ZWQpcSW','mCkQlq/dGa','W5rxW4DyWR5Jjmo6WQ9sW7JdS8kEW4C','amkEmZldOG','WRhdGHvVW64','zLbxWOf8','WONcT8kwh07cN8kUWOpdOSoPlmojeZWq','tmo2eMJcPW','WQNcOX/dG8ov','nSo7gSkEhCkPF1m','pLxdSfrA','r8kpc8kex8o+WRhdHa','WOhcLGxdImoSW4xdSG','W6baESk3bW','W6qIdCoGA8odWOVcKmoAWOpcUuWDuCkgW4K','Emoqf8kQW57cTCoL','W5S6efnD','W5GwaLrp','mSkCWQpdUay','WQ7cNWhdLCoG','WRxcNmk8a3S','xmoUmvtcHZ9C','a11kqXu','bvL8W5FcMq','qSktWQRdUw3cUdZcSSoVC8k5WOVcHCkdWQBcPSk7','W4FdKfxcH3tdMmorW5lcPL8BWOKNWOhdRXldMvFdN8ksvcZdQvS7E8o4WPXPyaZcNHLcW7VcVSonW6RdLwLhW5tcJSodvs3cKCkkv2FdON3dV0TVzCkqW5xcUZm+bCkNamoabSkWkCotkSo9W5LrWOZdNXDgEmoMWOnQcI/dV2JcRG','WQtdHaHoW6y','t1NcI3ex','ACoud8kBW5O','W4bgW4PXWRC','pSk3W4K3WRC','mWddPvBdSW','iCo3hCk7hSkXFW','pSoko8kwdW','5B+S5AsR5PA76zwxWOBcPa','A8kSWQlcKvFcUgr3CaHgW6BcJsSlW7O','omkUuq7dJa','FCkUWOhdUg8','AY9ejmoZ','hmksW48PWP44WOC','W65fE8kBaJOC','W6XVEmkecW','W5aBtGlcQW','W5eKjCkPW68','WPGbdJ5X','WOO6s8kPjq','W7m1uJ7cVG','WO3cNKRcGNa','WPFcIXJdQSo/W4pdQCkmp18txHpcLSke','WPuNWOOuWPzRWRZdOrTKqZibbW','W6b8W6b2WQe','f8ktWORdJbe','WOaNWPm+WOXR','fCknW4KfWPa1WPW','qLzrWRX3WRRdGmo1','Amk+mmktAW','a1K6ACoYE8o8W5BdLsGyWR0','lsJdUZPv','vtXpWRHC','i8ofaSkAW5FdOCoKpSkBW53cHSk4tHBdImoLW4uQFmkjWRe8C8oTA8oyo3tcUCk1fmkXWOS8W4z7WQxcHJDkW49eW4ddQSobWQyfW5b8WOJcG30d','pbRdJ3JdKa','W5uWvxri','W5OkWPZcRmop','k3/cGCosihShW5tcSazLW4jtnIRdJSotWPKoymkeWQzWWOyN','W78bia','W7ycvMbCimotWOBcVN3dMI1AW5hcMmo0','l8kavaJdQKBcI8kmW5FcLfqTtJldUmkc','jdpdSeldUW','jsRdNcPr','s1dcLLyDWPNdLG','WOhcJZFdOmoDW6OFmSowhrRdM8kbqCkYs8kOE8ka','W4FdKfxcH3tdMmorW5tdQvWkWOzPW4ldOb/dI1FcKCknaJhdRvnZjCoWWPzOEXZcIeCxWRC','W6rjyCkzbteAW6FdPSo4','W60pl3jx','W78zeCoeya','DSoBdCklW43cLCoLE8on','DMPCWPPG'].concat((function(){return['FSorbW','n3mE','WPRcSvxcQeG','WQJcUuxcSv8','W7OpWPpcPSo1WQ1iFHW','WOmREmkheG','WR0Mv8kZmq','57QP5P2x5PEl6zEVEaK','WPhcSuBcP2VdJCo6zrvj','hgryyW','WQG9st1wW6Gpva','kYpcGSodlZvAWOtdVGzMWP4FFa','WQuKWQ05WRS','W7ldJG9dW6y','qvbhWQr9','WRZcN1RcHey','f8kbWQtdVs0','W4fHz8kAaW','yM9/WOv5','W6ecW5BcOmoC','W4uxpmkmW7m','W4SxBsFcUG','fMftFInBjx89WOpcPSoKW7NcOSoCiSoUyConx8o4ubVcLSoiW5pcGtueW6RdQttcN0XxW4hdIbRcHSkOASkIW6y7W67dR38Em8olwY/dSc7cI8oIWR3cL1tcKCkYmmoE','DNZcGCoFnW','sCkPWQVcOxK','mvJdUhjr','vufkWOb3WQZdNCoQ','iwZcQGLm','bd/dIX98','WOOMWRKLWR4','ymozg1VcMa','hwFdRMLuW7ddVK4','W4iaoSkiW7S','E8k9WQpcPLJcJM9VwqjbW73cMG','W5fDW5DK','m15NAsm','WPNcI0JcUMddGSkk','WPVcUCkzh0y','g27dINbv','W6eYW5/cKmor','W54kn8kEaW','DqT0cCof','kI3dPKJdMa','feiGh8kD','oLBcNqLki8kEWOviW5ddIX3cOdtdKmk0','e8oRgSkBgG','W7a/aCoYDmodWPBcL8olWOBcSuqXuCku','r8kmcSktvq','htZdGNBdPG','b8kCnJy','gfzLW7dcLSo+W7W','sSotWO1ZW4zKWRaoWQFdS8oosa','W5mKkCk1cq','WOdcNapdNSoOW4xdTCkrgu0','hMpdQeOwW7hdPfGBfW','mhSvmSkf','WPFdIXbEW7e','WQTbW7pdHuK','AZf5dSo/','WOWhF8khda','veFcQCogkq','WPuRxmkIneS','W4/cMCk9W6NcUSkhW5vL','WRJcJvdcSee','55MY6igv5BA757I15P+1','WP8IxCkQmG','W68ShKHG','W5tcGSkXW7FcIW','gg7dR1m','qCoVgvJcJrjSWOXb','WQ5pi8knimkSB8kwW64gz8kaW5JdJWHJWQbXWQddP8kLW4FcIxtcH8krW5v0ps7cKSkEe3m9','W7qku1zzcCouWOhcHG','DutcLCofpG','WPSSWPa0WOHAWRtdVae','W6beDmk6cZO','WOioWQq0WQa','W6WFkSk/W6y','WP4RrSkdnu/cJZH5W4yt','x8oOe0NcLW','ACkWlmkTDq','mmkQgcRdRa','W5dcKcZdL8ouWQqyASkyfLFcL8oEwSoKwmo/pSoCWPldUNFdUmkwWR08WR3dNILOWPtcLYpdVIirWRD7h8kaW6btxY3cLSkuFSkBdYWxW7vbWPlcImooWQaEgYiQWQG/q8kdz23cTb/cV8oslSoqW6xdM8kVW57cL1ZcVYS/yGpdIt/dG0TXWP9QW5/dNNWtw2KceCkuWRnkW4NcQGnp','w0PqWQ1QWO3dISoHWRW','n8krCaVdNa','Fmoco8kBW50','nq3dR1VdRW','W6pcN8kqW6hcGG','WOddJHG','uWnZWP9ZW4dcNSovWOqWWOldGwZdUa','WRawFSk1fW','WP/cLLxcLNFdMSkkWOO','WO/cRmkBoeBcICkLWOm','ubzEkSoo','zK5uWR16','WOiRmXT0','g1PIW5tcK8oYW6a','mgiwmCkeW5qKE8kRxmofW5LcW7CyWPpdHW','c0f4W4K','WO00pCkiWOFdTwhcOKzU','leG/Amoh','W6ldKGPjW7K','n8kTW4iwWPu','iuq7y8o2xCo3','W4rPDmkxaq','gSkaEdJdGq','W7efvwbR','WQ1LuCkWimkwWRhcKSo8WOpcLKW','W5KHamk7dG','W6vTymk+nq','WO7cLcpdPCojW6GqjmozkqRdKSkd','hw1jws1CzNWMWOZcPCooW7dcPConzmkRamkDwmoP','W5iqcSkkW48','WOZcLKlcG30','WOtcSv/cHxtdHG','WPKKWP0yWP0','xCkTm8kHxa','5A+25ywB5O+b56AE77+L5Q+36k2N5lQk54Uz5P2+5B2Q5B6X6igI5BQ35lUC5lIe6k6H5lMP5OM25PYZ772/56w85Q2f6yo66lYn5PY+5zYP5PEt5lQ855UV5O+m5OId5B6M7761kEISUowYOUwhHoMaU+E+MUwjVSkOWQWHW41sWOqGvSoiW5xdP8kyWQFcN0qolfxMNPpLIPBLMBdKUPFOV5FOO7pJGR0','aHqeW7GOW6pcN8kP','FN5qWPTx','DgdcNSoqjq','W4aHWQqy','WPlcVuhcMM7dGSo2','W7akaCkUja','WQJcK1atWRRdLMngi2NdS8oL','fmklkX7dULWbW7FdRwNcHCk7W4ddLG','cxXeDYC','ohhcSYr+','W7qvjbdcQepcPMmCW4pcOa','5PI35P6E5zQS','W4WaqZ/cPG','pZVdQ0tdUq','euOzESoW','WPldNGvhW7e','W6CGdSoUBq','W6uxaNvJ','W6GPoHhcNa','uSkhWQRdOhS','shqgWQZcTW','sCkpnmkGuW','pSkaqYxdQW','W6awWOGZWPq','eSkgW5e1WOiIWRKDWORdJmoQEmkU','WQFcGfdcOuy','amkAjJFdSW','W44atsJcU8o/m8kKWOa5W4NdVrNcI8ooBCobWQ19tq','mSkQjHpdNG','W5S5W5tcHSo2','nHddH07dN8kWW7a','W5e+fSoIAW','iumWDmo8uCo9W4S','WPhcSuBcR27dHSoIDb5oWQFdTa5b','5B2s5AA+55MW6icS','WOe2WOC9WP8','xSkyWOJcG2y','l2OqtCoB','WR0muCkclq','W70jWPxcQCoJWQvcBq','tSotivdcMG','W7KgdmkFW6i','W5ekwGhcUmo2','WOegz8k8kW','WO11W6BdU0O','W4Ovb8kwma','WQiVcdW','F0qYWPFcUW','W5qkvqxcP8oNdCksWPi+W4NdQWpcImoxzmoaWRTWs8kMd8ok','W4advH3cVCoFnSkeWPC','W6ehygT8','qdHXd8orW5m','WR/cMtRdICo3','p8kUWQ7dHXC','WOdcTv7cN2C','W7WccaRcUelcNuegW5xcKCk0qSkx','W7S9e2fPWR7cM8k2W7JdINuUWOLC','W5hcQ8kfc03dMSkJWPVdHSo2oSkzvcynW7RcTSo8hmk5qSomW4hdG8kZW6RdN8kux0JcMCoiCYvXW69rW7hdSSo3W5mJz8o7nuX3zYGtf8osWR8zWP7cOCoSWONdGuK/ySogW67cQCk2v8oJWOPhjmkCqCkCWO09W6pdLCk4W6ZcHSoSjtZcH8oQWQzVnSk0buldO8ovg8oqkr7cRCo0WOyvW7/dQCocW4HLA29IxhtcVGWzu8ozAxlcUu7cOKJdMCopW4jDkIPQBxFdVCkGWP3cTHlcM10krSoFWOO1WR7dP8oKWO/cVSoQ','WR56W7JdHNq','gv9+W4VcJq','a24UnCoOW5eQW53dVW','r8kkWQFdPM3cLs/cUSoV','W7uyhSkjba','umkjcmkzumoWWPldMh/cGa','WQJcNmkxbe4','WRVdNsHpW5O','cmksWPRdSGq','WOJcMLlcV3RdG8kDWP0','smkmiSkWBa','W5vEW5XYWQa','W5PCW514WQbslmoNWRu','xSoGg0JcMG','gfzLW6hcK8o2W7qzW79jELGQW5S','i0G6','WOZcTZ/dP8o+','W54SW4hcN8o2','WQbvW5xdV8k4W7LUEaaVpCkG','yCkGWQJdV0W','WP3cJ8k8a3u','ev3cGaH0pSkxWRO8W7xdUHZcVdJdUSkkW6pcMmkZjtyvufBdO8k/W7xcGW','W4W8W5ZcTSoLWPtcKSo9Cmo4a2/cICkmwmkw','z8oOmNJcNq','W6afpCksn8kN','WOdcT2dcJe0','t17cSLaY','W7OHqrJcPG','jb3dRa9UWRRdVr8','r8kmdmktvq','jwmBl8kd','WQzvcH0ADCoTWORcTNldMa4','W4u2WO4vWOm','WPBdJX5aW71XW57cI8oQDmoVirpdHCkAoIJcSCkcsfZdSCka','Fmkyn8kEsb09W5pdJmktWPiJbmkxW5/dT2ZcNrlcGmkUW783WP3cJhBdPmoIWOy','W7FdJGny','pXVdQXPY','mrNdGfZdMCksW6xdLg8','o0XeuWO','BmkKWQNcU1m','FmonnwNcKG','fCoxvSocdSkUW6BcHx/cHSoNDsNcRq','WQJcIZZdGSoY','WOG7v8k3oxdcHG15W4qvWRLn','W5dcKZ3dGSosWQqFo8oBkbZcISopzSk4vmkOm8kgW53cVYxcU8kuWRm','gSkVWQZdTGGpgSoqvmoGWOy1rCk9dq','WOVcQg/cNKm','hqtdMcjm','q8oibh7cHG','xXTslCoH','sCoLhuJcJc51WQHJWPDWd8o2','fL1/W4hcJCoBW40XW50','W6upbmkQka','juKQvmo0vCo2','gvXYW5hcJmoaW6WEW7Tyw1u','i8oukSktgG','W5ddJZ7dK8oDW6PcA8kvkb/dLSkdla','s8oThL7cLa','W6dcRSkhW4lcUa','mvGNBmo4','hHRdOtLv','W7GeWOi','ACkepmkTuXuR','WOORrSkmneBcJG','y8kMWQJcSvpcLv5oCa','ceL0WQP+W4VdJCkmWPK0WQhdLGxdVWZdIqRdJSkZgXTmWOtcHgHXW7dcK2xcL8kLnCo4WOddPwGOe3xcIrZdJSorlCklWPVdQSkhW60RW4lcGNRdMfFdJqzwCYdcJCkvW6ldN8oKW6ZcTchdLY/cTCo8W4NcKmk5W6mDWPTxjehcKCkWW7hdSGi','iCkEWRldItm','qCoydd/dSeWVW5W','WQb9W7ldL24uW655WRW','WPZcRbFdHSoM','WRJdHG56W5u','WRhcVLFcGwC','W4SFcd7cVW','WPVdObrBW6u','kSkrtH3dP0hcMW','W7tcO8kPW7JcGq','kLTYW6RcHG','WPRcR8kXpwa','z37cNSoupd4xW4VcGGf3WOSemq','WRVcHH7dI8o9','vK1nWQL6WRxdISo9','W4bbymkGhG','DZX2WQ56','W70cCh9y','FMlcN8owpa8bW4dcPq','W4aowWi','i0morCot','lKuWzCo8sSk+W5/dKYWeWQabxCokWONcM1m+WRijW64EhCk2ymoQWPZcISkpvZyOE8koW4NdMvjwiW9kfComW6ZdHCkGW4BcVG','W7m1fSocDCodWPxcHSoGWP7cLLaDwW','W7ldJGDtW77cQKzrbq','nhfNyZi','w0PAWQ1GWPBdIq','qGDRWQ96','WQvYW77dL3azW5rqWQtdKg7dRW','WPPMW7BdNhG','W4q2W5BcLSoHWQxcMCoXsa','ee5Nxbe','WPaTWPOO','zhJcImoFkW','qCoVgvJcJq5DWRL5','W60Qe8oMCW','de7cPWzr','DMJcM8oLfW','rtftWOPN','WPRcJ1BcM2W','W7byDmkMga','mCkzWPhdRGO','WP8CrW/cOmkZpmkBWOi4W5/cPvxcUSolzCojW6v7vSk2gmoxW4hcMW','WPxcISo7W6FdN8kEWO1QpgNdQtVcNKnOW7JdJZmyomkKWOi','W7i8l8osFG','oMqlECo2','W4WFqenMpCohWR7cQ0BdUsPnW5RcUCoFWQP1W7VcG0JcOSoWa8kWACokW7S','W6ufmSkwkmk2fmouWRSbuCkuW5RcGXHSWRnNWRBcTa','WP0NqCkKiK/cHGu','xhaiWRRcNq','W6O3EX7cMq','W5iAuHZcT8oaoSkBWOyOW5JdTWxcJ8ooza','WONcMLFcGNddHCkBWQJcOemwWPrKWPddPHBdHa','hcFdJIXt','5PIi5PYt5lU4','WQXtW5ddUSk3W78sCbyemSkenq','W6yDf8oWBa','ECk8WRtcVu/cUMnLrq','W7SuWOJcM8o1WQHvFseYemk1','AK0/WPdcNCo6kMT+rW','t1NcG2epWQhdMHD4','W4LeW7HQWPC','W7CHqJVcUq','WR/cJKJcSgS','WORcJY7dLSopW5qDj8oFksBdMCklFq','FmoAfSkaW4VcPCoVDmoxW5hdLSoYcLhdLmkeW4f9qColW6rU','WRCVccvg','hw1jvI1hFha','jJ/dICklFMS0W4dcLrnNWQG','W4SSjvvk','BSkEnSk0uXyAW4xcJ8ktWRmY','r8kVWRhdJfq','uCkLWQtdMw8','kMPyW53cKq','WQ/cMbldG8oI','bCkpmY7dSW','hCoAmCkkkq','B8oflSkTW64','b18CsSoT','W4vHqCk1iu3dNv1VW5CaWRGFuuRdRgrelCkrWPKgjrJdSNDIEw3cOSkWW4X2uuG0z3/dPfm7WOXVW6qFW7LxWO7dPmk9WRe7W5xcPCkzW6pcLSoBW7pcO0pcPmkFW6VdMbqYW7uvWQBcT34WW5/dJmkPWOtcPeRcHgRcLY8BcLK','wNiWWPFcUq','W5qLdIFcPW','WQ3cUsddRmog','W7CwjKDK','h8kEFYRdQq','q8kfeCk1uSoYWRldKNxcKCojrXpcPW','g3ldQK1c','rmoVhg/cMHTCWQT4WRbH','dgLrBIC','F8kEn8kj','WQlcOfhcR0O','bmkJW5OHWQq','eNvFW6NcUq','z23cGCowpbGlW43cVWe','kvlcNXXR','A8oNeSkVW6K','W7menmk4n8kNp8oyWP4CzmkvW5pcGq59','gqZdGexdGG','qsLUcCojW5eYW6NdLG','q8kdWRldKhlcVIpcSSoKACk+WP7cQCkk','WOxcSuBcRMpdL8oQ','W6BcU8kfW5ZcJW','EmorkmkiW7K','WP3cJNtcMwe','zCkekmkmtImGW4hcJmkfW5TGbmklW4hcVNhcJJ7cM8kVWRDNWRxdMhVdPCoPWOlcQmkIWPG','WPhcUMxcJga','imkhFdZdOKdcJCkCW5hcSL4TBtFdR8kcWQFdP8o1','W4yum8k4cq','W7esjSkSga','W7C8dCoKCG','W5FcN8keW4VcGG','WPaGxmkGmNFcHHLO','WQrJW4xdL34','x8kDWPdcJgi','WQ3cIqFdKCoX','WQH3W7JdT2O5W5raWRZdKhddVSoaASo3lW','W5aseCoXFG','xudcH2afWR7dLGHPgCoBgxe','obpdQZ1UWRldOau','bSkMhaRdHG','5PQS5PYT5yEE','WP8pWOqbWOi','W7/cSmkrW4pcMq','W6dcSCkkW7/cNG','W4qZpCkUW4xdSwBcUa','v8kwWQRdVgO','FfJdGriioSozWOPxW5VcMXpdUW','iNyioSksW4m','W5ugi8kqlG','W540efzD','kSkrtGZdOKNcK8kAW43cO3K6yt8','WOlcGrBdOmoiW4JdVSkRffme','W74FrKL6','WP7cRCkxaeBcMCk0','W5KsCh18','W4qZpCkJW4BdOxNcRKTXlxNcQ8oH','l8khurRdPW','W5yqWPBcISol','p3KuomkfW6mZzSk6','btddQ0ddOa','WPOHWR8/WQG','cLldVxvD','WRuuWPy4WPG','W5SzaCoEvq','W6udx0PCia','W7Kfkq','cKijtmox','cYRdTW9v','qmkpWRxdThZcTYVcSW','DvNcMSo2cW','j0Ohz8oN','ASkieCkHEq','FCk7dSkqxq','W4e/pCkqW6q','WOFdGXPFW7fGW7BcS8oVDG','ECk9WQtcVKtcVN4','6lEV5B2D6icFwSkh','j2iFl8koW6qZCSkRuCo0W5Pv','r8kmbmkdtCoBWRBdHg8','naxdHfJdHW','ivqQh8kz','FNNcOxKB','W5aImmkkW48','W6BdGXroW6tcIKa','W4uavbVcVCk+mSkyWOCU','WOVcMSk5cu0','AXHSf8oZ','mmoMb8k3emkWAgpdUGtcJmoaW6q','hmowh8krnq','W7SuWOJcHCoOWQDOzXC1o8kQjaC','kefjsIO','yw3cNCogkW','W649cKTZWR4','ECk8WR/cUeq','WPBcLKG','fCkBmZFdPvOEW7FdPNpcPmkQW6JdNmk9W68','W7qjr0TEiCosWOxcNa','iXxdIHDF','gCk/WQBdUXeFbSoRDSoSWOyft8kKbLK','pCkvsIZdVg/cKCkkW43cOW','W4eIWQKeWQJcNmk3','W4OCDahcU8o9k8ktWOW8W4ldMXJcOmoeyCoEWQv2xq','W6KwW53cG8oz','q0nWW5dcL8kZW71bWRnWdafsWOSqWQaPWQL7cepdNrBdKmkIpY8cFLzyzmkgWOutWQpcK8kFW6tcPx/cUmoMECkyuCobyH3cMSkDWQhdHW','qSkqdSktFq','ufRcMCoAla','W5WbW4JcM8ou','W440W5NcGmoGWR3cLCo6sa','W7ihWQpcSCoe','iw7cPdPl','WRi6htXg','WP4RrSkiku3cLHv5W5q','WOumbXDo','WPtcIrVdPmo5','c8k4WQRdKqGwjSo+v8oG','W7RdQXvJW7q','W7mpqvvgjmoe','W4VcG8kGW6ZcQq','rSouhvFcSq'];}()));}()));}());_0x3b31=function(){return _0x903123;};return _0x3b31();};const _0x434554=(function(){let _0x257cf6=!![];return function(_0xaeedc5,_0x553373){const _0x5b0c2c=_0x257cf6?function(){const _0x2c058c=_0x3fdf;if(_0x553373){const _0x2a87b5=_0x553373["apply"](_0xaeedc5,arguments);return _0x553373=null,_0x2a87b5;}}:function(){};return _0x257cf6=![],_0x5b0c2c;};}()),_0x234d49=_0x434554(this,function(){const _0x1e6b1f=_0x3fdf,_0x87e6d0={'xrVlQ':function(_0x50622a,_0x221c70){return _0x50622a(_0x221c70);},'LjgcB':function(_0x22f4d7,_0x2e0d8f){return _0x22f4d7-_0x2e0d8f;},'mNJkS':function(_0x3175d8,_0x1e43f4){return _0x3175d8!==_0x1e43f4;},'KhpTj':"dThjQ",'YAKnO':"eEzcR",'bskSi':function(_0x5537ab,_0x47273b){return _0x5537ab!=_0x47273b;},'nrTuH':"vaRNV",'PZePp':"bHdvp",'jFZGS':function(_0x5d6dd1,_0x542751){return _0x5d6dd1<_0x542751;},'xbFMw':function(_0x1122f1,_0x1da718){return _0x1122f1==_0x1da718;},'NhtQG':function(_0x10bc7e,_0x1b736b){return _0x10bc7e!=_0x1b736b;},'DoMqm':function(_0x29958a,_0x5bb775){return _0x29958a+_0x5bb775;},'WTUSB':"2|3|1|6|10|4|5|8|7|0|9",'Vvbaa':"focus-mode",'fRVme':"linear-gradient(135deg, var(--m-blue) 0%, var(--m-purple) 100%)",'AiJrM':"开始监考",'piLPl':function(_0x57ee30,_0x4d7587){return _0x57ee30(_0x4d7587);},'adjVY':"progress-warning",'zvKwE':function(_0x435c48){return _0x435c48();},'oeHlh':function(_0x39d9a7,_0x550642){return _0x39d9a7===_0x550642;},'eZtTO':"xKoGH",'fAujY':function(_0x15ac4a,_0x58d5e6,_0x279289,_0x58386a){return _0x15ac4a(_0x58d5e6,_0x279289,_0x58386a);},'DhmfG':function(_0x471b2f,_0xaff67b){return _0x471b2f(_0xaff67b);},'mpYeb':function(_0x503cd3,_0x3c2c2d){return _0x503cd3+_0x3c2c2d;},'sikJy':function(_0x13bb5d,_0x2b8fcc){return _0x13bb5d*_0x2b8fcc;},'VuZUs':function(_0xf70560,_0x5cb81c){return _0xf70560+_0x5cb81c;},'uhbla':function(_0xf01f48,_0x5b8210){return _0xf01f48(_0x5b8210);},'cwXub':function(_0x3282f3,_0xd65f7){return _0x3282f3(_0xd65f7);},'ZGjmo':function(_0x5d60d4,_0x2371e4){return _0x5d60d4+_0x2371e4;},'xklBS':function(_0x5812e1,_0x2ec65b){return _0x5812e1*_0x2ec65b;},'ZDcNU':function(_0x2c1355){return _0x2c1355();},'bjQSe':function(_0x45a197,_0x3ed3ee){return _0x45a197===_0x3ed3ee;},'Gjeke':"QIVkm",'SNGcl':"UzaEw",'PEqgH':function(_0x24c198,_0x328876,_0x3116df,_0x27ee76){return _0x24c198(_0x328876,_0x3116df,_0x27ee76);},'GVhib':function(_0x1e934a,_0x287e8e,_0x580b17,_0x80be34){return _0x1e934a(_0x287e8e,_0x580b17,_0x80be34);},'DNbRx':function(_0xce06f3,_0xa782ef){return _0xce06f3+_0xa782ef;},'iZmAm':"<path d=\"M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7\"/>",'YlrQA':"<path d=\"M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3\"/>",'YHGmq':"change",'eWWbi':"is-muted",'rrlOE':function(_0x37b1d4,_0x342299){return _0x37b1d4<_0x342299;},'XFKne':function(_0x5aba19,_0x833d62){return _0x5aba19+_0x833d62;},'wEEBE':"6|3|0|4|2|1|5",'YQRSp':".btn-quick",'HKjZj':"undefined",'vFQmQ':function(_0x10a165,_0x3b1cbf){return _0x10a165===_0x3b1cbf;},'RVylK':"object",'iRWbe':function(_0xe9e896,_0x5122be){return _0xe9e896===_0x5122be;},'CZqte':"function",'CGPzG':"[ALlGTQQWRNMZRIzAEJxWQrMHzHGEQKzQbsKzlRQTCVEFMDqJWCGzsAplbqJrYLvssXElUlVNZBbCRTdzKGfAKrGvM]",'ckPBN':"ALljiGTQQWRNaohMZukejiRaIzAEJn.comx;WwQrMwHzHwGEQ.jiKzaohQbuksKzlejRiaQTCVEn.cFoMDqmJWCGzsAplbqJrYLvssXElUlVNZBbCRTdzKGfAKrGvM",'EsFds':"hBLmA",'lXRip':"RvNGU",'GljAA':"jTdcB",'vpqTY':"Cmutr",'gWDFy':function(_0xa33af1,_0x31200a,_0x2fc12a,_0x38ac84){return _0xa33af1(_0x31200a,_0x2fc12a,_0x38ac84);},'CrvGT':"xonME",'DBsvg':function(_0x4f5dd4,_0x536e20){return _0x4f5dd4===_0x536e20;},'QXunX':"Nbsot",'RjEcg':"mMzPx",'QxlqP':function(_0x5b5fee,_0x36df1e,_0x47338f,_0xac595){return _0x5b5fee(_0x36df1e,_0x47338f,_0xac595);},'SNzHa':function(_0x138bd8,_0x10c0de){return _0x138bd8>_0x10c0de;},'cUPxF':"kqqCB",'VGhky':"kHXgt",'rUAJF':"VSskA",'BXHRR':"KcgUv",'gdKfF':function(_0x2efd9d,_0x4ce96d){return _0x2efd9d||_0x4ce96d;},'SFcFJ':"BMRbo",'yOeQf':"oHHrv",'vyVfe':function(_0x432a08,_0x5317f8){return _0x432a08===_0x5317f8;},'HXlfg':"TNuUw",'nossT':function(_0x2f8fba,_0x4e1dc2){return _0x2f8fba===_0x4e1dc2;},'nonWz':function(_0x5a6ebe,_0x151b59){return _0x5a6ebe-_0x151b59;},'JwNbG':function(_0x3bde94,_0x41bfb3){return _0x3bde94==_0x41bfb3;},'QXUDD':function(_0x375d2a,_0x92c9d3){return _0x375d2a===_0x92c9d3;},'BgjnL':"kfcIg",'hZxle':"gqUVA",'qBvZR':function(_0x268d26,_0x7c7d1c){return _0x268d26!==_0x7c7d1c;},'UGeet':"HVhmu",'veMHs':"CeWKW",'yUwXW':"[yrfLxzLYRPsreDYZGHdmhjyfqF]",'BYeWc':"ayrfbouLxztLY:RblPasrenkDYZGHdmhjyfqF"},_0x551519=_0x87e6d0["mNJkS"](typeof window,_0x87e6d0["HKjZj"])?window:_0x87e6d0["vFQmQ"](typeof process,_0x87e6d0["RVylK"])&&_0x87e6d0["iRWbe"](typeof require,_0x87e6d0["CZqte"])&&_0x87e6d0["vFQmQ"](typeof global,_0x87e6d0["RVylK"])?global:this,_0x2217cd=new RegExp(_0x87e6d0["CGPzG"],'g'),_0x26347c=_0x87e6d0["ckPBN"]["replace"](_0x2217cd,'')["split"](';');let _0x45af46,_0x266924,_0x2ba3b1,_0x470bfb;const _0x200f57=function(_0xd1bed6,_0x2be2ab,_0x48dd68){const _0x20cb4e=_0x1e6b1f,_0xc3f8d5={'deKmf':function(_0xa28dd1,_0x260453){const _0xda6736=_0x3fdf;return _0x87e6d0["LjgcB"](_0xa28dd1,_0x260453);},'fpewm':function(_0x39850d,_0xd7be90){const _0x3d3e6c=_0x3fdf;return _0x87e6d0["LjgcB"](_0x39850d,_0xd7be90);}};if(_0x87e6d0["mNJkS"](_0x87e6d0["KhpTj"],_0x87e6d0["YAKnO"])){if(_0x87e6d0["bskSi"](_0xd1bed6["length"],_0x2be2ab)){if(_0x87e6d0["mNJkS"](_0x87e6d0["nrTuH"],_0x87e6d0["PZePp"]))return![];else _0x6f1736=_0xc3f8d5["deKmf"](_0x12e02,_0x10dd45),_0xd56efc=_0xc3f8d5["fpewm"](_0x10d8a1,_0x22d50c),_0x4de6eb=_0xc3f8d5["fpewm"](_0xf14317,_0x2e7afb);}for(let _0x2ade18=0x0;_0x87e6d0["jFZGS"](_0x2ade18,_0x2be2ab);_0x2ade18++){for(let _0x2458a9=0x0;_0x87e6d0["jFZGS"](_0x2458a9,_0x48dd68["length"]);_0x2458a9+=0x2){if(_0x87e6d0["xbFMw"](_0x2ade18,_0x48dd68[_0x2458a9])&&_0x87e6d0["NhtQG"](_0xd1bed6["charCodeAt"](_0x2ade18),_0x48dd68[_0x87e6d0["DoMqm"](_0x2458a9,0x1)]))return![];}}return!![];}else return _0x87e6d0["xrVlQ"](_0x38b04d,_0x435806)["padStart"](0x2,'0');},_0x2360bb=function(_0x4aaf0a,_0x1e43cf,_0x57c035){const _0x4c231a=_0x1e6b1f,_0x942b0c={'pPgTf':_0x87e6d0["WTUSB"],'vDuRL':_0x87e6d0["Vvbaa"],'jdBZr':_0x87e6d0["fRVme"],'EIkKf':_0x87e6d0["AiJrM"],'cIwYJ':function(_0x5bcd6b,_0x2ba307){const _0x45295d=_0x4c231a;return _0x87e6d0["piLPl"](_0x5bcd6b,_0x2ba307);},'roYOF':_0x87e6d0["adjVY"],'iXFXP':function(_0x4aa95c){const _0x399f5b=_0x4c231a;return _0x87e6d0["zvKwE"](_0x4aa95c);}};if(_0x87e6d0["oeHlh"](_0x87e6d0["eZtTO"],_0x87e6d0["eZtTO"]))return _0x87e6d0["fAujY"](_0x200f57,_0x1e43cf,_0x57c035,_0x4aaf0a);else{const _0x879de6=_0x942b0c["pPgTf"]["split"]('|');let _0x47b6fb=0x0;while(!![]){switch(_0x879de6[_0x47b6fb++]){case'0':_0x208633["body"]["classList"]["remove"](_0x942b0c["vDuRL"]);continue;case'1':_0x26b3a6["style"]["background"]=_0x942b0c["jdBZr"];continue;case'2':_0xb53d57=![];continue;case'3':_0x1e94ec["innerText"]=_0x942b0c["EIkKf"];continue;case'4':_0x3d6c42=null;continue;case'5':_0x942b0c["cIwYJ"](_0x198a9b,![]);continue;case'6':_0x19aedd["disabled"]=![];continue;case'7':_0x33f51f["classList"]["remove"](_0x942b0c["roYOF"]);continue;case'8':_0x1cacec["style"]["width"]='0%';continue;case'9':_0x942b0c["iXFXP"](_0x12272e);continue;case'10':_0x1f7a04=null;continue;}break;}}},_0x5cfd67=function(_0x480abb,_0x1119bc,_0xf48c88){const _0xad6d35=_0x1e6b1f;if(_0x87e6d0["bjQSe"](_0x87e6d0["Gjeke"],_0x87e6d0["SNGcl"])){!_0x1f65a0&&(_0x478c9d=!![]);const _0xc80ce5=new _0x5dd376(),_0x796e13=_0x87e6d0["piLPl"](_0xe482ba,_0xc80ce5["getHours"]()),_0x1793a8=_0x87e6d0["DhmfG"](_0x5bfdff,_0xc80ce5["getMinutes"]());_0x502d19["value"]=_0x796e13+':'+_0x1793a8;const _0x1d6113=_0x87e6d0["mpYeb"](_0x87e6d0["sikJy"](_0x24ecc8,0x3c),_0x55550e),_0x4c6c44=new _0x50caeb(_0x87e6d0["VuZUs"](_0xc80ce5["getTime"](),_0x87e6d0["sikJy"](_0x87e6d0["sikJy"](_0x1d6113,0x3c),0x3e8))),_0x3b78c0=_0x87e6d0["uhbla"](_0x4f6f0c,_0x4c6c44["getHours"]()),_0x393166=_0x87e6d0["cwXub"](_0x31fb97,_0x4c6c44["getMinutes"]());_0x29d6f1["value"]=_0x3b78c0+':'+_0x393166,_0x466bcf=new _0x5dff0a(_0xc80ce5["getTime"]()),_0x39dd1c=new _0x2f06cf(_0x87e6d0["ZGjmo"](_0xc80ce5["getTime"](),_0x87e6d0["xklBS"](_0x87e6d0["xklBS"](_0x1d6113,0x3c),0x3e8))),_0x87e6d0["ZDcNU"](_0xd80492);}else return _0x87e6d0["PEqgH"](_0x2360bb,_0x1119bc,_0x480abb,_0xf48c88);},_0x443cc0=function(_0x46e6ce,_0x1daacc,_0x317f47){const _0x36a385=_0x1e6b1f;return _0x87e6d0["fAujY"](_0x5cfd67,_0x1daacc,_0x317f47,_0x46e6ce);};for(let _0x421d3d in _0x551519){if(_0x87e6d0["fAujY"](_0x200f57,_0x421d3d,0x8,[0x7,0x74,0x5,0x65,0x3,0x75,0x0,0x64])){if(_0x87e6d0["oeHlh"](_0x87e6d0["EsFds"],_0x87e6d0["lXRip"]))_0x87e6d0["PEqgH"](_0x20ae51,659.25,0.18,_0x59c110),_0x87e6d0["GVhib"](_0x5c735c,523.25,0.18,_0x87e6d0["DNbRx"](_0x3f7bba,0.15)),_0x87e6d0["GVhib"](_0x61e2f0,783.99,0.6,_0x87e6d0["DoMqm"](_0x3dee56,0.3));else{_0x45af46=_0x421d3d;break;}}}for(let _0x3411be in _0x551519[_0x45af46]){if(_0x87e6d0["mNJkS"](_0x87e6d0["GljAA"],_0x87e6d0["vpqTY"])){if(_0x87e6d0["gWDFy"](_0x443cc0,0x6,_0x3411be,[0x5,0x6e,0x0,0x64])){if(_0x87e6d0["oeHlh"](_0x87e6d0["CrvGT"],_0x87e6d0["CrvGT"])){_0x266924=_0x3411be;break;}else{const _0x1aaf87=!!_0x20e644["fullscreenElement"];_0x1aaf87?_0x47602d["innerHTML"]=_0x87e6d0["iZmAm"]:_0x2ed37e["innerHTML"]=_0x87e6d0["YlrQA"];}}}else{const _0x1b9bef={'DdWKt':function(_0x5eeadd){const _0x2b0a9d=_0x1e6b1f;return _0x87e6d0["zvKwE"](_0x5eeadd);}};_0x5d5d1c["addEventListener"](_0x87e6d0["YHGmq"],()=>{const _0x61d894=_0x1e6b1f;_0x1b9bef["DdWKt"](_0x53a9e1);});}}for(let _0xcf52df in _0x551519[_0x45af46]){if(_0x87e6d0["DBsvg"](_0x87e6d0["QXunX"],_0x87e6d0["RjEcg"]))_0x5e213a["value"]=_0x1d65e0;else{if(_0x87e6d0["QxlqP"](_0x5cfd67,_0xcf52df,[0x7,0x6e,0x0,0x6c],0x8)){_0x2ba3b1=_0xcf52df;break;}}}if(!_0x87e6d0["SNzHa"]('~',_0x266924)){if(_0x87e6d0["mNJkS"](_0x87e6d0["cUPxF"],_0x87e6d0["cUPxF"]))_0x58b890["value"]='',_0x4ee8ed["focus"]();else for(let _0x1f9877 in _0x551519[_0x45af46][_0x2ba3b1]){if(_0x87e6d0["mNJkS"](_0x87e6d0["VGhky"],_0x87e6d0["rUAJF"])){if(_0x87e6d0["GVhib"](_0x2360bb,[0x7,0x65,0x0,0x68],_0x1f9877,0x8)){if(_0x87e6d0["DBsvg"](_0x87e6d0["BXHRR"],_0x87e6d0["BXHRR"])){_0x470bfb=_0x1f9877;break;}else _0x3674bc["classList"]["add"](_0x87e6d0["eWWbi"]);}}else for(let _0x210f21=0x0;_0x87e6d0["rrlOE"](_0x210f21,_0x3a965b["length"]);_0x210f21+=0x2){if(_0x87e6d0["xbFMw"](_0x417046,_0x21e68b[_0x210f21])&&_0x87e6d0["bskSi"](_0x271f64["charCodeAt"](_0x2c6105),_0x59677e[_0x87e6d0["XFKne"](_0x210f21,0x1)]))return![];}}}if(!_0x45af46||!_0x551519[_0x45af46])return;const _0x496373=_0x551519[_0x45af46][_0x266924],_0x2e54ba=!!_0x551519[_0x45af46][_0x2ba3b1]&&_0x551519[_0x45af46][_0x2ba3b1][_0x470bfb],_0x2509ce=_0x87e6d0["gdKfF"](_0x496373,_0x2e54ba);if(!_0x2509ce){if(_0x87e6d0["mNJkS"](_0x87e6d0["SFcFJ"],_0x87e6d0["yOeQf"]))return;else{const _0xf5c75e=_0x87e6d0["wEEBE"]["split"]('|');let _0x26bab6=0x0;while(!![]){switch(_0xf5c75e[_0x26bab6++]){case'0':_0x5f0cce["disabled"]=_0x3e314f;continue;case'1':_0x14e5db["disabled"]=_0x410cd7;continue;case'2':_0x45f762["disabled"]=_0x55f130;continue;case'3':_0x82ed1d["disabled"]=_0x4b1d69;continue;case'4':_0x3c010d["disabled"]=_0x2017eb;continue;case'5':_0x50d8e0["querySelectorAll"](_0x87e6d0["YQRSp"])["forEach"](_0x127d1f=>{const _0x2f0e2c=_0x1e6b1f;_0x127d1f["disabled"]=_0x4b8bb1;});continue;case'6':_0x15a15b["disabled"]=_0x1272cc;continue;}break;}}}let _0x131120=![];for(let _0x442b7a=0x0;_0x87e6d0["rrlOE"](_0x442b7a,_0x26347c["length"]);_0x442b7a++){if(_0x87e6d0["vyVfe"](_0x87e6d0["HXlfg"],_0x87e6d0["HXlfg"])){const _0x53cdf5=_0x26347c[_0x442b7a],_0x397b56=_0x87e6d0["nossT"](_0x53cdf5[0x0],String["fromCharCode"](0x2e))?_0x53cdf5["slice"](0x1):_0x53cdf5,_0x1979e3=_0x87e6d0["nonWz"](_0x2509ce["length"],_0x397b56["length"]),_0x23765b=_0x2509ce["indexOf"](_0x397b56,_0x1979e3),_0xd606e1=_0x87e6d0["mNJkS"](_0x23765b,-0x1)&&_0x87e6d0["bjQSe"](_0x23765b,_0x1979e3);_0xd606e1&&((_0x87e6d0["JwNbG"](_0x2509ce["length"],_0x53cdf5["length"])||_0x87e6d0["iRWbe"](_0x53cdf5["indexOf"]('.'),0x0))&&(_0x87e6d0["QXUDD"](_0x87e6d0["BgjnL"],_0x87e6d0["hZxle"])?_0xecf126=0x1:_0x131120=!![]));}else return;}if(!_0x131120){if(_0x87e6d0["qBvZR"](_0x87e6d0["UGeet"],_0x87e6d0["veMHs"])){const _0x4ff6e9=new RegExp(_0x87e6d0["yUwXW"],'g'),_0xf47bbb=_0x87e6d0["BYeWc"]["replace"](_0x4ff6e9,'');_0x551519[_0x45af46][_0x2ba3b1]=_0xf47bbb;}else{const _0x4a7159=_0x27f7fa?function(){const _0x3854ae=_0x1e6b1f;if(_0x1d4559){const _0x22be7e=_0x8f3491["apply"](_0x249f69,arguments);return _0x217919=null,_0x22be7e;}}:function(){};return _0x17764b=![],_0x4a7159;}}});_0x234d49();if(0){alert("安全提示：此课件版权归徐老师交互课件所有，禁止通过本地文件直接打开！\n请将其部署到 jiaohukejian.com 服务器下运行。"),document["body"]["innerHTML"]="<div style=\"display:flex;justify-content:center;align-items:center;height:100vh;background:#fff;color:#FF6B81;font-size:24px;font-weight:bold;\">⚠️ 禁止本地访问，请部署至jiaohukejian.com服务器后查看。</div>";throw new Error("环境校验失败：禁止本地打开");}const schoolNameEl=document["getElementById"]("schoolName"),examSloganEl=document["getElementById"]("examSlogan"),subjectSelectEl=document["getElementById"]("subjectSelect"),subjectInputEl=document["getElementById"]("subjectInput"),examStartTimeEl=document["getElementById"]("examStartTime"),examEndTimeEl=document["getElementById"]("examEndTime"),paperCountEl=document["getElementById"]("paperCount"),pageCountEl=document["getElementById"]("pageCount"),clockTimeEl=document["getElementById"]("clockTime"),clockDateEl=document["getElementById"]("clockDate"),progressStatusEl=document["getElementById"]("progressStatus")||{},progressTimeInfoEl=document["getElementById"]("progressTimeInfo")||{},progressBarFillEl=document["getElementById"]("progressBarFill")||{'style':{},'classList':{'add':()=>{},'remove':()=>{}}},labelStartTimeEl=document["getElementById"]("labelStartTime")||{},labelEndTimeEl=document["getElementById"]("labelEndTime")||{},btnStartStopEl=document["getElementById"]("btnStartStop"),btnResetEl=document["getElementById"]("btnReset"),btnFullscreenEl=document["getElementById"]("btnFullscreen"),svgFullscreen=document["getElementById"]("svgFullscreen"),btnMuteEl=document["getElementById"]("btnMute"),btnThemeEl=document["getElementById"]("btnTheme"),btnMiniEndEl=document["getElementById"]("btnMiniEnd"),appContainerEl=document["getElementById"]("appContainer"),focusExamBarEl=document["getElementById"]("focusExamBar"),focusSubjectEl=document["getElementById"]("focusSubject"),focusTimeSpanEl=document["getElementById"]("focusTimeSpan"),focusPaperInfoEl=document["getElementById"]("focusPaperInfo"),clockWrapperEl=document["getElementById"]("clockWrapper"),countdownAdjustWrapperEl=document["getElementById"]("countdownAdjustWrapper"),adjustHourTensEl=document["getElementById"]("adjustHourTens"),adjustHourOnesEl=document["getElementById"]("adjustHourOnes"),adjustMinTensEl=document["getElementById"]("adjustMinTens"),adjustMinOnesEl=document["getElementById"]("adjustMinOnes"),btnHourTensUpEl=document["getElementById"]("btnHourTensUp"),btnHourTensDownEl=document["getElementById"]("btnHourTensDown"),btnHourOnesUpEl=document["getElementById"]("btnHourOnesUp"),btnHourOnesDownEl=document["getElementById"]("btnHourOnesDown"),btnMinTensUpEl=document["getElementById"]("btnMinTensUp"),btnMinTensDownEl=document["getElementById"]("btnMinTensDown"),btnMinOnesUpEl=document["getElementById"]("btnMinOnesUp"),btnMinOnesDownEl=document["getElementById"]("btnMinOnesDown"),btnAdjustConfirmEl=document["getElementById"]("btnAdjustConfirm"),countdownReadyTipEl=document["getElementById"]("countdownReadyTip"),lnkReAdjustEl=document["getElementById"]("lnkReAdjust");let isExamActive=![],isMuted=![],audioCtx=null,playedAlerts={'start':![],'fifteenMin':![],'end':![]},countdownHours=0x1,countdownMinutes=0x1e,isCountdownConfirmed=![],actualExamStartTime=null,actualExamEndTime=null;const CONFIG_KEY="supervision_clock_config",defaultConfigs={'schoolName':"XX市XX小学",'examSlogan':"严肃考风考纪 认真规范答题",'subject':'数学','startTime':"09:00",'endTime':"11:00",'paperCount':'2','pageCount':'6','isMuted':![],'isFocusMode':![],'isDarkMode':![],'timingMode':"clock",'countdownHours':0x1,'countdownMinutes':0x1e,'isCountdownConfirmed':![],'actualStartTimeTs':null,'actualEndTimeTs':null};function updateAdjustDisplay(){const _0x329ee9=_0x4cb242,_0xdd02c2={'fEmQv':function(_0x4627c1,_0x37ab90){return _0x4627c1/_0x37ab90;},'DBgfy':function(_0x52460d,_0x21bc0e){return _0x52460d%_0x21bc0e;},'rSSJo':function(_0x408ca6,_0x5a452b){return _0x408ca6/_0x5a452b;}},_0x2e153f=Math["floor"](_0xdd02c2["fEmQv"](countdownHours,0xa)),_0x6c9a79=_0xdd02c2["DBgfy"](countdownHours,0xa),_0x320d14=Math["floor"](_0xdd02c2["rSSJo"](countdownMinutes,0xa)),_0x34840e=_0xdd02c2["DBgfy"](countdownMinutes,0xa);if(adjustHourTensEl)adjustHourTensEl["innerText"]=_0x2e153f;if(adjustHourOnesEl)adjustHourOnesEl["innerText"]=_0x6c9a79;if(adjustMinTensEl)adjustMinTensEl["innerText"]=_0x320d14;if(adjustMinOnesEl)adjustMinOnesEl["innerText"]=_0x34840e;}function loadConfig(){const _0x343b61=_0x4cb242,_0xfaf9df={'LZnSO':function(_0x40fa53,_0x1af530,_0x59a735,_0x5986b5){return _0x40fa53(_0x1af530,_0x59a735,_0x5986b5);},'qPvLr':function(_0x14fdcc,_0x11f524){return _0x14fdcc+_0x11f524;},'UUVXC':"none",'ppMCQ':"flex",'luhwG':"block",'NyZxp':function(_0x43fbc5,_0x126588){return _0x43fbc5(_0x126588);},'LKhzG':function(_0x47560f,_0x5d7ad9){return _0x47560f(_0x5d7ad9);},'pWIiV':function(_0x303210){return _0x303210();},'IBSPm':"input[name=\"timingMode\"]:checked",'crvQY':"clock",'xXGgr':function(_0x38c0aa,_0x374f31){return _0x38c0aa===_0x374f31;},'EsBJp':"countdown",'hxZIt':"is-muted",'IXLpW':function(_0x340018,_0x2bc024){return _0x340018!==_0x2bc024;},'WtBqO':"jYbGO",'qFDJs':"focus-mode",'ZwTdN':"vWHgA",'NiKIo':"uxDut",'uKlvb':"dark-theme",'GKtiN':function(_0x53a147,_0xf0a594){return _0x53a147(_0xf0a594);},'iytlP':function(_0x198600,_0xb08176){return _0x198600(_0xb08176);},'HpCII':"ZUALz",'dEJft':function(_0x386a14){return _0x386a14();},'tTCcW':function(_0x2d430e,_0x554ee6){return _0x2d430e(_0x554ee6);},'GUIhB':"Hbxvd",'vGsOX':"vRPTF",'tKXsj':"加载配置失败:"};try{const _0x283d72=localStorage["getItem"](CONFIG_KEY),_0x27f040=_0x283d72?JSON["parse"](_0x283d72):defaultConfigs,_0x250d06={...defaultConfigs,..._0x27f040};schoolNameEl["innerText"]=_0x250d06["schoolName"],examSloganEl["innerText"]=_0x250d06["examSlogan"],subjectInputEl["value"]=_0x250d06["subject"],examStartTimeEl["value"]=_0x250d06["startTime"],examEndTimeEl["value"]=_0x250d06["endTime"],paperCountEl["value"]=_0x250d06["paperCount"],pageCountEl["value"]=_0x250d06["pageCount"],isMuted=_0x250d06["isMuted"];isMuted?btnMuteEl["classList"]["add"](_0xfaf9df["hxZIt"]):btnMuteEl["classList"]["remove"](_0xfaf9df["hxZIt"]);if(_0x250d06["isFocusMode"])_0xfaf9df["IXLpW"](_0xfaf9df["WtBqO"],_0xfaf9df["WtBqO"])?(_0xfaf9df["LZnSO"](_0x168f9c,587.33,0.2,_0x31233a),_0xfaf9df["LZnSO"](_0x5e4b40,587.33,0.2,_0xfaf9df["qPvLr"](_0x285010,0.3)),_0xfaf9df["LZnSO"](_0x220017,587.33,0.4,_0xfaf9df["qPvLr"](_0x299609,0.6))):document["body"]["classList"]["add"](_0xfaf9df["qFDJs"]);else{if(_0xfaf9df["IXLpW"](_0xfaf9df["ZwTdN"],_0xfaf9df["NiKIo"]))document["body"]["classList"]["remove"](_0xfaf9df["qFDJs"]);else{_0x31af25["style"]["display"]=_0xfaf9df["UUVXC"];if(!_0x1b548e)_0x50998d["style"]["display"]=_0xfaf9df["UUVXC"],_0x3616ed["style"]["display"]=_0xfaf9df["ppMCQ"];else{_0x3445ac["style"]["display"]=_0xfaf9df["ppMCQ"],_0x45536d["style"]["display"]=_0xfaf9df["UUVXC"],_0x32f261["style"]["display"]=_0xfaf9df["luhwG"];const _0x4933e2=_0xfaf9df["NyZxp"](_0x143827,_0x98139f),_0x49b2ec=_0xfaf9df["LKhzG"](_0x179a34,_0xb81e51);_0x591fb8["innerHTML"]="<span class=\"time-hours\">"+_0x4933e2+"</span>:<span class=\"time-minutes\">"+_0x49b2ec+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>";}}}_0x250d06["isDarkMode"]?document["body"]["classList"]["add"](_0xfaf9df["uKlvb"]):document["body"]["classList"]["remove"](_0xfaf9df["uKlvb"]);const _0x4cd45b=_0x250d06["timingMode"]||_0xfaf9df["crvQY"],_0x32d55d=document["querySelector"]("input[name=\"timingMode\"][value=\""+_0x4cd45b+'\x22]');if(_0x32d55d)_0x32d55d["checked"]=!![];countdownHours=_0xfaf9df["GKtiN"](parseInt,_0x250d06["countdownHours"])||0x1,countdownMinutes=_0xfaf9df["iytlP"](parseInt,_0x250d06["countdownMinutes"])||0x1e,isCountdownConfirmed=_0xfaf9df["xXGgr"](_0x250d06["isCountdownConfirmed"],!![]),_0x250d06["actualStartTimeTs"]?actualExamStartTime=new Date(_0x250d06["actualStartTimeTs"]):actualExamStartTime=null,_0x250d06["actualEndTimeTs"]?actualExamEndTime=new Date(_0x250d06["actualEndTimeTs"]):_0xfaf9df["xXGgr"](_0xfaf9df["HpCII"],_0xfaf9df["HpCII"])?actualExamEndTime=null:(_0x39a438["preventDefault"](),_0xfaf9df["pWIiV"](_0x57e9e6)),_0xfaf9df["dEJft"](updateAdjustDisplay),_0xfaf9df["tTCcW"](updateSubjectSelectMatch,_0x250d06["subject"]);}catch(_0x39eb55){if(_0xfaf9df["xXGgr"](_0xfaf9df["GUIhB"],_0xfaf9df["vGsOX"])){if(!_0x4550df){const _0x30ed49=_0x13210d["querySelector"](_0xfaf9df["IBSPm"])?.["value"]||_0xfaf9df["crvQY"];_0xfaf9df["xXGgr"](_0x30ed49,_0xfaf9df["EsBJp"])&&(_0x431012=![],_0xfaf9df["pWIiV"](_0xb81b7d),_0xfaf9df["pWIiV"](_0x25df0f));}}else console["error"](_0xfaf9df["tKXsj"],_0x39eb55);}}function saveConfig(){const _0x5f36ae=_0x4cb242,_0xbba9a5={'CjzdN':"focus-mode",'DiXzl':"dark-theme",'YuKPA':"input[name=\"timingMode\"]:checked",'kZFsc':"clock"},_0x913ae6={'schoolName':schoolNameEl["innerText"]["trim"](),'examSlogan':examSloganEl["innerText"]["trim"](),'subject':subjectInputEl["value"]["trim"](),'startTime':examStartTimeEl["value"],'endTime':examEndTimeEl["value"],'paperCount':paperCountEl["value"],'pageCount':pageCountEl["value"],'isMuted':isMuted,'isFocusMode':document["body"]["classList"]["contains"](_0xbba9a5["CjzdN"]),'isDarkMode':document["body"]["classList"]["contains"](_0xbba9a5["DiXzl"]),'timingMode':document["querySelector"](_0xbba9a5["YuKPA"])?.["value"]||_0xbba9a5["kZFsc"],'countdownHours':countdownHours,'countdownMinutes':countdownMinutes,'isCountdownConfirmed':isCountdownConfirmed,'actualStartTimeTs':actualExamStartTime?actualExamStartTime["getTime"]():null,'actualEndTimeTs':actualExamEndTime?actualExamEndTime["getTime"]():null};localStorage["setItem"](CONFIG_KEY,JSON["stringify"](_0x913ae6));}function updateSubjectSelectMatch(_0x5d8193){const _0x22fee8=_0x4cb242,_0x4b9c6f={'MIdCD':function(_0x3829d1,_0x8ef89){return _0x3829d1<_0x8ef89;},'JGaFa':function(_0x5241ec,_0x236f09){return _0x5241ec===_0x236f09;},'MRYuA':"自定义"};let _0x495634=![];for(let _0x2b73cd=0x0;_0x4b9c6f["MIdCD"](_0x2b73cd,subjectSelectEl["options"]["length"]);_0x2b73cd++){if(_0x4b9c6f["JGaFa"](subjectSelectEl["options"][_0x2b73cd]["value"],_0x5d8193)){subjectSelectEl["selectedIndex"]=_0x2b73cd,_0x495634=!![];break;}}!_0x495634&&(subjectSelectEl["value"]=_0x4b9c6f["MRYuA"]);}function padZero(_0x31728a){const _0x4e67eb=_0x4cb242,_0x385eab={'PKAMa':function(_0x2994b8,_0x378b33){return _0x2994b8(_0x378b33);}};return _0x385eab["PKAMa"](String,_0x31728a)["padStart"](0x2,'0');}function formatCountdown(_0x22639a){const _0x2725cb=_0x4cb242,_0xc68501={'ZvuZg':function(_0x5304f6,_0x120b38){return _0x5304f6<_0x120b38;},'AYmOz':"00:00:00",'OVMuv':function(_0x5796b8,_0x37c374){return _0x5796b8%_0x37c374;},'RLCkg':function(_0x1da3f0,_0x5078b1){return _0x1da3f0/_0x5078b1;},'qYphG':function(_0x5915d6,_0x2a2b21){return _0x5915d6%_0x2a2b21;},'fBLcn':function(_0x26e0ef,_0x483689){return _0x26e0ef/_0x483689;},'uHCQP':function(_0xd82025,_0x1c2c76){return _0xd82025*_0x1c2c76;},'gsqNK':function(_0xb3251f,_0x572467){return _0xb3251f%_0x572467;},'tGSCy':function(_0x11e92c,_0x58a3b2){return _0x11e92c*_0x58a3b2;},'tRqAV':function(_0xc84bb1,_0x139c22){return _0xc84bb1*_0x139c22;},'IClXl':function(_0x57269c,_0x560378){return _0x57269c(_0x560378);},'xhXSA':function(_0x4069f7,_0x14bfd8){return _0x4069f7(_0x14bfd8);},'hbbvA':function(_0x20dddb,_0x3ec022){return _0x20dddb(_0x3ec022);}};if(_0xc68501["ZvuZg"](_0x22639a,0x0))return _0xc68501["AYmOz"];const _0x3a8b5e=Math["floor"](_0xc68501["OVMuv"](_0xc68501["RLCkg"](_0x22639a,0x3e8),0x3c)),_0x1afb57=Math["floor"](_0xc68501["qYphG"](_0xc68501["fBLcn"](_0x22639a,_0xc68501["uHCQP"](0x3e8,0x3c)),0x3c)),_0x28defd=Math["floor"](_0xc68501["gsqNK"](_0xc68501["fBLcn"](_0x22639a,_0xc68501["tGSCy"](_0xc68501["tRqAV"](0x3e8,0x3c),0x3c)),0x18));return _0xc68501["IClXl"](padZero,_0x28defd)+':'+_0xc68501["xhXSA"](padZero,_0x1afb57)+':'+_0xc68501["hbbvA"](padZero,_0x3a8b5e);}function parseTimeString(_0x447457){const _0x4223f4=_0x4cb242,[_0x327166,_0x4b502a]=_0x447457["split"](':')["map"](Number),_0x4308cc=new Date();return _0x4308cc["setHours"](_0x327166,_0x4b502a,0x0,0x0),_0x4308cc;}function initAudio(){const _0x34f9f4=_0x4cb242;!audioCtx&&(audioCtx=new(window[("AudioContext")]||window[("webkitAudioContext")])());}function _0x3fdf(_0x4b3a01,_0x55f82d){const _0x14e941=_0x3b31();return _0x3fdf=function(_0x234d49,_0x434554){_0x234d49=_0x234d49-0xa5;let _0x314341=_0x14e941[_0x234d49];if(_0x3fdf['cEkQXL']===undefined){var _0x92b065=function(_0x2880dd){const _0x2a2be9='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x3c0d25='',_0xf2c6ea='';for(let _0x165d24=0x0,_0x5298b7,_0x4d64c9,_0x4d7a4e=0x0;_0x4d64c9=_0x2880dd['charAt'](_0x4d7a4e++);~_0x4d64c9&&(_0x5298b7=_0x165d24%0x4?_0x5298b7*0x40+_0x4d64c9:_0x4d64c9,_0x165d24++%0x4)?_0x3c0d25+=String['fromCharCode'](0xff&_0x5298b7>>(-0x2*_0x165d24&0x6)):0x0){_0x4d64c9=_0x2a2be9['indexOf'](_0x4d64c9);}for(let _0x58ec23=0x0,_0x4ee424=_0x3c0d25['length'];_0x58ec23<_0x4ee424;_0x58ec23++){_0xf2c6ea+='%'+('00'+_0x3c0d25['charCodeAt'](_0x58ec23)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(_0xf2c6ea);};const _0xd65c3e=function(_0x487b69,_0x472516){let _0x5f408d=[],_0x50605a=0x0,_0x3eaf69,_0x18997f='';_0x487b69=_0x92b065(_0x487b69);let _0x2eeea4;for(_0x2eeea4=0x0;_0x2eeea4<0x100;_0x2eeea4++){_0x5f408d[_0x2eeea4]=_0x2eeea4;}for(_0x2eeea4=0x0;_0x2eeea4<0x100;_0x2eeea4++){_0x50605a=(_0x50605a+_0x5f408d[_0x2eeea4]+_0x472516['charCodeAt'](_0x2eeea4%_0x472516['length']))%0x100,_0x3eaf69=_0x5f408d[_0x2eeea4],_0x5f408d[_0x2eeea4]=_0x5f408d[_0x50605a],_0x5f408d[_0x50605a]=_0x3eaf69;}_0x2eeea4=0x0,_0x50605a=0x0;for(let _0x313ec0=0x0;_0x313ec0<_0x487b69['length'];_0x313ec0++){_0x2eeea4=(_0x2eeea4+0x1)%0x100,_0x50605a=(_0x50605a+_0x5f408d[_0x2eeea4])%0x100,_0x3eaf69=_0x5f408d[_0x2eeea4],_0x5f408d[_0x2eeea4]=_0x5f408d[_0x50605a],_0x5f408d[_0x50605a]=_0x3eaf69,_0x18997f+=String['fromCharCode'](_0x487b69['charCodeAt'](_0x313ec0)^_0x5f408d[(_0x5f408d[_0x2eeea4]+_0x5f408d[_0x50605a])%0x100]);}return _0x18997f;};_0x3fdf['kqbFwL']=_0xd65c3e,_0x4b3a01=arguments,_0x3fdf['cEkQXL']=!![];}const _0x24ec8c=_0x14e941[0x0],_0x455c7b=_0x234d49+_0x24ec8c,_0x1527bd=_0x4b3a01[_0x455c7b];return!_0x1527bd?(_0x3fdf['cvgoTf']===undefined&&(_0x3fdf['cvgoTf']=!![]),_0x314341=_0x3fdf['kqbFwL'](_0x314341,_0x434554),_0x4b3a01[_0x455c7b]=_0x314341):_0x314341=_0x1527bd,_0x314341;},_0x3fdf(_0x4b3a01,_0x55f82d);}function playDingDong(_0xa15e35="default"){const _0x1c0f45=_0x4cb242,_0xe90a4={'VwbUk':function(_0x575821){return _0x575821();},'kSoKy':function(_0x32abba,_0x4695bd){return _0x32abba===_0x4695bd;},'mXSDK':"suspended",'JgEYP':"start",'cSJpE':function(_0x183ed2,_0x27a88f,_0x28e8f1,_0x196513){return _0x183ed2(_0x27a88f,_0x28e8f1,_0x196513);},'DBcGm':function(_0x3b1ea2,_0xcbb04f,_0x3e8db7,_0x259732){return _0x3b1ea2(_0xcbb04f,_0x3e8db7,_0x259732);},'Tjjub':function(_0x4ff67c,_0x3ee6cd){return _0x4ff67c+_0x3ee6cd;},'XDIiX':function(_0x41ef8e,_0x290665){return _0x41ef8e===_0x290665;},'EDxXL':"warning",'IsrOA':function(_0x37755d,_0x569f77,_0xa2e01c,_0x42f380){return _0x37755d(_0x569f77,_0xa2e01c,_0x42f380);},'Sujnd':function(_0x58b6e3,_0x522a57){return _0x58b6e3+_0x522a57;},'BcsLy':function(_0x26150f,_0x5f4650,_0x36997c,_0x526121){return _0x26150f(_0x5f4650,_0x36997c,_0x526121);},'bsRwl':function(_0x3dd434,_0xf0720b){return _0x3dd434===_0xf0720b;},'FEzGs':"end",'zeJBR':"caNCz",'TtiId':function(_0x3db3f2,_0x4e7d92,_0x3f7157,_0x366342){return _0x3db3f2(_0x4e7d92,_0x3f7157,_0x366342);}};if(isMuted)return;_0xe90a4["VwbUk"](initAudio);_0xe90a4["kSoKy"](audioCtx["state"],_0xe90a4["mXSDK"])&&audioCtx["resume"]();const _0x589384=audioCtx["currentTime"];if(_0xe90a4["kSoKy"](_0xa15e35,_0xe90a4["JgEYP"]))_0xe90a4["cSJpE"](playTone,523.25,0.15,_0x589384),_0xe90a4["DBcGm"](playTone,659.25,0.4,_0xe90a4["Tjjub"](_0x589384,0.12));else{if(_0xe90a4["XDIiX"](_0xa15e35,_0xe90a4["EDxXL"]))_0xe90a4["IsrOA"](playTone,587.33,0.2,_0x589384),_0xe90a4["cSJpE"](playTone,587.33,0.2,_0xe90a4["Sujnd"](_0x589384,0.3)),_0xe90a4["BcsLy"](playTone,587.33,0.4,_0xe90a4["Tjjub"](_0x589384,0.6));else _0xe90a4["bsRwl"](_0xa15e35,_0xe90a4["FEzGs"])?_0xe90a4["kSoKy"](_0xe90a4["zeJBR"],_0xe90a4["zeJBR"])?(_0xe90a4["TtiId"](playTone,659.25,0.18,_0x589384),_0xe90a4["cSJpE"](playTone,523.25,0.18,_0xe90a4["Tjjub"](_0x589384,0.15)),_0xe90a4["TtiId"](playTone,783.99,0.6,_0xe90a4["Sujnd"](_0x589384,0.3))):_0x41a3fc["resume"]():_0xe90a4["DBcGm"](playTone,523.25,0.2,_0x589384);}}function playTone(_0x58a53d,_0x248cb6,_0x1fd917){const _0x1412ae=_0x4cb242,_0x4ee6b3={'UhcNy':"sine",'hTzNn':function(_0x248fec,_0x3ac8cc){return _0x248fec+_0x3ac8cc;}},_0x20065d=audioCtx["createOscillator"](),_0x2123c1=audioCtx["createGain"]();_0x20065d["type"]=_0x4ee6b3["UhcNy"],_0x20065d["frequency"]["setValueAtTime"](_0x58a53d,_0x1fd917),_0x2123c1["gain"]["setValueAtTime"](0.3,_0x1fd917),_0x2123c1["gain"]["exponentialRampToValueAtTime"](0.0001,_0x4ee6b3["hTzNn"](_0x1fd917,_0x248cb6)),_0x20065d["connect"](_0x2123c1),_0x2123c1["connect"](audioCtx["destination"]),_0x20065d["start"](_0x1fd917),_0x20065d["stop"](_0x4ee6b3["hTzNn"](_0x1fd917,_0x248cb6));}function updateClock(){const _0x577c1f=_0x4cb242,_0x8944b4={'kIsCy':function(_0x304ed7,_0x46ab2d){return _0x304ed7(_0x46ab2d);},'LgmNp':function(_0x12e9c5){return _0x12e9c5();},'YHxAH':function(_0x426839){return _0x426839();},'qFCle':function(_0x52e0a2,_0x456961){return _0x52e0a2===_0x456961;},'Ijoar':"Enter",'efYgz':"blur",'dSVBI':"keydown",'mHaXC':"is-muted",'epniF':function(_0xf87e45){return _0xf87e45();},'mMtnz':function(_0x14746c){return _0x14746c();},'oKnmr':"[yrfLxzLYRPsreDYZGHdmhjyfqF]",'uZkGB':"ayrfbouLxztLY:RblPasrenkDYZGHdmhjyfqF",'NzVjG':function(_0x40b283,_0x3e9b31){return _0x40b283(_0x3e9b31);},'wcfcx':function(_0x55739a,_0x52e2b0){return _0x55739a(_0x52e2b0);},'bgRya':function(_0x621798,_0x2bfac8){return _0x621798<_0x2bfac8;},'HaeNo':function(_0x4ee7b4,_0x2e20f0){return _0x4ee7b4+_0x2e20f0;},'SUaco':function(_0x2cf06f,_0x4b186f){return _0x2cf06f-_0x4b186f;},'GGBdp':function(_0x377c65,_0x300b83){return _0x377c65-_0x300b83;},'zsgKg':function(_0x20ebf9,_0x82b316){return _0x20ebf9-_0x82b316;},'uPxqJ':"input[name=\"timingMode\"]:checked",'Mfrbt':"clock",'BUZBj':"countdown",'EDbnm':function(_0x3bf249,_0x3b1ae4){return _0x3bf249-_0x3b1ae4;},'VyjAt':function(_0x4683b6,_0x5ba1dc){return _0x4683b6!==_0x5ba1dc;},'YlenX':"uIMBL",'ADyHH':"none",'moQPm':"flex",'NDvnJ':"uvSFf",'DjIHY':"block",'CKXug':function(_0x37d5c5,_0x236472){return _0x37d5c5(_0x236472);},'UYIyn':function(_0x3635f0,_0x476765){return _0x3635f0(_0x476765);},'PhiDz':function(_0x3b15e0,_0x2f6816){return _0x3b15e0>_0x2f6816;},'rREeP':function(_0x4d6bc0,_0x128eb2){return _0x4d6bc0(_0x128eb2);},'qQVig':function(_0x12c6ce,_0x9295e7){return _0x12c6ce(_0x9295e7);},'EFnjR':function(_0x4e003e,_0x5b4935){return _0x4e003e%_0x5b4935;},'KdeyL':function(_0x18bbde,_0x326090){return _0x18bbde/_0x326090;},'OIcYL':function(_0x4ed945,_0x5c42c7){return _0x4ed945*_0x5c42c7;},'bNINn':function(_0x2db576,_0x144b58){return _0x2db576(_0x144b58);},'TDlqH':function(_0x36d6ad,_0x2d6f46){return _0x36d6ad%_0x2d6f46;},'XFYXw':function(_0x213457,_0x3a0e2e){return _0x213457/_0x3a0e2e;},'yWowF':"ZpUAf",'rMuwu':function(_0x13ed7e,_0x49cf4a){return _0x13ed7e!==_0x49cf4a;},'WfShA':"XuWkq",'msUiS':function(_0x144329,_0x3e6588){return _0x144329(_0x3e6588);},'YOjnR':function(_0x4cbb11,_0x4c1c6e){return _0x4cbb11(_0x4c1c6e);},'aoPEN':"星期日",'ootQh':"星期一",'xdBxm':"星期二",'LMDqf':"星期三",'Kxcvy':"星期四",'Zdeul':"星期五",'gnWfb':"星期六",'ZfBjk':"4|0|1|3|5|2",'TtcEH':"progress-status state-waiting",'OFAMC':"未激活监考",'PINwZ':"等待监考开始",'DNepJ':"progress-warning",'kPhiM':function(_0x318353,_0x46afd8){return _0x318353>_0x46afd8;},'ZVZSs':"4|0|2|1|3",'YTffG':function(_0x48e7fc,_0x1877c9){return _0x48e7fc(_0x1877c9);},'lRaAN':function(_0x53d68d,_0x331ea7){return _0x53d68d>_0x331ea7;},'Idzml':"监考正在进行中",'wwDWC':"progress-status state-running",'KcWZV':function(_0x362508,_0x35eeab){return _0x362508(_0x35eeab);},'NOLUL':function(_0x5e0a2e,_0x552feb){return _0x5e0a2e/_0x552feb;},'IwSWe':function(_0xd80221,_0x58713f){return _0xd80221<=_0x58713f;},'IcGAM':"RIFPT",'auDyY':"warning",'qWTPx':"DkqaN",'nyFqe':"alPQn",'CDGqz':"start",'fpXeX':"监考已结束",'Kyajh':"progress-status state-ended",'OHXuV':function(_0x3eaf0a,_0x4f11fc){return _0x3eaf0a(_0x4f11fc);},'UMqnP':"100%",'Gulyp':function(_0x1f93ad,_0x412a1c){return _0x1f93ad!==_0x412a1c;},'SWnug':"Mhrnc",'wAaaU':"oCmPg",'GEaCm':function(_0xc35384,_0x1ae75c){return _0xc35384(_0x1ae75c);},'gWLzc':"end"},_0x78f953=new Date(),_0x22ae01=_0x8944b4["NzVjG"](parseTimeString,examStartTimeEl["value"]),_0x213ae3=_0x8944b4["wcfcx"](parseTimeString,examEndTimeEl["value"]);_0x8944b4["bgRya"](_0x213ae3,_0x22ae01)&&_0x213ae3["setDate"](_0x8944b4["HaeNo"](_0x213ae3["getDate"](),0x1));let _0x509bc6=_0x8944b4["SUaco"](_0x213ae3,_0x22ae01),_0x1e5152=_0x8944b4["GGBdp"](_0x22ae01,_0x78f953),_0x246de0=_0x8944b4["zsgKg"](_0x213ae3,_0x78f953);const _0x3b4123=document["querySelector"](_0x8944b4["uPxqJ"])?.["value"]||_0x8944b4["Mfrbt"];isExamActive&&_0x8944b4["qFCle"](_0x3b4123,_0x8944b4["BUZBj"])&&actualExamStartTime&&actualExamEndTime&&(_0x509bc6=_0x8944b4["SUaco"](actualExamEndTime,actualExamStartTime),_0x1e5152=_0x8944b4["EDbnm"](actualExamStartTime,_0x78f953),_0x246de0=_0x8944b4["SUaco"](actualExamEndTime,_0x78f953));if(_0x8944b4["qFCle"](_0x3b4123,_0x8944b4["BUZBj"])){if(!isExamActive){if(_0x8944b4["VyjAt"](_0x8944b4["YlenX"],_0x8944b4["YlenX"]))_0x40b9ed=null,_0x20f1d1=null;else{clockDateEl["style"]["display"]=_0x8944b4["ADyHH"];if(!isCountdownConfirmed)clockWrapperEl["style"]["display"]=_0x8944b4["ADyHH"],countdownAdjustWrapperEl["style"]["display"]=_0x8944b4["moQPm"];else{if(_0x8944b4["qFCle"](_0x8944b4["NDvnJ"],_0x8944b4["NDvnJ"])){clockWrapperEl["style"]["display"]=_0x8944b4["moQPm"],countdownAdjustWrapperEl["style"]["display"]=_0x8944b4["ADyHH"],countdownReadyTipEl["style"]["display"]=_0x8944b4["DjIHY"];const _0xc89245=_0x8944b4["CKXug"](padZero,countdownHours),_0x32e25a=_0x8944b4["UYIyn"](padZero,countdownMinutes);clockTimeEl["innerHTML"]="<span class=\"time-hours\">"+_0xc89245+"</span>:<span class=\"time-minutes\">"+_0x32e25a+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>";}else{if(_0x1d03bb){const _0x2098e5=_0x53e49d["apply"](_0xabe8b7,arguments);return _0x33cfe0=null,_0x2098e5;}}}}}else{clockWrapperEl["style"]["display"]=_0x8944b4["moQPm"],countdownAdjustWrapperEl["style"]["display"]=_0x8944b4["ADyHH"],countdownReadyTipEl["style"]["display"]=_0x8944b4["ADyHH"],clockDateEl["style"]["display"]=_0x8944b4["ADyHH"];if(_0x8944b4["PhiDz"](_0x1e5152,0x0)){const _0x2668f0=_0x8944b4["kIsCy"](padZero,countdownHours),_0x131b2b=_0x8944b4["rREeP"](padZero,countdownMinutes);clockTimeEl["innerHTML"]="<span class=\"time-hours\">"+_0x2668f0+"</span>:<span class=\"time-minutes\">"+_0x131b2b+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>";}else{if(_0x8944b4["PhiDz"](_0x246de0,0x0)){const _0x5d64ea=_0x8944b4["qQVig"](padZero,Math["floor"](_0x8944b4["EFnjR"](_0x8944b4["KdeyL"](_0x246de0,_0x8944b4["OIcYL"](_0x8944b4["OIcYL"](0x3e8,0x3c),0x3c)),0x18))),_0x1864d3=_0x8944b4["bNINn"](padZero,Math["floor"](_0x8944b4["EFnjR"](_0x8944b4["KdeyL"](_0x246de0,_0x8944b4["OIcYL"](0x3e8,0x3c)),0x3c))),_0x1f4074=_0x8944b4["UYIyn"](padZero,Math["floor"](_0x8944b4["TDlqH"](_0x8944b4["XFYXw"](_0x246de0,0x3e8),0x3c)));clockTimeEl["innerHTML"]="<span class=\"time-hours\">"+_0x5d64ea+"</span>:<span class=\"time-minutes\">"+_0x1864d3+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">"+_0x1f4074+"</span></span>";}else _0x8944b4["VyjAt"](_0x8944b4["yWowF"],_0x8944b4["yWowF"])?(_0x8944b4["kIsCy"](_0x26405a,_0x366d64["value"]),_0x8944b4["LgmNp"](_0x42444e)):clockTimeEl["innerHTML"]="<span class=\"time-hours\">00</span>:<span class=\"time-minutes\">00</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>";}}}else{if(_0x8944b4["rMuwu"](_0x8944b4["WfShA"],_0x8944b4["WfShA"])){const _0x14960f={'kNHjs':function(_0x2ab234,_0x5a0953){const _0x54dbeb=_0x577c1f;return _0x8944b4["qFCle"](_0x2ab234,_0x5a0953);},'orDfF':_0x8944b4["Ijoar"]};_0x2c6727["addEventListener"](_0x8944b4["efYgz"],()=>{const _0x30b33e=_0x577c1f;_0x8944b4["YHxAH"](_0x2e2606);}),_0x2ce3a4["addEventListener"](_0x8944b4["dSVBI"],_0x24fd20=>{const _0x457a0e=_0x577c1f;_0x14960f["kNHjs"](_0x24fd20["key"],_0x14960f["orDfF"])&&(_0x24fd20["preventDefault"](),_0x3a3ad0["blur"]());});}else{clockWrapperEl["style"]["display"]=_0x8944b4["moQPm"],countdownAdjustWrapperEl["style"]["display"]=_0x8944b4["ADyHH"],countdownReadyTipEl["style"]["display"]=_0x8944b4["ADyHH"],clockDateEl["style"]["display"]='';const _0x3f9d07=_0x8944b4["msUiS"](padZero,_0x78f953["getHours"]()),_0x25cc6c=_0x8944b4["YOjnR"](padZero,_0x78f953["getMinutes"]()),_0x5b572b=_0x8944b4["CKXug"](padZero,_0x78f953["getSeconds"]());clockTimeEl["innerHTML"]="<span class=\"time-hours\">"+_0x3f9d07+"</span>:<span class=\"time-minutes\">"+_0x25cc6c+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">"+_0x5b572b+"</span></span>";}}const _0x2bec7d=_0x78f953["getFullYear"](),_0x2fe87f=_0x8944b4["HaeNo"](_0x78f953["getMonth"](),0x1),_0x55dc4a=_0x78f953["getDate"](),_0x1fb327=[_0x8944b4["aoPEN"],_0x8944b4["ootQh"],_0x8944b4["xdBxm"],_0x8944b4["LMDqf"],_0x8944b4["Kxcvy"],_0x8944b4["Zdeul"],_0x8944b4["gnWfb"]],_0x5b7c7a=_0x1fb327[_0x78f953["getDay"]()];clockDateEl["innerText"]=_0x2bec7d+'年'+_0x2fe87f+'月'+_0x55dc4a+'日\x20'+_0x5b7c7a;if(!isExamActive){const _0x559a82=_0x8944b4["ZfBjk"]["split"]('|');let _0x3e64da=0x0;while(!![]){switch(_0x559a82[_0x3e64da++]){case'0':progressStatusEl["className"]=_0x8944b4["TtcEH"];continue;case'1':progressTimeInfoEl["innerText"]=_0x8944b4["OFAMC"];continue;case'2':return;case'3':progressBarFillEl["style"]["width"]='0%';continue;case'4':progressStatusEl["innerText"]=_0x8944b4["PINwZ"];continue;case'5':progressBarFillEl["classList"]["remove"](_0x8944b4["DNepJ"]);continue;}break;}}if(_0x8944b4["kPhiM"](_0x1e5152,0x0)){const _0x3605c7=_0x8944b4["ZVZSs"]["split"]('|');let _0xbb43df=0x0;while(!![]){switch(_0x3605c7[_0xbb43df++]){case'0':progressStatusEl["className"]=_0x8944b4["TtcEH"];continue;case'1':progressBarFillEl["style"]["width"]='0%';continue;case'2':progressTimeInfoEl["innerText"]="距开考: "+_0x8944b4["YTffG"](formatCountdown,_0x1e5152);continue;case'3':progressBarFillEl["classList"]["remove"](_0x8944b4["DNepJ"]);continue;case'4':progressStatusEl["innerText"]=_0x8944b4["PINwZ"];continue;}break;}}else{if(_0x8944b4["lRaAN"](_0x246de0,0x0)){progressStatusEl["innerText"]=_0x8944b4["Idzml"],progressStatusEl["className"]=_0x8944b4["wwDWC"],progressTimeInfoEl["innerText"]="剩: "+_0x8944b4["KcWZV"](formatCountdown,_0x246de0);const _0x8d6ced=_0x8944b4["zsgKg"](_0x78f953,_0x22ae01),_0x3ef670=Math["min"](_0x8944b4["OIcYL"](_0x8944b4["NOLUL"](_0x8d6ced,_0x509bc6),0x64),0x64);progressBarFillEl["style"]["width"]=_0x3ef670["toFixed"](0x2)+'%';const _0x8db66a=_0x8944b4["OIcYL"](_0x8944b4["OIcYL"](0xf,0x3c),0x3e8);_0x8944b4["IwSWe"](_0x246de0,_0x8db66a)?_0x8944b4["VyjAt"](_0x8944b4["IcGAM"],_0x8944b4["IcGAM"])?(_0x5bee2e=!_0x4f7024,_0x509bb2?_0x36a7ec["classList"]["add"](_0x8944b4["mHaXC"]):(_0x29d808["classList"]["remove"](_0x8944b4["mHaXC"]),_0x8944b4["YHxAH"](_0x5df4b4),_0x8944b4["epniF"](_0x4922d4)),_0x8944b4["mMtnz"](_0x49c394)):(progressBarFillEl["classList"]["add"](_0x8944b4["DNepJ"]),!playedAlerts["fifteenMin"]&&(_0x8944b4["UYIyn"](playDingDong,_0x8944b4["auDyY"]),playedAlerts["fifteenMin"]=!![])):progressBarFillEl["classList"]["remove"](_0x8944b4["DNepJ"]);if(!playedAlerts["start"]){if(_0x8944b4["qFCle"](_0x8944b4["qWTPx"],_0x8944b4["nyFqe"])){const _0x85f90a=new _0x1a7a51(tYAgNm["oKnmr"],'g'),_0x376ce0=tYAgNm["uZkGB"]["replace"](_0x85f90a,'');_0x151672[_0x781669][_0x425be1]=_0x376ce0;}else _0x8944b4["kIsCy"](playDingDong,_0x8944b4["CDGqz"]),playedAlerts["start"]=!![];}}else progressStatusEl["innerText"]=_0x8944b4["fpXeX"],progressStatusEl["className"]=_0x8944b4["Kyajh"],progressTimeInfoEl["innerText"]="已超时: "+_0x8944b4["OHXuV"](formatCountdown,_0x8944b4["EDbnm"](_0x78f953,_0x213ae3)),progressBarFillEl["style"]["width"]=_0x8944b4["UMqnP"],progressBarFillEl["classList"]["remove"](_0x8944b4["DNepJ"]),!playedAlerts["end"]&&(_0x8944b4["Gulyp"](_0x8944b4["SWnug"],_0x8944b4["wAaaU"])?(_0x8944b4["GEaCm"](playDingDong,_0x8944b4["gWLzc"]),playedAlerts["end"]=!![]):_0x4c3f7b=new(_0x1e11aa[("AudioContext")]||_0x47055b[("webkitAudioContext")])());}}function toggleConfigurationDisable(_0x1ebf70){const _0x33235f=_0x4cb242,_0x7ecdf2={'cvmrS':"progress-warning",'rxoHd':function(_0x7cf4fc,_0x2cded9){return _0x7cf4fc(_0x2cded9);},'bZbqG':"warning",'tlKsv':function(_0x332f37,_0x3875dc){return _0x332f37===_0x3875dc;},'TUABI':"gMvhz",'wcVJU':".btn-quick"};subjectSelectEl["disabled"]=_0x1ebf70,subjectInputEl["disabled"]=_0x1ebf70,examStartTimeEl["disabled"]=_0x1ebf70,examEndTimeEl["disabled"]=_0x1ebf70,paperCountEl["disabled"]=_0x1ebf70,pageCountEl["disabled"]=_0x1ebf70,document["querySelectorAll"](_0x7ecdf2["wcVJU"])["forEach"](_0x2a0166=>{const _0x1114f6=_0x33235f;_0x7ecdf2["tlKsv"](_0x7ecdf2["TUABI"],_0x7ecdf2["TUABI"])?_0x2a0166["disabled"]=_0x1ebf70:(_0x3d0a7e["classList"]["add"](_0x7ecdf2["cvmrS"]),!_0x52280f["fifteenMin"]&&(_0x7ecdf2["rxoHd"](_0x4216d3,_0x7ecdf2["bZbqG"]),_0x28fe10["fifteenMin"]=!![]));});}function syncFocusBarData(){const _0x54fc7f=_0x4cb242,_0x2411e6={'XTEZB':"未设科目"};focusSubjectEl["innerText"]=subjectInputEl["value"]["trim"]()||_0x2411e6["XTEZB"],focusTimeSpanEl["innerText"]=examStartTimeEl["value"]+" 至 "+examEndTimeEl["value"];const _0x11dda3=paperCountEl["value"],_0x138eba=pageCountEl["value"];focusPaperInfoEl["innerText"]='共\x20'+_0x11dda3+" 张 "+_0x138eba+'\x20页';}subjectSelectEl["addEventListener"]("mousedown",_0x1e492c=>{const _0x1d6863=_0x4cb242,_0x3f96ba={'hcAnR':function(_0x377f6d,_0x32b2c3){return _0x377f6d-_0x32b2c3;},'AqHAZ':function(_0x21406b,_0xeb7903){return _0x21406b<_0xeb7903;},'Ernfn':function(_0x142e3d,_0x351e93){return _0x142e3d===_0x351e93;},'ocDXZ':"VbaCO",'KAPFO':"YYggO"},_0x239fac=subjectSelectEl["getBoundingClientRect"](),_0x4e2a90=_0x3f96ba["hcAnR"](_0x1e492c["clientX"],_0x239fac["left"]),_0x2369ad=0x3c;_0x3f96ba["AqHAZ"](_0x4e2a90,_0x3f96ba["hcAnR"](_0x239fac["width"],_0x2369ad))&&(_0x3f96ba["Ernfn"](_0x3f96ba["ocDXZ"],_0x3f96ba["KAPFO"])?_0x46ad2b=!![]:(_0x1e492c["preventDefault"](),subjectInputEl["focus"]()));}),subjectSelectEl["addEventListener"]("change",_0x521fc3=>{const _0x3f49b2=_0x4cb242,_0x3a33f3={'deAyl':function(_0x53d7e4){return _0x53d7e4();},'QTbKD':function(_0x520b68,_0x25c3f9){return _0x520b68!==_0x25c3f9;},'kJVTs':"自定义",'QwzVA':function(_0x95ef30,_0x450f1e){return _0x95ef30===_0x450f1e;},'FbsnX':"HPOxY",'RItQh':"klBVE",'RZzPQ':function(_0x5c4d4a){return _0x5c4d4a();}},_0x36959a=_0x521fc3["target"]["value"];_0x3a33f3["QTbKD"](_0x36959a,_0x3a33f3["kJVTs"])?_0x3a33f3["QwzVA"](_0x3a33f3["FbsnX"],_0x3a33f3["RItQh"])?(_0x1a2176=![],_0x3a33f3["deAyl"](_0x159158),_0x3a33f3["deAyl"](_0x8ad8c7)):subjectInputEl["value"]=_0x36959a:(subjectInputEl["value"]='',subjectInputEl["focus"]()),_0x3a33f3["RZzPQ"](saveConfig);}),subjectInputEl["addEventListener"]("input",()=>{const _0x130fba=_0x4cb242,_0xd8da9={'wCPBn':function(_0x7790aa,_0x2e6fd5){return _0x7790aa(_0x2e6fd5);},'DWjua':function(_0xb9a71f){return _0xb9a71f();}};_0xd8da9["wCPBn"](updateSubjectSelectMatch,subjectInputEl["value"]),_0xd8da9["DWjua"](saveConfig);}),[examStartTimeEl,examEndTimeEl,paperCountEl,pageCountEl]["forEach"](_0x3df03d=>{const _0x92553e=_0x4cb242,_0x429177={'oxURa':function(_0x1adda7,_0x24db63){return _0x1adda7===_0x24db63;},'QTnND':"flMUg",'mXubv':"utehO",'OppBJ':function(_0x21ab6a){return _0x21ab6a();},'Cjyuj':"change"};_0x3df03d["addEventListener"](_0x429177["Cjyuj"],()=>{const _0xd36bcc=_0x92553e;_0x429177["oxURa"](_0x429177["QTnND"],_0x429177["mXubv"])?_0xc4f447["call"](_0x47a50a["documentElement"]):_0x429177["OppBJ"](saveConfig);});}),[schoolNameEl,examSloganEl]["forEach"](_0x3ac084=>{const _0x33a141=_0x4cb242,_0x46d006={'iRVbt':function(_0x5404d3){return _0x5404d3();},'zVXRC':function(_0x1a8a7c,_0x553fa4){return _0x1a8a7c!==_0x553fa4;},'pLZeZ':"FjUhi",'vFSiN':function(_0x17895a,_0x46c900){return _0x17895a===_0x46c900;},'AQXNi':"Enter",'JfnSf':"blur",'QJBbO':"keydown"};_0x3ac084["addEventListener"](_0x46d006["JfnSf"],()=>{const _0x205440=_0x33a141;_0x46d006["iRVbt"](saveConfig);}),_0x3ac084["addEventListener"](_0x46d006["QJBbO"],_0x877daf=>{const _0x2e0984=_0x33a141;if(_0x46d006["zVXRC"](_0x46d006["pLZeZ"],_0x46d006["pLZeZ"]))return![];else _0x46d006["vFSiN"](_0x877daf["key"],_0x46d006["AQXNi"])&&(_0x877daf["preventDefault"](),_0x3ac084["blur"]());});});function adjustTime(_0x25be73,_0x6cdff3){const _0xa7ff04=_0x4cb242,_0x5bc2d2={'bitvN':function(_0x4e5a19,_0x2e2840){return _0x4e5a19/_0x2e2840;},'ndahZ':function(_0x5b19a7,_0xdcce67){return _0x5b19a7%_0xdcce67;},'wcqwo':function(_0x5c5f23,_0x171bbd){return _0x5c5f23%_0x171bbd;},'SywjK':function(_0x56e17b,_0x5ce1c8){return _0x56e17b===_0x5ce1c8;},'yzBwT':"hourTens",'gUeGF':function(_0x67ca1d,_0x4d4bb1){return _0x67ca1d%_0x4d4bb1;},'GXOYV':function(_0x151ae2,_0x15c6b2){return _0x151ae2+_0x15c6b2;},'UNAOa':function(_0x56ad37,_0x159283){return _0x56ad37%_0x159283;},'mFNMF':function(_0x2b3f26,_0x34d53d){return _0x2b3f26+_0x34d53d;},'RaoXA':function(_0x35201b,_0x4777c5){return _0x35201b-_0x4777c5;},'fcgEA':function(_0x3ebb49,_0x51ae7d){return _0x3ebb49===_0x51ae7d;},'LmvFx':function(_0x4f1cab,_0x54380e){return _0x4f1cab>_0x54380e;},'iRDCm':function(_0x32585b,_0x1542cf){return _0x32585b===_0x1542cf;},'WEJoJ':"hourOnes",'DOyVd':function(_0x39db68,_0x4e6276){return _0x39db68===_0x4e6276;},'wVgAe':function(_0x52d456,_0x5d6a86){return _0x52d456+_0x5d6a86;},'Gfsmo':function(_0x4834e1,_0x2e3db6){return _0x4834e1-_0x2e3db6;},'bOjGn':"minTens",'svnlm':function(_0x3e7af9,_0x40f9af){return _0x3e7af9+_0x40f9af;},'ICFhl':function(_0x27322c,_0x4563c4){return _0x27322c%_0x4563c4;},'CamuX':function(_0x48bf6c,_0x1ae309){return _0x48bf6c-_0x1ae309;},'qSpru':"minOnes",'MNkIx':function(_0x537884,_0x39820a){return _0x537884%_0x39820a;},'Aysde':function(_0x5a0264,_0x4ac347){return _0x5a0264-_0x4ac347;},'IcwgE':function(_0x2fa366,_0x3d7553){return _0x2fa366+_0x3d7553;},'RPZxd':function(_0x14ca50,_0x41ba7b){return _0x14ca50*_0x41ba7b;},'LfsEF':function(_0x5f5d81,_0x15c8b4){return _0x5f5d81*_0x15c8b4;},'FUjFL':function(_0x53ba94,_0x48b4f8){return _0x53ba94===_0x48b4f8;},'FCccj':"dTZHJ",'wMLsu':"fpBZK",'xGjne':function(_0x590178){return _0x590178();}};let _0x3d4c49=Math["floor"](_0x5bc2d2["bitvN"](countdownHours,0xa)),_0x26dba3=_0x5bc2d2["ndahZ"](countdownHours,0xa),_0x1ff520=Math["floor"](_0x5bc2d2["bitvN"](countdownMinutes,0xa)),_0x184791=_0x5bc2d2["wcqwo"](countdownMinutes,0xa);if(_0x5bc2d2["SywjK"](_0x25be73,_0x5bc2d2["yzBwT"])){_0x3d4c49=_0x6cdff3?_0x5bc2d2["gUeGF"](_0x5bc2d2["GXOYV"](_0x3d4c49,0x1),0x3):_0x5bc2d2["UNAOa"](_0x5bc2d2["mFNMF"](_0x5bc2d2["RaoXA"](_0x3d4c49,0x1),0x3),0x3);if(_0x5bc2d2["fcgEA"](_0x3d4c49,0x2)&&_0x5bc2d2["LmvFx"](_0x26dba3,0x3))_0x26dba3=0x3;}else{if(_0x5bc2d2["iRDCm"](_0x25be73,_0x5bc2d2["WEJoJ"])){const _0x115297=_0x5bc2d2["DOyVd"](_0x3d4c49,0x2)?0x4:0xa;_0x26dba3=_0x6cdff3?_0x5bc2d2["gUeGF"](_0x5bc2d2["wVgAe"](_0x26dba3,0x1),_0x115297):_0x5bc2d2["ndahZ"](_0x5bc2d2["mFNMF"](_0x5bc2d2["Gfsmo"](_0x26dba3,0x1),_0x115297),_0x115297);}else{if(_0x5bc2d2["fcgEA"](_0x25be73,_0x5bc2d2["bOjGn"]))_0x1ff520=_0x6cdff3?_0x5bc2d2["UNAOa"](_0x5bc2d2["svnlm"](_0x1ff520,0x1),0x6):_0x5bc2d2["ICFhl"](_0x5bc2d2["wVgAe"](_0x5bc2d2["CamuX"](_0x1ff520,0x1),0x6),0x6);else _0x5bc2d2["iRDCm"](_0x25be73,_0x5bc2d2["qSpru"])&&(_0x184791=_0x6cdff3?_0x5bc2d2["MNkIx"](_0x5bc2d2["mFNMF"](_0x184791,0x1),0xa):_0x5bc2d2["ndahZ"](_0x5bc2d2["GXOYV"](_0x5bc2d2["Aysde"](_0x184791,0x1),0xa),0xa));}}countdownHours=_0x5bc2d2["IcwgE"](_0x5bc2d2["RPZxd"](_0x3d4c49,0xa),_0x26dba3),countdownMinutes=_0x5bc2d2["wVgAe"](_0x5bc2d2["LfsEF"](_0x1ff520,0xa),_0x184791);if(_0x5bc2d2["DOyVd"](countdownHours,0x0)&&_0x5bc2d2["SywjK"](countdownMinutes,0x0)){if(_0x5bc2d2["FUjFL"](_0x5bc2d2["FCccj"],_0x5bc2d2["wMLsu"])){const _0x5abb66=_0x281f37["apply"](_0x55b820,arguments);return _0x40d432=null,_0x5abb66;}else countdownMinutes=0x1;}_0x5bc2d2["xGjne"](updateAdjustDisplay),_0x5bc2d2["xGjne"](saveConfig);}btnHourTensUpEl["addEventListener"]("click",()=>adjustTime("hourTens",!![])),btnHourTensDownEl["addEventListener"]("click",()=>adjustTime("hourTens",![])),btnHourOnesUpEl["addEventListener"]("click",()=>adjustTime("hourOnes",!![])),btnHourOnesDownEl["addEventListener"]("click",()=>adjustTime("hourOnes",![])),btnMinTensUpEl["addEventListener"]("click",()=>adjustTime("minTens",!![])),btnMinTensDownEl["addEventListener"]("click",()=>adjustTime("minTens",![])),btnMinOnesUpEl["addEventListener"]("click",()=>adjustTime("minOnes",!![])),btnMinOnesDownEl["addEventListener"]("click",()=>adjustTime("minOnes",![])),btnAdjustConfirmEl["addEventListener"]("click",()=>{const _0x23d6f8=_0x4cb242,_0x254dfc={'haVXs':function(_0x1b6296){return _0x1b6296();}};isCountdownConfirmed=!![],_0x254dfc["haVXs"](saveConfig),_0x254dfc["haVXs"](updateClock);});function enterAdjustMode(){const _0x442b44=_0x4cb242,_0x5083e7={'ZPEyH':"input[name=\"timingMode\"]:checked",'BlwrX':"clock",'fTlKv':function(_0x48441f,_0x2d9b85){return _0x48441f===_0x2d9b85;},'vgWNJ':"countdown",'bRowU':function(_0x157d48){return _0x157d48();}};if(!isExamActive){const _0x337f95=document["querySelector"](_0x5083e7["ZPEyH"])?.["value"]||_0x5083e7["BlwrX"];_0x5083e7["fTlKv"](_0x337f95,_0x5083e7["vgWNJ"])&&(isCountdownConfirmed=![],_0x5083e7["bRowU"](saveConfig),_0x5083e7["bRowU"](updateClock));}}lnkReAdjustEl["addEventListener"]("click",_0x55ea85=>{const _0x540e8e=_0x4cb242,_0x3b26ca={'kNAca':function(_0xf4df57){return _0xf4df57();}};_0x55ea85["preventDefault"](),_0x3b26ca["kNAca"](enterAdjustMode);}),clockTimeEl["addEventListener"]("click",()=>{const _0x545bfd=_0x4cb242,_0x24a796={'wldCP':function(_0x58a272){return _0x58a272();}};_0x24a796["wldCP"](enterAdjustMode);}),btnStartStopEl["addEventListener"]("click",()=>{const _0x2b5121=_0x4cb242,_0x5cd237={'kgEyE':"focus-mode",'mfOpj':"dark-theme",'zjmsf':"input[name=\"timingMode\"]:checked",'DfzIV':"clock",'tUZqF':function(_0x5c7bf7){return _0x5c7bf7();},'GbwwX':function(_0x682b33){return _0x682b33();},'vfEtO':function(_0x4f1561,_0x15b8f9){return _0x4f1561!==_0x15b8f9;},'BawvD':"qxfoj",'xdGtD':function(_0x437cf2,_0x438ae9){return _0x437cf2===_0x438ae9;},'bUkEE':"countdown",'OiEEb':function(_0x2a1122,_0xcb9593){return _0x2a1122===_0xcb9593;},'jljFk':"SNSks",'HnWLJ':"TLBTm",'MUrwF':function(_0x261a73,_0x271ed1){return _0x261a73(_0x271ed1);},'evuko':function(_0x5d0fad,_0x21abd4){return _0x5d0fad(_0x21abd4);},'gxNtE':function(_0xf36d35,_0x1d4d19){return _0xf36d35+_0x1d4d19;},'JzvRv':function(_0xb60c80,_0x4c0ea6){return _0xb60c80*_0x4c0ea6;},'uOXnW':function(_0x39ff9a,_0x1d4595){return _0x39ff9a*_0x1d4595;},'ZtCLk':function(_0x3bf13e,_0x41ea71){return _0x3bf13e*_0x41ea71;},'HYMlC':function(_0x267ba6){return _0x267ba6();},'xUKBF':function(_0x3bd9a0,_0x1d0b5b){return _0x3bd9a0(_0x1d0b5b);},'LKJPu':function(_0x2c857f,_0x87dccc){return _0x2c857f<_0x87dccc;},'uCbLq':function(_0x27c003,_0x1097b8){return _0x27c003>_0x1097b8;},'rnhir':function(_0x17545c,_0xdad510){return _0x17545c-_0xdad510;},'NZhNX':function(_0x1a4a52,_0x17468d){return _0x1a4a52(_0x17468d);},'SfGzm':"结束监考",'BDrTV':"linear-gradient(135deg, #feb8b8 0%, #fecfef 100%)",'bKBJi':function(_0x389c58){return _0x389c58();},'oZfCJ':function(_0x41ba8e,_0x3cc66b){return _0x41ba8e(_0x3cc66b);},'FYyvo':function(_0x642afc){return _0x642afc();},'NYlPf':"Dhevq",'NtBXV':"2|4|9|6|10|8|0|1|3|5|7",'jOkSN':function(_0x5a1c12,_0x34d432){return _0x5a1c12(_0x34d432);},'BVgQb':"progress-warning",'CoETe':"开始监考",'YrXDT':function(_0x52ca67){return _0x52ca67();},'KZbSj':"linear-gradient(135deg, var(--m-blue) 0%, var(--m-purple) 100%)"};_0x5cd237["GbwwX"](initAudio);if(!isExamActive){if(_0x5cd237["vfEtO"](_0x5cd237["BawvD"],_0x5cd237["BawvD"])){const _0xa2d2f6={'schoolName':_0x2bf42c["innerText"]["trim"](),'examSlogan':_0x348ddf["innerText"]["trim"](),'subject':_0x2c772e["value"]["trim"](),'startTime':_0x24c06c["value"],'endTime':_0x45a838["value"],'paperCount':_0x5a85cf["value"],'pageCount':_0x4b6625["value"],'isMuted':_0xb83df0,'isFocusMode':_0x2c8976["body"]["classList"]["contains"](_0x5cd237["kgEyE"]),'isDarkMode':_0x3a18bb["body"]["classList"]["contains"](_0x5cd237["mfOpj"]),'timingMode':_0x586b55["querySelector"](_0x5cd237["zjmsf"])?.["value"]||_0x5cd237["DfzIV"],'countdownHours':_0x219eb0,'countdownMinutes':_0x4b6041,'isCountdownConfirmed':_0x271085,'actualStartTimeTs':_0x498c35?_0x130903["getTime"]():null,'actualEndTimeTs':_0x4d32e2?_0x2951b1["getTime"]():null};_0x47cc42["setItem"](_0x196d44,_0x503b34["stringify"](_0xa2d2f6));}else{const _0x528c05=document["querySelector"](_0x5cd237["zjmsf"])?.["value"]||_0x5cd237["DfzIV"];if(_0x5cd237["xdGtD"](_0x528c05,_0x5cd237["bUkEE"])){if(_0x5cd237["OiEEb"](_0x5cd237["jljFk"],_0x5cd237["HnWLJ"]))_0x5cd237["tUZqF"](_0x1c96a7);else{!isCountdownConfirmed&&(isCountdownConfirmed=!![]);const _0x2cc131=new Date(),_0x5db6c9=_0x5cd237["MUrwF"](padZero,_0x2cc131["getHours"]()),_0x59929d=_0x5cd237["evuko"](padZero,_0x2cc131["getMinutes"]());examStartTimeEl["value"]=_0x5db6c9+':'+_0x59929d;const _0x1949c9=_0x5cd237["gxNtE"](_0x5cd237["JzvRv"](countdownHours,0x3c),countdownMinutes),_0x110e1c=new Date(_0x5cd237["gxNtE"](_0x2cc131["getTime"](),_0x5cd237["JzvRv"](_0x5cd237["uOXnW"](_0x1949c9,0x3c),0x3e8))),_0x398be6=_0x5cd237["MUrwF"](padZero,_0x110e1c["getHours"]()),_0x29a810=_0x5cd237["MUrwF"](padZero,_0x110e1c["getMinutes"]());examEndTimeEl["value"]=_0x398be6+':'+_0x29a810,actualExamStartTime=new Date(_0x2cc131["getTime"]()),actualExamEndTime=new Date(_0x5cd237["gxNtE"](_0x2cc131["getTime"](),_0x5cd237["JzvRv"](_0x5cd237["ZtCLk"](_0x1949c9,0x3c),0x3e8))),_0x5cd237["HYMlC"](saveConfig);}}else{const _0x2bb068=new Date();let _0x4d4d04=_0x5cd237["evuko"](parseTimeString,examStartTimeEl["value"]),_0x2df3d8=_0x5cd237["xUKBF"](parseTimeString,examEndTimeEl["value"]);_0x5cd237["LKJPu"](_0x2df3d8,_0x4d4d04)&&_0x2df3d8["setDate"](_0x5cd237["gxNtE"](_0x2df3d8["getDate"](),0x1));if(_0x5cd237["uCbLq"](_0x2bb068,_0x2df3d8)){const _0x10e225=_0x5cd237["rnhir"](_0x2df3d8,_0x4d4d04),_0x23f5ae=_0x5cd237["NZhNX"](padZero,_0x2bb068["getHours"]()),_0x53f782=_0x5cd237["xUKBF"](padZero,_0x2bb068["getMinutes"]());examStartTimeEl["value"]=_0x23f5ae+':'+_0x53f782;const _0x184b37=new Date(_0x5cd237["gxNtE"](_0x2bb068["getTime"](),_0x10e225)),_0x3fd102=_0x5cd237["NZhNX"](padZero,_0x184b37["getHours"]()),_0x3765b3=_0x5cd237["NZhNX"](padZero,_0x184b37["getMinutes"]());examEndTimeEl["value"]=_0x3fd102+':'+_0x3765b3,_0x5cd237["GbwwX"](saveConfig);}}isExamActive=!![],btnStartStopEl["innerText"]=_0x5cd237["SfGzm"],btnStartStopEl["style"]["background"]=_0x5cd237["BDrTV"],btnResetEl["disabled"]=!![],playedAlerts={'start':![],'fifteenMin':![],'end':![]},_0x5cd237["bKBJi"](syncFocusBarData),_0x5cd237["oZfCJ"](toggleConfigurationDisable,!![]),labelStartTimeEl["innerText"]="开始时间: "+examStartTimeEl["value"],labelEndTimeEl["innerText"]="结束时间: "+examEndTimeEl["value"],document["body"]["classList"]["add"](_0x5cd237["kgEyE"]),_0x5cd237["FYyvo"](saveConfig);}}else{if(_0x5cd237["xdGtD"](_0x5cd237["NYlPf"],_0x5cd237["NYlPf"])){const _0x3a41a8=_0x5cd237["NtBXV"]["split"]('|');let _0x47ea8c=0x0;while(!![]){switch(_0x3a41a8[_0x47ea8c++]){case'0':_0x5cd237["jOkSN"](toggleConfigurationDisable,![]);continue;case'1':progressBarFillEl["style"]["width"]='0%';continue;case'2':isExamActive=![];continue;case'3':progressBarFillEl["classList"]["remove"](_0x5cd237["BVgQb"]);continue;case'4':btnStartStopEl["innerText"]=_0x5cd237["CoETe"];continue;case'5':document["body"]["classList"]["remove"](_0x5cd237["kgEyE"]);continue;case'6':btnResetEl["disabled"]=![];continue;case'7':_0x5cd237["YrXDT"](saveConfig);continue;case'8':actualExamEndTime=null;continue;case'9':btnStartStopEl["style"]["background"]=_0x5cd237["KZbSj"];continue;case'10':actualExamStartTime=null;continue;}break;}}else _0xab9948["body"]["classList"]["remove"](_0x5cd237["mfOpj"]);}}),btnResetEl["addEventListener"]("click",()=>{const _0x5a2577=_0x4cb242,_0x7786d7={'VhnWO':"3|2|5|1|4|0|6|7",'vxPsw':function(_0xf66105){return _0xf66105();}},_0x8abb0e=_0x7786d7["VhnWO"]["split"]('|');let _0x42c14c=0x0;while(!![]){switch(_0x8abb0e[_0x42c14c++]){case'0':actualExamEndTime=null;continue;case'1':isCountdownConfirmed=![];continue;case'2':countdownHours=0x1;continue;case'3':localStorage["removeItem"](CONFIG_KEY);continue;case'4':actualExamStartTime=null;continue;case'5':countdownMinutes=0x1e;continue;case'6':_0x7786d7["vxPsw"](loadConfig);continue;case'7':_0x7786d7["vxPsw"](updateClock);continue;}break;}}),btnMuteEl["addEventListener"]("click",()=>{const _0x308e60=_0x4cb242,_0x3e0503={'FLZwV':"flex",'zJhpq':"none",'YdMKS':function(_0x1cfd8a,_0x5b81c9){return _0x1cfd8a>_0x5b81c9;},'QGkXf':function(_0x550201,_0xbb7dc0){return _0x550201(_0xbb7dc0);},'IVZra':function(_0x23acd3,_0x60efec){return _0x23acd3>_0x60efec;},'ZMMVd':function(_0x17ea45,_0x120e07){return _0x17ea45(_0x120e07);},'RGQqs':function(_0x2b2664,_0x53aa4e){return _0x2b2664%_0x53aa4e;},'AMMGa':function(_0x278515,_0x325963){return _0x278515/_0x325963;},'IfvXm':function(_0x2ed3ba,_0x3ae569){return _0x2ed3ba*_0x3ae569;},'xLciK':function(_0x40218d,_0x561175){return _0x40218d(_0x561175);},'dweUX':function(_0x25adf6,_0x30de85){return _0x25adf6%_0x30de85;},'XnJaz':function(_0xfac286,_0x502760){return _0xfac286/_0x502760;},'JffDd':function(_0x41f2b5,_0x555093){return _0x41f2b5*_0x555093;},'UVbQu':function(_0x51c38c,_0x1de310){return _0x51c38c(_0x1de310);},'jiVLg':function(_0x59fc15,_0x425699){return _0x59fc15%_0x425699;},'XCAIQ':function(_0x40bbae,_0x5b73fc){return _0x40bbae/_0x5b73fc;},'pIXLc':function(_0x42d3c6,_0x140b61){return _0x42d3c6===_0x140b61;},'YgVzc':"aZHbC",'YEpwT':"is-muted",'wkylU':function(_0x23b286){return _0x23b286();},'YNvvh':function(_0xf72e50){return _0xf72e50();}};isMuted=!isMuted;if(isMuted){if(_0x3e0503["pIXLc"](_0x3e0503["YgVzc"],_0x3e0503["YgVzc"]))btnMuteEl["classList"]["add"](_0x3e0503["YEpwT"]);else{_0x35dea3["style"]["display"]=_0x3e0503["FLZwV"],_0x28d461["style"]["display"]=_0x3e0503["zJhpq"],_0x45febb["style"]["display"]=_0x3e0503["zJhpq"],_0x743131["style"]["display"]=_0x3e0503["zJhpq"];if(_0x3e0503["YdMKS"](_0xe7c150,0x0)){const _0x4801da=_0x3e0503["QGkXf"](_0x3941a4,_0x41f73d),_0x239dfe=_0x3e0503["QGkXf"](_0x212278,_0x2efdf4);_0xf21955["innerHTML"]="<span class=\"time-hours\">"+_0x4801da+"</span>:<span class=\"time-minutes\">"+_0x239dfe+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>";}else{if(_0x3e0503["IVZra"](_0x430b55,0x0)){const _0x35664b=_0x3e0503["ZMMVd"](_0x201ddb,_0x105d32["floor"](_0x3e0503["RGQqs"](_0x3e0503["AMMGa"](_0x3c36e5,_0x3e0503["IfvXm"](_0x3e0503["IfvXm"](0x3e8,0x3c),0x3c)),0x18))),_0x47d229=_0x3e0503["xLciK"](_0xf9f414,_0x3f2700["floor"](_0x3e0503["dweUX"](_0x3e0503["XnJaz"](_0x399a2e,_0x3e0503["JffDd"](0x3e8,0x3c)),0x3c))),_0x4f7a79=_0x3e0503["UVbQu"](_0x2491de,_0x568580["floor"](_0x3e0503["jiVLg"](_0x3e0503["XCAIQ"](_0x4b000a,0x3e8),0x3c)));_0x189ada["innerHTML"]="<span class=\"time-hours\">"+_0x35664b+"</span>:<span class=\"time-minutes\">"+_0x47d229+"</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">"+_0x4f7a79+"</span></span>";}else _0x3c80a8["innerHTML"]="<span class=\"time-hours\">00</span>:<span class=\"time-minutes\">00</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>";}}}else btnMuteEl["classList"]["remove"](_0x3e0503["YEpwT"]),_0x3e0503["wkylU"](initAudio),_0x3e0503["YNvvh"](playDingDong);_0x3e0503["wkylU"](saveConfig);}),btnThemeEl["addEventListener"]("click",()=>{const _0x558a09=_0x4cb242,_0x1bfc3c={'IXhvl':"dark-theme",'PWTwm':function(_0x134054){return _0x134054();}};document["body"]["classList"]["toggle"](_0x1bfc3c["IXhvl"]),_0x1bfc3c["PWTwm"](saveConfig);}),btnFullscreenEl["addEventListener"]("click",()=>{const _0x233366=_0x4cb242;if(!document["fullscreenElement"]&&!document["mozFullScreenElement"]&&!document["webkitFullscreenElement"]&&!document["msFullscreenElement"]){const _0x52f4e7=document["documentElement"]["requestFullscreen"]||document["documentElement"]["msRequestFullscreen"]||document["documentElement"]["mozRequestFullScreen"]||document["documentElement"]["webkitRequestFullscreen"];_0x52f4e7&&_0x52f4e7["call"](document["documentElement"]);}else{const _0x2cd584=document["exitFullscreen"]||document["msExitFullscreen"]||document["mozCancelFullScreen"]||document["webkitExitFullscreen"];_0x2cd584&&_0x2cd584["call"](document);}}),document["addEventListener"]("fullscreenchange",()=>{const _0x33dc55=_0x4cb242,_0x248046={'VIvYO':"<path d=\"M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7\"/>",'qWHVR':function(_0x488902,_0x137b95){return _0x488902!==_0x137b95;},'xHUyk':"TPNWG",'BMrNo':"<path d=\"M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3\"/>"},_0x1751a8=!!document["fullscreenElement"];_0x1751a8?svgFullscreen["innerHTML"]=_0x248046["VIvYO"]:_0x248046["qWHVR"](_0x248046["xHUyk"],_0x248046["xHUyk"])?_0x13259c["innerHTML"]="<span class=\"time-hours\">00</span>:<span class=\"time-minutes\">00</span><span class=\"time-seconds-wrapper\">:<span class=\"time-seconds\">00</span></span>":svgFullscreen["innerHTML"]=_0x248046["BMrNo"];}),document["querySelectorAll"]("input[name=\"timingMode\"]")["forEach"](_0x263cd3=>{const _0x12ebbb=_0x4cb242,_0x119f61={'CXxaO':function(_0x4b7a85){return _0x4b7a85();},'LJVZz':"change"};_0x263cd3["addEventListener"](_0x119f61["LJVZz"],()=>{const _0x45e6ea=_0x12ebbb;!isExamActive&&(actualExamStartTime=null,actualExamEndTime=null),_0x119f61["CXxaO"](saveConfig),_0x119f61["CXxaO"](updateClock);});}),btnMiniEndEl["addEventListener"]("click",()=>{const _0xbc9f3d=_0x4cb242,_0x466bd2={'woTWi':"2|8|5|3|9|10|11|4|6|7|0|1",'yzqaj':function(_0xc4b5f8){return _0xc4b5f8();},'RdXGu':"linear-gradient(135deg, var(--m-blue) 0%, var(--m-purple) 100%)",'aVsnQ':"progress-warning",'nUjjN':"focus-mode",'uDveT':"开始监考",'vusMe':function(_0x325545,_0x16f86c){return _0x325545(_0x16f86c);}},_0x2bd7cb=_0x466bd2["woTWi"]["split"]('|');let _0x307a64=0x0;while(!![]){switch(_0x2bd7cb[_0x307a64++]){case'0':_0x466bd2["yzqaj"](saveConfig);continue;case'1':_0x466bd2["yzqaj"](updateClock);continue;case'2':isExamActive=![];continue;case'3':btnResetEl["disabled"]=![];continue;case'4':progressBarFillEl["style"]["width"]='0%';continue;case'5':btnStartStopEl["style"]["background"]=_0x466bd2["RdXGu"];continue;case'6':progressBarFillEl["classList"]["remove"](_0x466bd2["aVsnQ"]);continue;case'7':document["body"]["classList"]["remove"](_0x466bd2["nUjjN"]);continue;case'8':btnStartStopEl["innerText"]=_0x466bd2["uDveT"];continue;case'9':actualExamStartTime=null;continue;case'10':actualExamEndTime=null;continue;case'11':_0x466bd2["vusMe"](toggleConfigurationDisable,![]);continue;}break;}}),loadConfig(),setInterval(updateClock,0x64),updateClock();var version_ = 'jsjiami.com.v7';
+    </script>
+</body>
+</html>

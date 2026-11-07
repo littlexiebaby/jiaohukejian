@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>确定起跑线交互课件</title>
+    
+    <!-- 使用 unpkg 的开发版构建，通常在单文件环境中更稳定 -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 加载 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        /* 自定义滑动条样式 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+
+        /* 隐藏 input number 的箭头 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        /* 展开动画的关键帧 */
+        @keyframes growWidth {
+            from { transform: scaleX(0); opacity: 0; }
+            to { transform: scaleX(1); opacity: 1; }
+        }
+        .animate-grow {
+            animation: growWidth 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            transform-origin: left center;
+        }
+
+        /* 禁止选中类 */
+        .select-none {
+            user-select: none;
+        }
+
+        /* --- 运动员跑步动画 --- */
+        .runner-limbs {
+            transform-box: fill-box;
+            transform-origin: center top; 
+        }
+        
+        .limb-set-1 { transform: rotate(0deg); }
+        .limb-set-2 { transform: rotate(0deg); }
+
+        .is-running .limb-set-1 { animation: run-cycle 0.4s infinite alternate ease-in-out; }
+        .is-running .limb-set-2 { animation: run-cycle 0.4s infinite alternate-reverse ease-in-out; }
+
+        @keyframes run-cycle {
+            from { transform: rotate(-25deg); }
+            to { transform: rotate(25deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useLayoutEffect } = React;
+
+        // --- 图标组件 ---
+        const IconPlay = ({ size = 20, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        );
+        const IconRotateCcw = ({ size = 20, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"></path><path d="M3 5v7h7"></path></svg>
+        );
+        const IconArrowLeft = ({ size = 20, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        );
+        const IconRuler = ({ size = 24, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"></path><line x1="14.5" y1="5.5" x2="18.5" y2="9.5"></line><line x1="8.5" y1="11.5" x2="12.5" y2="15.5"></line><line x1="5.5" y1="5.5" x2="5.5" y2="5.5"></line><line x1="18.5" y1="18.5" x2="18.5" y2="18.5"></line></svg>
+        );
+        const IconZap = ({ size = 16, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        );
+        const IconLayers = ({ size = 20, className }) => (
+             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        );
+        const IconInfo = ({ size = 20, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        );
+        const IconEdit = ({ size = 16, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        );
+
+        // --- 运动员小人组件 (严格居中) ---
+        const RunnerFigure = ({ color, isRunning, id, facingLeft }) => {
+            return (
+                <g className={isRunning ? "is-running" : ""} transform={facingLeft ? "scale(-1, 1)" : "scale(1, 1)"}>
+                    {/* 阴影 */}
+                    <ellipse cx="0" cy="9" rx="6" ry="2" fill="black" opacity="0.2" />
+                    
+                    {/* 后腿 (对称分布) */}
+                    <g className="runner-limbs limb-set-2" style={{transformOrigin: '0px 2px'}}>
+                        <line x1="0" y1="2" x2="-3" y2="9" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                        <line x1="-3" y1="9" x2="-1" y2="14" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                    </g>
+
+                    {/* 后臂 */}
+                    <g className="runner-limbs limb-set-1" style={{transformOrigin: '0px -4px'}}>
+                        <line x1="0" y1="-4" x2="-3" y2="0" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                        <line x1="-3" y1="0" x2="-1" y2="4" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                    </g>
+
+                    {/* 躯干 - 垂直居中 */}
+                    <line x1="0" y1="2" x2="0" y2="-6" stroke={color} strokeWidth="4" strokeLinecap="round" />
+
+                    {/* 头 - 严格居中 */}
+                    <circle cx="0" cy="-8" r="3" fill="#ffe0bd" /> 
+                    <circle cx="0" cy="-8" r="3" fill="none" stroke="black" strokeWidth="0.5"/>
+
+                    {/* 前腿 */}
+                    <g className="runner-limbs limb-set-1" style={{transformOrigin: '0px 2px'}}>
+                        <line x1="0" y1="2" x2="3" y2="8" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                        <line x1="3" y1="8" x2="3" y2="14" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                    </g>
+
+                    {/* 前臂 */}
+                    <g className="runner-limbs limb-set-2" style={{transformOrigin: '0px -4px'}}>
+                        <line x1="0" y1="-4" x2="3" y2="0" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                        <line x1="3" y1="0" x2="5" y2="-3" stroke="black" strokeWidth="2" strokeLinecap="round" />
+                    </g>
+                    
+                    {/* 编号标签 */}
+                    <g transform="translate(0, -25)"> 
+                        <g transform={facingLeft ? "scale(-1, 1)" : "scale(1, 1)"}> 
+                            <rect x="-10" y="-12" width="20" height="17" rx="5" fill="white" stroke={color} strokeWidth="2"/>
+                            <text x="0" y="0" textAnchor="middle" fontSize="14" fontWeight="bold" fill={color} dy="1.5" style={{fontFamily: 'Arial, sans-serif'}}>{id + 1}</text>
+                        </g>
+                    </g>
+                </g>
+            );
+        };
+
+        const TrackSimulation = () => {
+          // --- 状态管理 ---
+          const [laneWidth, setLaneWidth] = useState(1.25);
+          
+          // 修复：添加缺失的状态变量定义
+          const [viewMode, setViewMode] = useState('playground'); 
+          const [raceMode, setRaceMode] = useState('staggered');
+          const [isRunning, setIsRunning] = useState(false);
+          const [progress, setProgress] = useState(0); 
+          const [speed, setSpeed] = useState(1.0);  // 之前缺失的变量
+          const [visibleLanesCount, setVisibleLanesCount] = useState(0); // 之前缺失的变量
+          const [showCalc, setShowCalc] = useState(false); // 之前缺失的变量
+          
+          const [footerHeight, setFooterHeight] = useState(110);
+          const isResizingFooter = useRef(false);
+          const [barScale, setBarScale] = useState(1.5);
+          const comparisonContainerRef = useRef(null);
+          
+          const requestRef = useRef();
+          const startTimeRef = useRef();
+          const speedRef = useRef(1.0);
+          const BASE_DURATION = 8000;
+
+          // 核心配置
+          const CONFIG = {
+            straightLength: 85.96, 
+            diameter: 72.6,        
+            radius: 36.3,          
+            laneCount: 6,          
+            pi: 3.14  
+          };
+
+          const VISUAL = {
+            scale: 3.2,           
+            laneWidth: 22,        
+            runnerScale: 0.75,    
+            straightWidth: (85.96 / 2) * 4.5 
+          };
+          
+          const COLORS = {
+            trackBg: '#d64d42',    
+            trackLine: '#ffffff',  
+            grass: '#5a9e4e',      
+            straight: '#3b82f6',   
+            curve: '#f97316',      
+            runners: ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7']
+          };
+
+          // --- 3. 数据计算核心 ---
+          const lanes = Array.from({ length: CONFIG.laneCount }, (_, i) => {
+            const physicalR = CONFIG.radius + i * laneWidth;
+            const visualR = (CONFIG.radius * VISUAL.scale) + (i * VISUAL.laneWidth);
+
+            // 修改：计算差值 (stagger)，然后以 400 为基准叠加
+            const stagger = i * laneWidth * 2 * CONFIG.pi;
+            const totalLength = 400 + stagger;
+            
+            return {
+              id: i,
+              label: `第${i + 1}道`,
+              r: physicalR,      
+              visualR: visualR,  
+              totalLength,       
+              stagger,           
+              color: COLORS.runners[i]
+            };
+          });
+
+          const boundaryLines = Array.from({ length: CONFIG.laneCount + 1 }, (_, i) => {
+             return (lanes[0].visualR - VISUAL.laneWidth / 2) + (i * VISUAL.laneWidth);
+          });
+
+          useEffect(() => { speedRef.current = speed; }, [speed]);
+
+          // --- 动态自适应比例尺计算 ---
+          useEffect(() => {
+              const calculateScale = () => {
+                  if (viewMode === 'comparison' && comparisonContainerRef.current) {
+                      const containerWidth = comparisonContainerRef.current.clientWidth;
+                      const reservedWidth = 80 + 16 + 350 + 32; 
+                      const availableWidth = containerWidth - reservedWidth;
+                      const maxTrackLen = lanes[lanes.length - 1].totalLength;
+                      let newScale = availableWidth / maxTrackLen;
+                      newScale = Math.max(0.5, newScale);
+                      setBarScale(newScale);
+                  }
+              };
+              calculateScale();
+              window.addEventListener('resize', calculateScale);
+              return () => window.removeEventListener('resize', calculateScale);
+          }, [viewMode, lanes]);
+
+          // --- 拖拽调节版面大小逻辑 ---
+          useEffect(() => {
+              const handleMouseMove = (e) => {
+                  if (isResizingFooter.current) {
+                      const newHeight = Math.max(80, Math.min(window.innerHeight - e.clientY, 400));
+                      setFooterHeight(newHeight);
+                  }
+              };
+              const handleMouseUp = () => {
+                  if (isResizingFooter.current) {
+                      isResizingFooter.current = false;
+                      document.body.style.cursor = 'default';
+                      document.body.classList.remove('select-none');
+                  }
+              };
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+              return () => {
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
+              };
+          }, []);
+
+          const startResizingFooterHandler = (e) => {
+              e.preventDefault();
+              isResizingFooter.current = true;
+              document.body.style.cursor = 'row-resize';
+              document.body.classList.add('select-none');
+          };
+
+          // --- 动画逻辑 ---
+          const animate = () => {
+            const now = Date.now();
+            const currentDuration = BASE_DURATION / speedRef.current;
+            const elapsed = now - startTimeRef.current;
+            const p = Math.min((elapsed / currentDuration) * 400, 400);
+            setProgress(p);
+            if (p < 400) {
+              requestRef.current = requestAnimationFrame(animate);
+            } else {
+              setIsRunning(false);
+            }
+          };
+
+          const handleStart = () => {
+            if (isRunning) return;
+            setIsRunning(true);
+            const currentDuration = BASE_DURATION / speedRef.current;
+            if (progress >= 400) setProgress(0);
+            const elapsed = (progress >= 400 ? 0 : progress) / 400 * currentDuration;
+            startTimeRef.current = Date.now() - elapsed;
+            requestRef.current = requestAnimationFrame(animate);
+          };
+
+          const handleReset = () => {
+            setIsRunning(false);
+            setProgress(0);
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+          };
+
+          const handleSpeedChange = (e) => {
+             const newSpeed = parseFloat(e.target.value);
+             if (isRunning) {
+                 const now = Date.now();
+                 const currentElapsed = now - startTimeRef.current;
+                 const oldSpeed = speedRef.current;
+                 const newElapsed = currentElapsed * (oldSpeed / newSpeed);
+                 startTimeRef.current = now - newElapsed;
+             }
+             setSpeed(newSpeed);
+          };
+
+          const handleLaneWidthChange = (e) => {
+              const val = parseFloat(e.target.value);
+              if (!isNaN(val) && val > 0) setLaneWidth(val);
+              else if (e.target.value === "") setLaneWidth(""); 
+          };
+
+          const startUnfoldAnimation = () => {
+            setViewMode('comparison');
+            setVisibleLanesCount(0);
+            setShowCalc(false);
+            let count = 0;
+            const interval = setInterval(() => {
+                count++;
+                setVisibleLanesCount(count);
+                if (count >= CONFIG.laneCount) clearInterval(interval);
+            }, 300);
+          };
+
+          const backToPlayground = () => { setViewMode('playground'); };
+
+          useEffect(() => { return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); }; }, []);
+
+          // --- 坐标映射算法 ---
+          const getPosition = (laneIndex, distanceRun) => {
+            const lane = lanes[laneIndex];
+            const drawR = lane.visualR;
+            const drawStraightW = VISUAL.straightWidth;
+            let startOffset = raceMode === 'staggered' ? lane.stagger : 0;
+            let currentDist = startOffset + distanceRun;
+            let rem = currentDist;
+            const SL = CONFIG.straightLength;
+            const CL = CONFIG.pi * lane.r;
+
+            if (rem <= CL) { 
+              const ratio = rem / CL; 
+              const angle = -Math.PI/2 - (ratio * Math.PI); 
+              return { x: -drawStraightW + Math.cos(angle) * drawR, y: Math.sin(angle) * drawR, facingLeft: ratio < 0.5 };
+            }
+            rem -= CL;
+            if (rem <= SL) { 
+              return { x: -drawStraightW + (rem / SL) * (2 * drawStraightW), y: drawR, facingLeft: false };
+            }
+            rem -= SL;
+            if (rem <= CL) { 
+              const ratio = rem / CL;
+              const angle = Math.PI/2 - (ratio * Math.PI);
+              return { x: drawStraightW + Math.cos(angle) * drawR, y: Math.sin(angle) * drawR, facingLeft: ratio > 0.5 };
+            }
+            rem -= CL;
+            if (rem <= SL) { 
+               const dist = (rem / SL) * (2 * drawStraightW);
+               return { x: drawStraightW - dist, y: -drawR, facingLeft: true };
+            }
+            return { x: -drawStraightW, y: -drawR, facingLeft: true };
+          };
+
+          const getTrackPath = (R, W) => `M -${W} -${R} A ${R} ${R} 0 0 0 -${W} ${R} L ${W} ${R} A ${R} ${R} 0 0 0 ${W} -${R} Z`;
+
+          return (
+            <div className="min-h-screen flex flex-col font-sans text-slate-800 h-screen overflow-hidden">
+              <div className="flex-1 w-full relative bg-slate-100 overflow-hidden">
+                    {/* 视图 1: 操场跑道 */}
+                    {viewMode === 'playground' && (
+                        <div className="absolute inset-0 flex flex-col animate-in fade-in zoom-in duration-300">
+                             <div className="flex-1 bg-[#5a9e4e] flex items-center justify-center relative overflow-hidden" 
+                                  style={{backgroundImage: 'radial-gradient(#6eb662 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                  
+                                  <svg width="100%" height="100%" viewBox="-550 -330 1100 620" className="overflow-visible">
+                                      {/* 标注线 */}
+                                      {(() => {
+                                        const SW = VISUAL.straightWidth;
+                                        const OuterR = lanes[lanes.length-1].visualR + VISUAL.laneWidth/2;
+                                        const InnerFieldR = lanes[0].visualR - VISUAL.laneWidth/2;
+                                        return (
+                                          <g>
+                                            {/* 直道标注 */}
+                                            <g>
+                                               <line x1={-SW} y1={-OuterR - 30} x2={SW} y2={-OuterR - 30} stroke="white" strokeWidth="2" />
+                                               <line x1={-SW} y1={-OuterR - 38} x2={-SW} y2={-OuterR - 22} stroke="white" strokeWidth="2" />
+                                               <line x1={SW} y1={-OuterR - 38} x2={SW} y2={-OuterR - 22} stroke="white" strokeWidth="2" />
+                                               <rect x="-70" y={-OuterR - 65} width="140" height="28" rx="6" fill="rgba(22, 101, 52, 0.8)" stroke="white" strokeWidth="1.5" />
+                                               <text x="0" y={-OuterR - 46} textAnchor="middle" fill="white" fontSize="16" fontWeight="bold" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>直道 {CONFIG.straightLength} m</text>
+                                            </g>
+                                            {/* 直径标注 */}
+                                            <g>
+                                               <line x1={SW} y1={-InnerFieldR} x2={SW} y2={InnerFieldR} stroke="white" strokeWidth="2" opacity="0.6" strokeDasharray="6 4" />
+                                               <line x1={SW-5} y1={-InnerFieldR} x2={SW+5} y2={-InnerFieldR} stroke="white" strokeWidth="2" />
+                                               <line x1={SW-5} y1={InnerFieldR} x2={SW+5} y2={InnerFieldR} stroke="white" strokeWidth="2" />
+                                               <rect x={SW-55} y="-14" width="110" height="28" fill="rgba(22, 101, 52, 0.8)" rx="6" stroke="white" strokeWidth="1.5" />
+                                               <text x={SW} y="5" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>直径 {CONFIG.diameter} m</text>
+                                            </g>
+                                          </g>
+                                        )
+                                      })()}
+
+                                      {/* 跑道绘制 */}
+                                      {[...lanes].reverse().map((lane) => {
+                                        const d = getTrackPath(lane.visualR, VISUAL.straightWidth);
+                                        return <path key={`bg-${lane.id}`} d={d} stroke={COLORS.trackBg} strokeWidth={VISUAL.laneWidth} fill="none" />;
+                                      })}
+                                      {boundaryLines.map((r, index) => {
+                                        const d = getTrackPath(r, VISUAL.straightWidth);
+                                        return <path key={`line-${index}`} d={d} stroke="white" strokeWidth="1.5" fill="none" opacity="0.9"/>;
+                                      })}
+                                      
+                                      {/* 标记与运动员 */}
+                                      {[...lanes].reverse().map((lane) => {
+                                        const R = lane.visualR;
+                                        const W = VISUAL.straightWidth;
+                                        const startPos = getPosition(lane.id, 0);
+                                        return (
+                                          <g key={`marks-${lane.id}`}>
+                                            <line x1={-W} y1={-R - VISUAL.laneWidth/2} x2={-W} y2={-R + VISUAL.laneWidth/2} stroke="white" strokeWidth="3" opacity="0.9" />
+                                            {raceMode === 'staggered' && (
+                                              <line 
+                                                x1={startPos.x} 
+                                                y1={startPos.y - VISUAL.laneWidth/2} 
+                                                x2={startPos.x} 
+                                                y2={startPos.y + VISUAL.laneWidth/2} 
+                                                stroke="white" 
+                                                strokeWidth="2" 
+                                                strokeDasharray="4 3" 
+                                                opacity="0.9"
+                                                transform={`rotate(${(Math.atan2(startPos.y, startPos.x + W) * 180 / Math.PI) + 90}, ${startPos.x}, ${startPos.y})`}
+                                              />
+                                            )}
+                                            {(() => {
+                                               const pos = getPosition(lane.id, progress);
+                                               return (
+                                                  <g transform={`translate(${pos.x}, ${pos.y})`}>
+                                                    <g transform={`scale(${VISUAL.runnerScale})`}>
+                                                        <RunnerFigure color={lane.color} isRunning={isRunning} id={lane.id} facingLeft={pos.facingLeft} />
+                                                    </g>
+                                                  </g>
+                                               );
+                                            })()}
+                                          </g>
+                                        );
+                                      })}
+                                      
+                                  </svg>
+                             </div>
+                        </div>
+                    )}
+
+                    {/* 视图 2: 展开对比 */}
+                    {viewMode === 'comparison' && (
+                         <div ref={comparisonContainerRef} className="absolute inset-0 p-4 pt-6 flex flex-col bg-white animate-in slide-in-from-right duration-500 overflow-y-auto">
+                            <div className="mb-2 border-b border-slate-100 pb-2">
+                               <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
+                                   <div>
+                                       <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                          <IconRuler className="text-indigo-600" size={28}/> 长度对比分析
+                                       </h2>
+                                       <button onClick={() => setShowCalc(!showCalc)} className="mt-2 text-sm text-indigo-600 font-bold hover:underline flex items-center gap-1.5 transition-colors">
+                                            <IconInfo size={20}/>{showCalc ? '隐藏计算过程' : '为什么相差 7.85米？(点击查看原理)'}
+                                       </button>
+                                   </div>
+                               </div>
+
+                               {showCalc && (
+                                    <div className="mt-6 bg-indigo-50 p-6 rounded-2xl border-2 border-indigo-200 text-slate-800 animate-in fade-in slide-in-from-top-2 shadow-md">
+                                        <div className="grid md:grid-cols-3 gap-8">
+                                            <div className="md:col-span-2">
+                                                <h4 className="text-3xl font-bold text-indigo-900 mb-6 border-b-2 border-indigo-200 pb-3 flex items-center gap-3">
+                                                    <IconLayers size={32} className="text-indigo-500"/>
+                                                    公式推导思路
+                                                </h4>
+                                                <div className="text-xl space-y-6 leading-loose">
+                                                    <p>1. 跑道全长 = <span className="font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded border border-blue-200">2 × 直道</span> + <span className="font-bold text-orange-700 bg-orange-100 px-3 py-1 rounded border border-orange-200">圆周长 (2πr)</span></p>
+                                                    <p>2. 因为所有跑道的<span className="font-bold text-slate-900 border-b-4 border-yellow-300">直道长度都相等</span>，所以：</p>
+                                                </div>
+                                                <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 font-mono text-2xl shadow-sm mt-6 leading-relaxed text-slate-800">
+                                                    <p className="font-bold text-indigo-900 mb-2">长度差 = 外圈圆周长 - 内圈圆周长</p>
+                                                    <p className="pl-8 text-slate-600">= 2π(r + 道宽) - 2πr</p>
+                                                    <p className="pl-8 text-slate-600">= 2πr + 2π(道宽) - 2πr</p>
+                                                    <div className="pl-8 mt-4">
+                                                        <span className="font-bold text-indigo-700 bg-indigo-100 px-6 py-3 rounded-xl border-2 border-indigo-200 shadow-md inline-block transform hover:scale-105 transition-transform cursor-default text-3xl">
+                                                            = 2π × 道宽
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="md:col-span-1 flex flex-col justify-center bg-white/60 rounded-2xl p-4 border border-indigo-100">
+                                                <h4 className="text-2xl font-bold text-indigo-900 mb-4 border-b-2 border-indigo-200 pb-2 flex items-center gap-2">
+                                                    <IconZap size={28} className="text-yellow-500"/>
+                                                    代入数据计算
+                                                </h4>
+                                                <div className="bg-white rounded-xl border-2 border-indigo-200 p-6 text-center shadow-lg relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-indigo-400 to-purple-500"></div>
+                                                    
+                                                    <div className="text-slate-600 text-lg mb-6 font-medium flex items-center justify-center gap-2 flex-wrap">
+                                                        <span>已知道宽 = </span>
+                                                        <div className="relative inline-block group">
+                                                            <input 
+                                                                type="number" 
+                                                                value={laneWidth} 
+                                                                onChange={handleLaneWidthChange}
+                                                                className="w-24 px-2 py-1 text-center font-bold text-slate-900 bg-slate-100 border-2 border-slate-300 rounded focus:border-indigo-500 focus:outline-none transition-colors"
+                                                                step="0.01"
+                                                            />
+                                                            <IconEdit size={12} className="absolute top-1 right-1 text-slate-400 opacity-50 pointer-events-none"/>
+                                                        </div>
+                                                        <span>m</span>
+                                                        <span className="ml-2 font-bold text-indigo-600">π 取 3.14</span>
+                                                    </div>
+                                                    
+                                                    <div className="text-2xl font-mono text-slate-700 mb-4 whitespace-nowrap">
+                                                        2 × 3.14 × {laneWidth || '?'}
+                                                    </div>
+                                                    <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-purple-600 my-6 tracking-tight drop-shadow-sm filter">
+                                                        = {(2 * 3.14 * (Number(laneWidth) || 0)).toFixed(2)} m
+                                                    </div>
+                                                    <div className="inline-block bg-yellow-50 text-yellow-800 border border-yellow-200 py-2 px-4 rounded-full text-sm font-bold shadow-sm leading-tight">
+                                                        每道起跑线前移距离
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                               )}
+                            </div>
+
+                            <div className="flex items-center mb-6 px-2"> 
+                                <div className="w-[80px]"></div>
+                                <div className="flex-1 flex items-center gap-6 pl-4">
+                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                      <div className="w-5 h-5 rounded shadow-sm" style={{backgroundColor: COLORS.straight}}></div>
+                                      <span>直道</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                      <div className="w-5 h-5 rounded shadow-sm" style={{backgroundColor: COLORS.curve}}></div>
+                                      <span>弯道</span>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-3 pr-4">
+                                    <div className="bg-slate-200 text-slate-700 px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm border border-slate-300 min-w-[110px] text-center">跑道全长</div>
+                                    <div className="bg-red-50 text-red-500 border border-red-100 px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm min-w-[90px] text-center">距第1道</div>
+                                    <div className="bg-indigo-50 text-indigo-600 border border-indigo-100 px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm min-w-[90px] text-center">距前一道</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-5 relative flex-1 pl-4"> 
+                                <div className="absolute left-[80px] top-0 bottom-0 w-0.5 bg-slate-200 z-0"></div> 
+                                <div className="absolute left-[70px] -top-5 text-xs font-bold text-slate-400">终点线对齐</div>
+
+                                {lanes.map((lane, index) => {
+                                  if (visibleLanesCount <= index) return null;
+                                  
+                                  const straightPx = CONFIG.straightLength * barScale;
+                                  const curvePx = (lane.totalLength - 2 * CONFIG.straightLength) / 2 * barScale;
+                                  const adjacentDiff = index > 0 ? (lane.totalLength - lanes[index-1].totalLength).toFixed(2) : "-";
+                                  const trackVisualWidth = (straightPx * 2) + (curvePx * 2);
+
+                                  return (
+                                    <div key={lane.id} className="flex items-center">
+                                       <div className="w-[80px] flex-none flex items-center gap-3 pr-4 justify-end relative z-10">
+                                         <div className="w-11 h-11 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-md ring-2 ring-white" style={{backgroundColor: lane.color}}>
+                                           {lane.id + 1}
+                                         </div>
+                                       </div>
+
+                                       <div 
+                                            className="relative h-12 bg-slate-100 rounded-l-xl overflow-hidden group shadow-md border-y border-l border-slate-200 animate-grow origin-left transition-all"
+                                            style={{ width: trackVisualWidth, flex: 'none' }}
+                                       >
+                                          <div className="flex h-full w-full">
+                                              <div className="h-full flex items-center justify-center text-white text-sm font-bold relative border-r border-white/20" 
+                                                   style={{width: straightPx, backgroundColor: COLORS.straight, minWidth: straightPx}}>
+                                                直道
+                                              </div>
+                                              <div className="h-full flex items-center justify-center text-white text-sm font-bold relative border-r border-white/20" 
+                                                   style={{width: curvePx, backgroundColor: COLORS.curve, minWidth: curvePx}}>
+                                                弯道
+                                              </div>
+                                              <div className="h-full flex items-center justify-center text-white text-sm font-bold relative border-r border-white/20" 
+                                                   style={{width: straightPx, backgroundColor: COLORS.straight, minWidth: straightPx}}>
+                                                直道
+                                              </div>
+                                              <div className="h-full flex items-center justify-center text-white text-sm font-bold relative" 
+                                                   style={{width: curvePx, backgroundColor: COLORS.curve, minWidth: curvePx}}>
+                                                弯道
+                                                {index > 0 && (
+                                                  <div className="absolute right-0 top-0 bottom-0 bg-yellow-400/90 animate-pulse border-l border-white/30" 
+                                                       style={{ width: `${(lane.totalLength - lanes[0].totalLength) * barScale}px` }}>
+                                                  </div>
+                                                )}
+                                              </div>
+                                          </div>
+                                       </div>
+
+                                       <div className="flex items-center gap-3 pl-3 h-12 animate-in fade-in slide-in-from-left-4 duration-500">
+                                            <div className="bg-slate-200 text-slate-700 font-mono font-bold px-4 py-2 rounded-lg text-xl shadow-sm min-w-[110px] text-center border border-slate-300">
+                                                {lane.totalLength.toFixed(2)}
+                                            </div>
+                                            
+                                            {index > 0 && (
+                                                <span className="text-red-600 font-bold bg-red-50 px-3 py-2 rounded-lg text-lg block shadow-sm border border-red-200 min-w-[90px] text-center">
+                                                    +{lane.stagger.toFixed(2)}
+                                                </span>
+                                            )}
+
+                                            {index > 0 && (
+                                                <span className="text-indigo-600 font-bold bg-indigo-50 px-3 py-2 rounded-lg text-lg block shadow-sm border border-indigo-200 min-w-[90px] text-center">
+                                                    +{adjacentDiff}
+                                                </span>
+                                            )}
+                                       </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                         </div>
+                    )}
+              </div>
+
+              {/* 拖拽手柄 */}
+              <div 
+                onMouseDown={startResizingFooterHandler}
+                className="h-2 bg-slate-200 hover:bg-blue-400 cursor-row-resize flex items-center justify-center transition-colors group flex-none z-40"
+                title="上下拖动调整控制栏高度"
+              >
+                 <div className="w-10 h-1 bg-slate-300 rounded-full group-hover:bg-white transition-colors"></div>
+              </div>
+
+              {/* 底部控制栏 */}
+              <div 
+                className="flex-none bg-white p-3 md:p-4 border-t border-slate-200 z-30 shadow-[0_-4px_15px_rgba(0,0,0,0.05)] overflow-hidden"
+                style={{ height: footerHeight }}
+              >
+                  <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 h-full">
+                    
+                    {/* 左侧：核心控制 */}
+                    <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-sm">
+                        <div className="flex gap-2">
+                            <button 
+                              onClick={handleStart}
+                              disabled={isRunning}
+                              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-bold text-white shadow transition-all ${
+                                isRunning 
+                                  ? 'bg-slate-400 cursor-not-allowed opacity-80' 
+                                  : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                              }`}
+                            >
+                              <IconPlay size={18}/>
+                              {isRunning ? '比赛中...' : '开始'}
+                            </button>
+                            <button 
+                              onClick={handleReset}
+                              className="flex items-center justify-center p-2 rounded-lg font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300 transition-colors active:scale-95"
+                              title="复位"
+                            >
+                              <IconRotateCcw size={18}/>
+                            </button>
+                        </div>
+                        
+                        <div className="h-8 w-px bg-slate-200 mx-1"></div>
+                        
+                        <div className="flex items-center gap-3 px-2 min-w-[140px]">
+                             <IconZap size={16} className="text-yellow-500"/>
+                             <input 
+                                type="range" min="0.5" max="3.0" step="0.1" 
+                                value={speed} onChange={handleSpeedChange} 
+                                className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                             />
+                             <span className="text-xs font-mono font-bold text-slate-600 w-8 text-right">{speed.toFixed(1)}x</span>
+                        </div>
+                    </div>
+
+                    {/* 中间：起跑模式 */}
+                    <div className="flex bg-slate-100 p-1 rounded-xl shadow-inner">
+                        <button 
+                          onClick={() => { setRaceMode('aligned'); handleReset(); }}
+                          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${raceMode === 'aligned' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          普通跑
+                        </button>
+                        <button 
+                          onClick={() => { setRaceMode('staggered'); handleReset(); }}
+                          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${raceMode === 'staggered' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          梯形跑
+                        </button>
+                    </div>
+
+                    {/* 右侧：视图切换 */}
+                    <button 
+                       onClick={viewMode === 'playground' ? startUnfoldAnimation : backToPlayground}
+                       className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold shadow-md transition-all transform active:scale-95 border-2
+                         ${viewMode === 'playground' 
+                            ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-transparent hover:from-orange-600 hover:to-red-600' 
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                    >
+                       {viewMode === 'playground' ? (
+                           <>
+                             <IconRuler size={20}/> 展开跑道对比
+                           </>
+                       ) : (
+                           <>
+                             <IconArrowLeft size={20}/> 返回操场视图
+                           </>
+                       )}
+                    </button>
+
+                  </div>
+              </div>
+
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TrackSimulation />);
+    </script>
+</body>
+</html>

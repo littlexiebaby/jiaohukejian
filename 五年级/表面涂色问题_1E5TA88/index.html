@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>表面涂色问题</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="_site/math/daohang/ku/tailwindcss.js"></script>
+    <!-- Three.js for 3D rendering -->
+    <script src="_site/math/daohang/ku/three.min.js"></script>
+    <script src="_site/math/daohang/ku/OrbitControls.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
+
+        /* touch-action: none 极大地优化了触屏一体机和平板的拖拽体验 */
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #e0f7fa; 
+            touch-action: none; 
+            font-family: 'Nunito', 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+        }
+        
+        /* 自定义纵向滚动条 - 糖果色 (应用于控制面板) */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #ffb7b2; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        
+        #ui-panel::-webkit-scrollbar { width: 6px; }
+        #ui-panel::-webkit-scrollbar-thumb { background: #ffb7b2; border-radius: 3px; border: 1px solid #fffbfa; }
+
+        /* ================================================================= */
+        /* 终极抗塌陷布局：100%硬核固定比例切割，免疫一切后端过滤和环境差异 */
+        /* ================================================================= */
+        .app-layout {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        .left-panel {
+            width: 30%;
+            min-width: 300px;
+            max-width: 400px;
+            margin: 10px;
+            height: calc(100vh - 20px); /* 强制精确高度，防塌陷 */
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* gap-2 对应 8px */
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 顶部模块：强制占 20%，极限压缩内边距 */
+        .panel-module-top {
+            height: calc(20% - 5px); /* 减去一半的gap高度 */
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* 极端矮屏下允许隐形滚动 */
+            scrollbar-width: none; /* Firefox 隐藏滚动条 */
+        }
+        .panel-module-top::-webkit-scrollbar { display: none; } /* Chrome 隐藏滚动条 */
+
+        /* 中部模块（数据统计）：强制精准占 65% */
+        .panel-module-middle {
+            height: calc(65% - 6px); /* 减去上下的gap高度 */
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* 底部模块：强制占 15% */
+        .panel-module-bottom {
+            height: calc(15% - 5px); /* 减去一半的gap高度 */
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* 更改为 flex-start 以缩紧与上方的空隙 */
+            overflow: hidden;
+        }
+
+        .stats-grid-wrap {
+            height: 100%;
+            overflow-y: auto;
+            align-content: flex-start;
+        }
+        .right-canvas {
+            flex: 1 1 0%;
+            position: relative;
+            height: 100%;
+        }
+
+        /* --- 糖果风滑块基础样式 --- */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { 
+            width: 100%; height: 10px; cursor: pointer; border-radius: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        input[type=range]::-webkit-slider-thumb { 
+            height: 20px; width: 20px; border-radius: 50%; cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border: 3px solid #fff; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        input[type=range]:disabled::-webkit-slider-thumb { filter: grayscale(1); cursor: not-allowed; transform: none; }
+        input[type=range]:disabled::-webkit-slider-runnable-track { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+
+        /* 马卡龙专属轨道与滑块颜色 */
+        .slider-l::-webkit-slider-runnable-track { background: #ffe4e6; }
+        .slider-l::-webkit-slider-thumb { background: #ff9aa2; }
+        .slider-gap::-webkit-slider-runnable-track { background: #fef08a; }
+        .slider-gap::-webkit-slider-thumb { background: #facc15; }
+
+        /* --- 卡通气泡风格按钮 --- */
+        .btn-kid { 
+            border-radius: 2rem; 
+            font-weight: 900; 
+            cursor: pointer; 
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            border: 3px solid #fff; 
+            outline: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        /* 高光反射效果 */
+        .btn-kid::before {
+            content: ''; position: absolute; top: 2px; left: 8%; right: 8%; height: 25%; background: rgba(255, 255, 255, 0.5); border-radius: 2rem; pointer-events: none;
+        }
+        .btn-kid:active:not(:disabled) { transform: translateY(4px); }
+        .btn-kid:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+        /* 主色彩变体 */
+        .btn-kid-primary { background: #ff9aa2; color: white; box-shadow: 0 4px 0 #ff7b89, 0 8px 10px rgba(255, 123, 137, 0.3); }
+        .btn-kid-primary:active:not(:disabled) { box-shadow: 0 0 0 #ff7b89, 0 0 0 transparent; }
+
+        .btn-kid-secondary { background: #a0e6ff; color: #0c4a6e; box-shadow: 0 4px 0 #7cb8cc, 0 8px 10px rgba(124, 184, 204, 0.3); }
+        .btn-kid-secondary:active:not(:disabled) { box-shadow: 0 0 0 #7cb8cc, 0 0 0 transparent; }
+
+        .btn-kid-accent { background: #ffe5d9; color: #d97706; box-shadow: 0 4px 0 #ffcbb3, 0 8px 10px rgba(255, 203, 179, 0.3); }
+        .btn-kid-accent:active:not(:disabled) { box-shadow: 0 0 0 #ffcbb3, 0 0 0 transparent; }
+
+        .btn-kid-purple { background: #e0e7ff; color: #4f46e5; box-shadow: 0 4px 0 #c7ceea, 0 8px 10px rgba(199, 206, 234, 0.3); }
+        .btn-kid-purple:active:not(:disabled) { box-shadow: 0 0 0 #c7ceea, 0 0 0 transparent; }
+
+        .btn-kid-green { background: #b5ead7; color: #0f766e; box-shadow: 0 4px 0 #85cba8, 0 8px 10px rgba(133, 203, 168, 0.3); }
+        .btn-kid-green:active:not(:disabled) { box-shadow: 0 0 0 #85cba8, 0 0 0 transparent; }
+
+        .btn-kid-yellow { background: #fde68a; color: #92400e; box-shadow: 0 4px 0 #fcd34d, 0 8px 10px rgba(253, 230, 138, 0.3); }
+        .btn-kid-yellow:active:not(:disabled) { box-shadow: 0 0 0 #fcd34d, 0 0 0 transparent; }
+
+        /* 纯 CSS 处理复选框标签的颜色切换 */
+        .toggle-label { background: #e0e7ff; color: #4f46e5; box-shadow: 0 4px 0 #c7ceea, 0 8px 10px rgba(199, 206, 234, 0.3); }
+        .toggle-label:has(input:checked) { background: #b5ead7; color: #0f766e; box-shadow: 0 4px 0 #85cba8, 0 8px 10px rgba(133, 203, 168, 0.3); }
+        .toggle-label:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
+        .toggle-label:has(input:checked):active { box-shadow: 0 0 0 transparent; }
+
+        /* 隐藏原本的 checkbox 默认样式 */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+    </style>
+</head>
+<body class="app-layout select-none bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+
+    <!-- 左侧控制面板 (完全采用原生 CSS 类 left-panel 控制宽高与硬核切割) -->
+    <div id="ui-panel" class="left-panel px-3 py-3 relative bg-[#fffbfa] rounded-[2.5rem] shadow-[15px_0_40px_rgba(255,183,178,0.2)] border-4 border-white">
+        
+        <!-- 模块 1：基础模型控制 (强制 20%，内部极限压缩间距) -->
+        <div class="panel-module-top border-b-4 border-pink-100 border-dashed pb-1">
+            <div class="flex flex-col gap-1.5 mt-0">
+                <!-- 图形选择器 -->
+                <div class="flex gap-1.5">
+                    <button id="shape-cube-btn" class="flex-1 btn-kid btn-kid-primary py-1 text-xs md:text-sm xl:text-base">正方体</button>
+                    <button id="shape-cuboid-btn" class="flex-1 btn-kid btn-kid-purple opacity-70 py-1 text-xs md:text-sm xl:text-base" style="box-shadow: none; transform: translateY(4px);">长方体</button>
+                    <button id="shape-tetra-btn" class="flex-1 btn-kid btn-kid-purple opacity-70 py-1 text-xs md:text-sm xl:text-base" style="box-shadow: none; transform: translateY(4px);">阶梯三角锥</button>
+                </div>
+                <!-- 滑块 N -->
+                <div id="single-n-wrapper" class="bg-white p-1.5 rounded-xl shadow-sm border-2 border-pink-50 mt-1">
+                    <label class="flex justify-between text-xs md:text-sm lg:text-base font-black text-[#ff7b89] mb-0.5 px-1">
+                        <span>模型阶数</span><span id="n-val" class="text-pink-600">4</span>
+                    </label>
+                    <input type="range" id="n-slider" min="1" max="10" value="4" class="slider-l">
+                </div>
+                <!-- 长方体独立滑块 -->
+                <div id="cuboid-n-wrapper" class="hidden bg-white px-1.5 py-1 rounded-xl shadow-sm border-2 border-pink-50 mt-1 flex-col gap-1">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs md:text-sm font-black text-[#ff7b89] w-4 md:w-5">长</span>
+                        <input type="range" id="l-slider" min="1" max="10" value="4" class="slider-l flex-1">
+                        <span id="l-val" class="text-pink-600 text-xs md:text-sm font-black w-4 md:w-5 text-right">4</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs md:text-sm font-black text-[#ff7b89] w-4 md:w-5">宽</span>
+                        <input type="range" id="w-slider" min="1" max="10" value="4" class="slider-l flex-1">
+                        <span id="w-val" class="text-pink-600 text-xs md:text-sm font-black w-4 md:w-5 text-right">4</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs md:text-sm font-black text-[#ff7b89] w-4 md:w-5">高</span>
+                        <input type="range" id="h-slider" min="1" max="10" value="4" class="slider-l flex-1">
+                        <span id="h-val" class="text-pink-600 text-xs md:text-sm font-black w-4 md:w-5 text-right">4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块 2：核心数据统计与快捷操作 (强制 65%) -->
+        <div class="panel-module-middle border-b-4 border-pink-100 border-dashed pb-0">
+            <!-- 操作按钮网格 (改为1行3列) -->
+            <div class="grid grid-cols-3 gap-1.5 mb-1.5 shrink-0 mt-1">
+                <button id="select-all-btn" class="btn-kid btn-kid-accent py-1 text-[10px] sm:text-xs lg:text-sm px-0">一键全选</button>
+                <button id="toggle-total-btn" class="btn-kid btn-kid-secondary py-1 text-[10px] sm:text-xs lg:text-sm px-0">显示总数</button>
+                <button id="reset-btn" class="btn-kid btn-kid-yellow py-1 text-[10px] sm:text-xs lg:text-sm px-0">重置状态</button>
+            </div>
+            
+            <!-- 动态卡片容器 -->
+            <div id="stats-grid" class="stats-grid-wrap grid grid-cols-2 gap-2 pb-1 pr-1">
+                <!-- Javascript将在这里动态渲染卡片 -->
+            </div>
+
+            <!-- 专属分离间距滑块 -->
+            <div class="mt-1 bg-white px-3 py-1.5 rounded-[1.5rem] shadow-sm border-2 border-yellow-100 flex flex-col gap-0.5 shrink-0">
+                <div class="flex justify-between items-center px-1">
+                    <label class="text-xs md:text-sm font-black text-[#d97706]">选中层分离间距:</label>
+                    <span id="space-val" class="text-[#d97706] text-sm md:text-base font-black w-[30px] text-right">0.0</span>
+                </div>
+                <input type="range" id="space-slider" min="0" max="2" step="0.1" value="0" class="slider-gap w-full">
+            </div>
+        </div>
+
+        <!-- 模块 3：涂色与探究控制 (强制 15%，高度紧缩整体缩小约15%，增加 -mt-1.5 实现空隙大幅缩减) -->
+        <div class="panel-module-bottom -mt-1.5">
+            <!-- 表面涂色按钮 -->
+            <button id="paint-btn" class="w-full btn-kid btn-kid-primary text-sm md:text-base lg:text-lg py-1 mb-1.5 shrink-0">
+                进行表面涂色
+            </button>
+            
+            <div class="grid grid-cols-2 gap-1.5 shrink-0">
+                <!-- 探究模式开关 (横向图标和文字) -->
+                <label class="btn-kid toggle-label text-xs md:text-sm py-1 cursor-pointer group flex-row items-center justify-center gap-1 w-full px-1">
+                    <input type="checkbox" id="explore-mode" class="sr-only peer" checked>
+                    <svg class="w-3.5 h-3.5 md:w-4 md:h-4 peer-checked:scale-110 peer-checked:rotate-12 transition-all duration-300" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span class="font-black transition-colors duration-300 select-none">探究模式</span>
+                </label>
+
+                <!-- 文字标签开关 (横向图标和文字) -->
+                <label class="btn-kid toggle-label text-xs md:text-sm py-1 cursor-pointer group flex-row items-center justify-center gap-1 w-full px-1">
+                    <input type="checkbox" id="label-mode" class="sr-only peer">
+                    <svg class="w-3.5 h-3.5 md:w-4 md:h-4 peer-checked:scale-110 transition-all duration-300" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    <span class="font-black transition-colors duration-300 select-none">文字标签</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧展示区域 -->
+    <div id="canvas-container" class="right-canvas pointer-events-auto">
+        <!-- 展示区左下角：操作手册悬浮按钮 -->
+        <button id="help-btn" class="absolute bottom-5 left-5 pointer-events-auto btn-kid btn-kid-yellow py-2 px-3 md:px-4 text-[12px] md:text-[13px] flex items-center gap-1.5 shadow-[0_4px_10px_rgba(253,230,138,0.4)] z-30">
+            <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+            操作手册
+        </button>
+    </div>
+
+    <!-- 课件操作手册弹窗 -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#fffbfa] border-[6px] border-white rounded-[2rem] w-[90%] md:w-[480px] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.2)] transform scale-95 transition-transform duration-300" id="help-modal-content">
+            <h2 class="text-xl md:text-2xl font-black text-[#ff7b89] mb-5 flex items-center justify-center gap-2">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                课件操作手册
+            </h2>
+            <div class="flex flex-col gap-3.5 text-slate-600 font-black text-sm md:text-[15px] mb-6 tracking-wide leading-relaxed">
+                <p><span class="inline-block bg-[#e0e7ff] text-[#4f46e5] px-2.5 py-0.5 rounded-xl border-2 border-white shadow-sm mr-1">1. 视角操作</span>单指/左键拖动旋转，双指/滚轮缩放。</p>
+                <p><span class="inline-block bg-[#ffe4e6] text-[#e11d48] px-2.5 py-0.5 rounded-xl border-2 border-white shadow-sm mr-1">2. 表面涂色</span>点击右下方按钮，为整个多面体外侧刷上涂料。</p>
+                <p><span class="inline-block bg-[#cffafe] text-[#0e7490] px-2.5 py-0.5 rounded-xl border-2 border-white shadow-sm mr-1">3. 一键选中</span>点击控制区中间的“X面”标签，秒找同类方块。</p>
+                <p><span class="inline-block bg-[#fef3c7] text-[#b45309] px-2.5 py-0.5 rounded-xl border-2 border-white shadow-sm mr-1">4. 分离与隐藏</span>针对特定分类，拉开间距观察内部，或将其隐身。</p>
+                <p><span class="inline-block bg-[#d1fae5] text-[#047857] px-2.5 py-0.5 rounded-xl border-2 border-white shadow-sm mr-1">5. 探究模式</span>开启后，您可以亲自点击 3D 画面上的小方块进行涂色计数测试。</p>
+            </div>
+            <button id="close-help-btn" class="w-full btn-kid btn-kid-primary py-3 text-base md:text-lg tracking-widest">
+                我知道啦
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心应用状态 ---
+        let currentShape = 'cube'; 
+        let currentN = 4; 
+        let currentL = 4, currentW = 4, currentH = 4;
+        let isPainted = false;
+        let currentSpacing = 0;
+        let isExploreMode = false;
+        let showFaceLabels = false; 
+        let showTotals = false;
+        let counts = { 6:0, 5:0, 4:0, 3:0, 2:0, 1:0, 0:0 };
+        let expectedCounts = { 6:0, 5:0, 4:0, 3:0, 2:0, 1:0, 0:0 };
+
+        let spacingCats = new Set();
+        let hiddenCats = new Set();
+
+        // --- 性能优化：防抖与节流定时器 ---
+        let rebuildTimeout = null;
+        let spaceUpdateFrame = null;
+
+        // --- Three.js 核心对象 ---
+        let scene, camera, renderer, controls;
+        let raycaster, mouse;
+        let cubes = []; 
+        let interactiveMeshes = []; 
+
+        // --- 几何体与材质 ---
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        const solidEdgesGeo = new THREE.EdgesGeometry(boxGeo);
+
+        const COLOR_WOOD = 0xfffcf2;   
+        const COLOR_PAINT = 0xffb6c1;  
+        const COLOR_INNER = 0xfffcf2;  
+        const COLOR_EDGE = 0x000000;   
+
+        const matDefault = new THREE.MeshLambertMaterial({ color: COLOR_WOOD });
+        const matPainted = new THREE.MeshLambertMaterial({ color: COLOR_PAINT });
+        const matInner = new THREE.MeshLambertMaterial({ color: COLOR_INNER });
+        const edgeMat = new THREE.LineBasicMaterial({ color: COLOR_EDGE, linewidth: 2 });
+
+        const matClicked = {
+            6: new THREE.MeshLambertMaterial({ color: 0xfda4af }),
+            5: new THREE.MeshLambertMaterial({ color: 0xd8b4fe }),
+            4: new THREE.MeshLambertMaterial({ color: 0x67e8f9 }),
+            3: new THREE.MeshLambertMaterial({ color: 0x93c5fd }),
+            2: new THREE.MeshLambertMaterial({ color: 0xfcd34d }),
+            1: new THREE.MeshLambertMaterial({ color: 0x6ee7b7 }),
+            0: new THREE.MeshLambertMaterial({ color: 0xcbd5e1 }) 
+        };
+
+        const textMats = {};
+        const baseColorsHex = {
+            6: '#fda4af', 5: '#d8b4fe', 4: '#67e8f9', 
+            3: '#93c5fd', 2: '#fcd34d', 1: '#6ee7b7'  
+        };
+        const textColorsHex = {
+            6: '#9f1239', 5: '#6b21a8', 4: '#155e75', 
+            3: '#1e40af', 2: '#92400e', 1: '#065f46'  
+        };
+        
+        for (let i = 1; i <= 6; i++) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = baseColorsHex[i];
+            ctx.fillRect(0, 0, 512, 512);
+
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(255,255,255,0.6)';
+            ctx.shadowOffsetY = 2; ctx.shadowBlur = 8;
+            ctx.fillStyle = textColorsHex[i];
+            
+            ctx.font = '900 240px sans-serif';
+            ctx.fillText(i, 256 - 60, 256 + 15);
+            ctx.font = '900 100px sans-serif';
+            ctx.fillText('面', 256 + 90, 256 + 40);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            textMats[i] = new THREE.MeshLambertMaterial({ map: tex });
+        }
+
+        // 气泡卡片配色映射
+        const FACE_STYLES = {
+            6: { bg: 'bg-[#ffe4e6]', textClass: 'text-[#e11d48]', shadow: 'shadow-[0_3px_0_#fda4af]' },
+            5: { bg: 'bg-[#f3e8ff]', textClass: 'text-[#7e22ce]', shadow: 'shadow-[0_3px_0_#d8b4fe]' },
+            4: { bg: 'bg-[#cffafe]', textClass: 'text-[#0e7490]', shadow: 'shadow-[0_3px_0_#67e8f9]' },
+            3: { bg: 'bg-[#dbeafe]', textClass: 'text-[#1d4ed8]', shadow: 'shadow-[0_3px_0_#93c5fd]' },
+            2: { bg: 'bg-[#fef3c7]', textClass: 'text-[#b45309]', shadow: 'shadow-[0_3px_0_#fcd34d]' },
+            1: { bg: 'bg-[#d1fae5]', textClass: 'text-[#047857]', shadow: 'shadow-[0_3px_0_#6ee7b7]' },
+            0: { bg: 'bg-[#f1f5f9]', textClass: 'text-[#475569]', shadow: 'shadow-[0_3px_0_#cbd5e1]' }
+        };
+
+        // --- 初始化 ---
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+
+            const canvasContainer = document.getElementById('canvas-container');
+            const rect = canvasContainer.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            canvasContainer.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(10, 20, 15);
+            scene.add(dirLight);
+
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            dirLight2.position.set(-10, -10, -15);
+            scene.add(dirLight2);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // 修复：必须在 controls 实例化之后再调用此函数，否则目标坐标会丢失
+            updateCameraPosition();
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            rebuildCubes();
+
+            window.addEventListener('resize', onWindowResize);
+            setupInputListeners();
+            setupUIEventListeners();
+            
+            setTimeout(() => {
+                // 修复：强制进行一次排版后的重计算，彻底解决刷新后图形不在屏幕正中间的问题
+                onWindowResize();
+
+                if (!isPainted) document.getElementById('paint-btn').click();
+                const exploreCheckbox = document.getElementById('explore-mode');
+                if (!exploreCheckbox.checked) {
+                    exploreCheckbox.checked = true;
+                    exploreCheckbox.dispatchEvent(new Event('change'));
+                }
+            }, 50);
+        }
+
+        // --- 核心业务逻辑 ---
+        
+        function rebuildCubes() {
+            cubes.forEach(group => scene.remove(group));
+            cubes = [];
+            interactiveMeshes = [];
+            
+            for(let i=0; i<=6; i++) { counts[i] = 0; expectedCounts[i] = 0; }
+
+            const coords = [];
+            if (currentShape === 'cube') {
+                for (let x = 0; x < currentN; x++) {
+                    for (let y = 0; y < currentN; y++) {
+                        for (let z = 0; z < currentN; z++) {
+                            coords.push({x, y, z});
+                        }
+                    }
+                }
+            } else if (currentShape === 'cuboid') {
+                for (let x = 0; x < currentL; x++) {
+                    for (let y = 0; y < currentH; y++) {
+                        for (let z = 0; z < currentW; z++) {
+                            coords.push({x, y, z});
+                        }
+                    }
+                }
+            } else if (currentShape === 'tetra') {
+                for (let y = 0; y < currentN; y++) {
+                    for (let z = 0; z < currentN - y; z++) {
+                        for (let x = 0; x < currentN - y - z; x++) {
+                            coords.push({x, y, z});
+                        }
+                    }
+                }
+            }
+
+            const coordSet = new Set(coords.map(c => `${c.x},${c.y},${c.z}`));
+            const dx = [1, -1, 0, 0, 0, 0];
+            const dy = [0, 0, 1, -1, 0, 0];
+            const dz = [0, 0, 0, 0, 1, -1];
+
+            let minX=0, maxX=0, minY=0, maxY=0, minZ=0, maxZ=0;
+            if (coords.length > 0) {
+                minX = Math.min(...coords.map(c=>c.x)); maxX = Math.max(...coords.map(c=>c.x));
+                minY = Math.min(...coords.map(c=>c.y)); maxY = Math.max(...coords.map(c=>c.y));
+                minZ = Math.min(...coords.map(c=>c.z)); maxZ = Math.max(...coords.map(c=>c.z));
+            }
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const centerZ = (minZ + maxZ) / 2;
+
+            coords.forEach(c => {
+                let neighbors = 0;
+                let paintedFaces = [false, false, false, false, false, false];
+                let nx = 0, ny = 0, nz = 0;
+                
+                for(let i=0; i<6; i++){
+                    if(!coordSet.has(`${c.x+dx[i]},${c.y+dy[i]},${c.z+dz[i]}`)) {
+                        paintedFaces[i] = true;
+                        // 动态累加暴露面的法线向量，算出专属的“抽出方向”
+                        nx += dx[i];
+                        ny += dy[i];
+                        nz += dz[i];
+                    } else {
+                        neighbors++;
+                    }
+                }
+                
+                const exteriorFacesCount = 6 - neighbors;
+                expectedCounts[exteriorFacesCount]++;
+
+                const group = new THREE.Group();
+                group.userData = { 
+                    x: c.x, y: c.y, z: c.z, 
+                    cx: centerX, cy: centerY, cz: centerZ,
+                    paintedFacesCount: exteriorFacesCount, 
+                    paintedFacesArray: paintedFaces, 
+                    normalX: nx, normalY: ny, normalZ: nz, // 存储法线方向
+                    isClicked: false 
+                };
+
+                const solidMesh = new THREE.Mesh(boxGeo, []);
+                group.add(solidMesh);
+                interactiveMeshes.push(solidMesh);
+
+                const solidEdges = new THREE.LineSegments(solidEdgesGeo, edgeMat);
+                group.add(solidEdges);
+
+                scene.add(group);
+                cubes.push(group);
+            });
+
+            renderStatsUI();
+            cubes.forEach(updateGroupMaterial);
+            updatePositions();
+            applyVisibility();
+        }
+
+        function updateGroupMaterial(group) {
+            const solidMesh = group.children[0];
+            const { paintedFacesArray, isClicked, paintedFacesCount } = group.userData;
+
+            const materials = [];
+            for (let i = 0; i < 6; i++) {
+                if (!isPainted) {
+                    materials.push(matDefault); 
+                } else {
+                    if (!isClicked) {
+                        materials.push(paintedFacesArray[i] ? matPainted : matInner);
+                    } else {
+                        if (paintedFacesCount === 0) {
+                            materials.push(matClicked[0]);
+                        } else if (paintedFacesArray[i]) {
+                            if (showFaceLabels) {
+                                materials.push(textMats[paintedFacesCount]);
+                            } else {
+                                materials.push(matClicked[paintedFacesCount]);
+                            }
+                        } else {
+                            materials.push(matInner);
+                        }
+                    }
+                }
+            }
+            solidMesh.material = materials;
+        }
+
+        // 动态渲染数据卡片 (修复：增加 min-h 保障，杜绝内部文字重叠)
+        function renderStatsUI() {
+            const container = document.getElementById('stats-grid');
+            container.innerHTML = '';
+
+            let displayFaces = [];
+            if (currentShape === 'cube') {
+                displayFaces = [3, 2, 1, 0];
+            } else {
+                [6, 5, 4, 3, 2, 1, 0].forEach(face => {
+                    if (expectedCounts[face] > 0) displayFaces.push(face);
+                });
+            }
+
+            displayFaces.forEach(face => {
+                const st = FACE_STYLES[face];
+                const isSpacing = spacingCats.has(face);
+                const isHidden = hiddenCats.has(face);
+
+                const spacingBtnClass = isSpacing ? 'btn-kid-accent' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50';
+                const hiddenBtnClass = isHidden ? 'btn-kid-purple' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50';
+                const cardOpacity = isHidden ? 'opacity-50 grayscale-[50%]' : 'opacity-100';
+
+                const div = document.createElement('div');
+                // 新增 min-h-[110px] 强制保护内部元素在任意环境下不重叠塌陷
+                div.className = `${st.bg} border-[3px] border-white rounded-[1rem] w-full flex flex-col items-center justify-between p-1.5 pb-2 transition-all ${st.shadow} hover:-translate-y-0.5 ${cardOpacity} gap-1 min-h-[110px]`;
+                
+                div.innerHTML = `
+                    <button onclick="autoSelectFaces(${face})" class="w-full bg-white/90 px-1 py-0.5 rounded-lg shadow-sm border border-white text-[10px] sm:text-xs lg:text-sm font-black ${st.textClass} hover:bg-white active:scale-95 transition-all tracking-widest ring-2 ring-transparent hover:ring-pink-100">
+                        ${face}面选中
+                    </button>
+                    
+                    <div class="flex items-baseline justify-center gap-1 w-full my-auto">
+                        <span class="text-2xl sm:text-3xl lg:text-4xl font-black ${st.textClass} leading-none drop-shadow-sm" id="count-${face}">${counts[face] || 0}</span>
+                        <span class="total-display ${showTotals ? '' : 'hidden'} text-[10px] sm:text-xs text-slate-500 font-black whitespace-nowrap">/${expectedCounts[face]}</span>
+                    </div>
+
+                    <div class="flex gap-1 w-full justify-between mt-auto">
+                        <button onclick="toggleSpacing(${face})" class="flex-1 btn-kid ${spacingBtnClass} text-[10px] sm:text-xs lg:text-sm py-1 border-[2px] rounded-lg tracking-widest min-w-0 px-0">分离</button>
+                        <button onclick="toggleVisibility(${face})" class="flex-1 btn-kid ${hiddenBtnClass} text-[10px] sm:text-xs lg:text-sm py-1 border-[2px] rounded-lg tracking-widest min-w-0 px-0">${isHidden ? '已隐' : '隐藏'}</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.toggleVisibility = function(face) {
+            if (hiddenCats.has(face)) {
+                hiddenCats.delete(face);
+            } else {
+                hiddenCats.add(face);
+            }
+            renderStatsUI();
+            applyVisibility();
+        };
+
+        function applyVisibility() {
+            cubes.forEach(group => {
+                const { paintedFacesCount } = group.userData;
+                group.visible = !hiddenCats.has(paintedFacesCount);
+            });
+        }
+
+        window.toggleSpacing = function(face) {
+            if (spacingCats.has(face)) {
+                spacingCats.delete(face);
+            } else {
+                spacingCats.add(face);
+            }
+            
+            const spaceSlider = document.getElementById('space-slider');
+            if (spaceSlider) spaceSlider.value = 0;
+            currentSpacing = 0;
+            document.getElementById('space-val').innerText = '0.0';
+
+            renderStatsUI();
+            updatePositions();
+        };
+
+        function updatePositions() {
+            cubes.forEach(group => {
+                group.userData.currentS = 0;
+                group.userData.isActive = spacingCats.has(group.userData.paintedFacesCount) && group.visible;
+                
+                // 核心优化：使用涂色面的法线向量和作为分离方向，方块只会向自己的“暴露面”垂直抽离
+                // 这样2面、1面的方块能像抽屉一样平滑抽出，完美绕开3面的角块，实现独立分离且绝不穿模。
+                group.userData.dirX = group.userData.normalX;
+                group.userData.dirY = group.userData.normalY;
+                group.userData.dirZ = group.userData.normalZ;
+            });
+
+            const STEPS = 40; 
+            if (currentSpacing > 0) {
+                const deltaS = currentSpacing / STEPS;
+                
+                for (let step = 1; step <= STEPS; step++) {
+                    let anyActive = false;
+                    
+                    cubes.forEach((g, i) => {
+                        if (!g.userData.isActive) return;
+                        anyActive = true;
+                        
+                        let nextS_i = g.userData.currentS + deltaS;
+                        let px = g.userData.x + g.userData.dirX * nextS_i;
+                        let py = g.userData.y + g.userData.dirY * nextS_i;
+                        let pz = g.userData.z + g.userData.dirZ * nextS_i;
+                        
+                        let collision = false;
+                        for (let j = 0; j < cubes.length; j++) {
+                            if (i === j || !cubes[j].visible) continue;
+                            
+                            let g2 = cubes[j].userData;
+                            let nextS_j = g2.currentS + (g2.isActive ? deltaS : 0);
+                            
+                            if (Math.abs(px - (g2.x + g2.dirX * nextS_j)) >= 0.999) continue;
+                            if (Math.abs(py - (g2.y + g2.dirY * nextS_j)) >= 0.999) continue;
+                            if (Math.abs(pz - (g2.z + g2.dirZ * nextS_j)) >= 0.999) continue;
+                            
+                            collision = true;
+                            break;
+                        }
+                        
+                        g.userData.canAdvance = !collision;
+                    });
+                    
+                    if (!anyActive) break; 
+                    
+                    cubes.forEach(g => {
+                        if (g.userData.isActive) {
+                            if (g.userData.canAdvance) {
+                                g.userData.currentS += deltaS;
+                            } else {
+                                g.userData.isActive = false; 
+                            }
+                        }
+                    });
+                }
+            }
+
+            cubes.forEach(group => {
+                let s = group.userData.currentS;
+                let baseX = group.userData.x - group.userData.cx;
+                let baseY = group.userData.y - group.userData.cy;
+                let baseZ = group.userData.z - group.userData.cz;
+                
+                group.position.set(
+                    baseX + group.userData.dirX * s,
+                    baseY + group.userData.dirY * s,
+                    baseZ + group.userData.dirZ * s
+                );
+            });
+        }
+
+        function updateCameraPosition() {
+            let maxDim = currentN;
+            if (currentShape === 'cuboid') {
+                maxDim = Math.max(currentL, currentW, currentH);
+            }
+            const dist = Math.max(maxDim * 2, 6);
+            camera.position.set(dist * 0.8, dist * 0.8, dist);
+            if (controls) {
+                controls.target.set(0, 0, 0);
+                controls.update(); // 强制立刻更新控制器，确保坐标轴绝对居中对齐
+            }
+            
+            camera.zoom = 0.8;
+            camera.updateProjectionMatrix();
+        }
+
+        function updateStatsCounter() {
+            Object.keys(counts).forEach(face => {
+                const el = document.getElementById(`count-${face}`);
+                if (el) el.innerText = counts[face];
+            });
+        }
+
+        function resetExploreState() {
+            cubes.forEach(group => {
+                if (group.userData.isClicked) {
+                    group.userData.isClicked = false;
+                    updateGroupMaterial(group);
+                }
+            });
+            for(let i=0; i<=6; i++) counts[i] = 0;
+            
+            spacingCats.clear();
+            hiddenCats.clear();
+            const spaceSlider = document.getElementById('space-slider');
+            if(spaceSlider) spaceSlider.value = 0;
+            currentSpacing = 0;
+            document.getElementById('space-val').innerText = '0.0';
+
+            updatePositions();
+            applyVisibility();
+            renderStatsUI();
+            updateStatsCounter();
+        }
+
+        window.autoSelectFaces = function(targetFaces) {
+            if (!isPainted) document.getElementById('paint-btn').click();
+            if (!isExploreMode) {
+                const exploreCheckbox = document.getElementById('explore-mode');
+                exploreCheckbox.checked = true;
+                exploreCheckbox.dispatchEvent(new Event('change'));
+            }
+
+            cubes.forEach(group => {
+                if (group.userData.paintedFacesCount === targetFaces && !group.userData.isClicked && group.visible) {
+                    group.userData.isClicked = true;
+                    updateGroupMaterial(group);
+                    counts[targetFaces]++;
+                }
+            });
+            updateStatsCounter();
+        };
+
+        // --- 交互与事件处理 ---
+        let pointerDownPos = { x: 0, y: 0 };
+
+        function setupInputListeners() {
+            const canvasContainer = document.getElementById('canvas-container');
+            
+            canvasContainer.addEventListener('pointerdown', (e) => {
+                pointerDownPos.x = e.clientX;
+                pointerDownPos.y = e.clientY;
+            });
+
+            canvasContainer.addEventListener('pointerup', (e) => {
+                const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+                if (dist < 5) handlePointerClick(e);
+            });
+
+            canvasContainer.addEventListener('pointermove', (e) => {
+                if (!isExploreMode) return;
+                
+                const rect = canvasContainer.getBoundingClientRect();
+                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(interactiveMeshes.filter(m => m.parent.visible));
+                canvasContainer.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+            });
+        }
+
+        function handlePointerClick(event) {
+            if (!isExploreMode || !isPainted) return;
+            
+            const canvasContainer = document.getElementById('canvas-container');
+            const rect = canvasContainer.getBoundingClientRect();
+
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveMeshes.filter(m => m.parent.visible));
+
+            if (intersects.length > 0) {
+                const hitMesh = intersects[0].object;
+                const group = hitMesh.parent;
+
+                if (!group.userData.isClicked) {
+                    group.userData.isClicked = true;
+                    updateGroupMaterial(group);
+                    counts[group.userData.paintedFacesCount]++;
+                    updateStatsCounter();
+                }
+            }
+        }
+
+        function setupUIEventListeners() {
+            const btnCube = document.getElementById('shape-cube-btn');
+            const btnCuboid = document.getElementById('shape-cuboid-btn');
+            const btnTetra = document.getElementById('shape-tetra-btn');
+            const singleNWrapper = document.getElementById('single-n-wrapper');
+            const cuboidNWrapper = document.getElementById('cuboid-n-wrapper');
+            
+            function switchShape(shape) {
+                if (currentShape === shape) return;
+                currentShape = shape;
+                
+                [btnCube, btnCuboid, btnTetra].forEach(btn => {
+                    btn.className = "flex-1 btn-kid btn-kid-purple opacity-70 py-1 text-xs md:text-sm xl:text-base";
+                    btn.style.boxShadow = "none";
+                    btn.style.transform = "translateY(4px)";
+                });
+
+                let activeBtn;
+                if (shape === 'cube') activeBtn = btnCube;
+                else if (shape === 'cuboid') activeBtn = btnCuboid;
+                else if (shape === 'tetra') activeBtn = btnTetra;
+
+                activeBtn.className = "flex-1 btn-kid btn-kid-primary py-1 text-xs md:text-sm xl:text-base";
+                activeBtn.style.boxShadow = "";
+                activeBtn.style.transform = "";
+
+                if (shape === 'cuboid') {
+                    singleNWrapper.classList.add('hidden');
+                    cuboidNWrapper.classList.remove('hidden');
+                    cuboidNWrapper.classList.add('flex');
+                } else {
+                    cuboidNWrapper.classList.add('hidden');
+                    cuboidNWrapper.classList.remove('flex');
+                    singleNWrapper.classList.remove('hidden');
+                }
+
+                updateCameraPosition();
+                if(isPainted) document.getElementById('paint-btn').click(); 
+                rebuildCubes();
+            }
+
+            btnCube.addEventListener('click', () => switchShape('cube'));
+            btnCuboid.addEventListener('click', () => switchShape('cuboid'));
+            btnTetra.addEventListener('click', () => switchShape('tetra'));
+
+            document.getElementById('n-slider').addEventListener('input', (e) => {
+                currentN = parseInt(e.target.value);
+                document.getElementById('n-val').innerText = currentN;
+                
+                // 【修复卡顿】使用防抖(Debounce)优化：只在拖动停顿时重构3D模型
+                if (rebuildTimeout) clearTimeout(rebuildTimeout);
+                rebuildTimeout = setTimeout(() => {
+                    updateCameraPosition(); 
+                    rebuildCubes();
+                }, 100);
+            });
+
+            ['l', 'w', 'h'].forEach(dim => {
+                document.getElementById(`${dim}-slider`).addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value);
+                    document.getElementById(`${dim}-val`).innerText = val;
+                    if (dim === 'l') currentL = val;
+                    if (dim === 'w') currentW = val;
+                    if (dim === 'h') currentH = val;
+                    
+                    // 【修复卡顿】使用防抖(Debounce)优化
+                    if (rebuildTimeout) clearTimeout(rebuildTimeout);
+                    rebuildTimeout = setTimeout(() => {
+                        updateCameraPosition();
+                        rebuildCubes();
+                    }, 100);
+                });
+            });
+
+            const paintBtn = document.getElementById('paint-btn');
+            paintBtn.addEventListener('click', () => {
+                isPainted = !isPainted;
+                if (isPainted) {
+                    paintBtn.innerHTML = '取消涂色恢复原木';
+                    paintBtn.className = 'w-full btn-kid btn-kid-purple text-sm md:text-base lg:text-lg py-1 mb-1.5 shrink-0';
+                } else {
+                    paintBtn.innerHTML = '进行表面涂色';
+                    paintBtn.className = 'w-full btn-kid btn-kid-primary text-sm md:text-base lg:text-lg py-1 mb-1.5 shrink-0';
+                    
+                    const exploreCheckbox = document.getElementById('explore-mode');
+                    if (isExploreMode) {
+                        exploreCheckbox.checked = false;
+                        isExploreMode = false;
+                    }
+                }
+                resetExploreState(); 
+                cubes.forEach(updateGroupMaterial);
+            });
+
+            document.getElementById('space-slider').addEventListener('input', (e) => {
+                currentSpacing = parseFloat(e.target.value);
+                document.getElementById('space-val').innerText = currentSpacing.toFixed(1);
+                
+                // 【修复卡顿】使用节流(RAF Throttle)优化：限制碰撞检测的频率与屏幕刷新率一致
+                if (spaceUpdateFrame) cancelAnimationFrame(spaceUpdateFrame);
+                spaceUpdateFrame = requestAnimationFrame(() => {
+                    updatePositions();
+                });
+            });
+
+            const exploreCheckbox = document.getElementById('explore-mode');
+            exploreCheckbox.addEventListener('change', (e) => {
+                isExploreMode = e.target.checked;
+                if (isExploreMode) {
+                    if (!isPainted) paintBtn.click();
+                } else {
+                    document.getElementById('canvas-container').style.cursor = 'default';
+                }
+            });
+
+            const labelCheckbox = document.getElementById('label-mode');
+            labelCheckbox.addEventListener('change', (e) => {
+                showFaceLabels = e.target.checked;
+                cubes.forEach(updateGroupMaterial);
+            });
+
+            document.getElementById('reset-btn').addEventListener('click', resetExploreState);
+
+            document.getElementById('toggle-total-btn').addEventListener('click', (e) => {
+                showTotals = !showTotals;
+                e.target.innerText = showTotals ? '隐藏总数' : '显示总数';
+                const totalDisplays = document.querySelectorAll('.total-display');
+                totalDisplays.forEach(el => {
+                    if (showTotals) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                });
+            });
+
+            document.getElementById('select-all-btn').addEventListener('click', () => {
+                if (!isPainted) document.getElementById('paint-btn').click();
+                if (!isExploreMode) {
+                    const exploreCheckbox = document.getElementById('explore-mode');
+                    exploreCheckbox.checked = true;
+                    exploreCheckbox.dispatchEvent(new Event('change'));
+                }
+
+                cubes.forEach(group => {
+                    if (!group.userData.isClicked && group.visible) {
+                        group.userData.isClicked = true;
+                        updateGroupMaterial(group);
+                        counts[group.userData.paintedFacesCount]++;
+                    }
+                });
+                updateStatsCounter();
+            });
+
+            // --- 操作手册弹窗逻辑 ---
+            const helpBtn = document.getElementById('help-btn');
+            const closeHelpBtn = document.getElementById('close-help-btn');
+            const helpModal = document.getElementById('help-modal');
+            const helpModalContent = document.getElementById('help-modal-content');
+
+            helpBtn.addEventListener('click', () => {
+                helpModal.classList.remove('opacity-0', 'pointer-events-none');
+                helpModalContent.classList.remove('scale-95');
+                helpModalContent.classList.add('scale-100');
+            });
+
+            closeHelpBtn.addEventListener('click', () => {
+                helpModal.classList.add('opacity-0', 'pointer-events-none');
+                helpModalContent.classList.remove('scale-100');
+                helpModalContent.classList.add('scale-95');
+            });
+        }
+
+        function onWindowResize() {
+            const canvasContainer = document.getElementById('canvas-container');
+            const rect = canvasContainer.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

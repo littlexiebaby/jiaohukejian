@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>神奇的默比乌斯带</title>
+    
+    <!-- CDN 资源调用全部统一放在标题下方 -->
+    <script src="_site/math/daohang/ku/tailwindcss.js"></script>
+    <script src="_site/math/daohang/ku/three.min.js"></script>
+    <script src="_site/math/daohang/ku/OrbitControls.js"></script>
+
+    <!-- Tailwind CSS 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        macaron: {
+                            pink: '#FFB6C1',
+                            blue: '#40E0D0',
+                            green: '#98FB98',
+                            yellow: '#FFEA00',
+                            purple: '#E6E6FA',
+                            red: '#FF6B81'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(255, 182, 193, 0.5) 0%, rgba(230, 230, 250, 0.5) 50%, rgba(64, 224, 208, 0.5) 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+            /* 全局禁用文字选中，优化交互体验 */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80%;
+            z-index: 1;
+        }
+
+        #control-area {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            right: 5px;
+            height: calc(20% - 10px);
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 400px;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #FF6B81;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #E6E6FA;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        
+        .btn-macaron {
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+        }
+        .btn-macaron:active {
+            transform: scale(0.95);
+        }
+        
+        #game-panel {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="control-area">
+        <h1 class="text-lg md:text-xl font-bold text-gray-700 mb-2 md:mb-4 tracking-wide">✨ 神奇的默比乌斯带 ✨</h1>
+        
+        <div id="main-panel" class="flex flex-wrap justify-center gap-2 md:gap-4 w-full px-2">
+            <button id="btn-toggle-fill" class="btn-macaron bg-macaron-blue hover:bg-[#30c0b0] text-gray-800 font-bold py-2 px-3 md:px-5 rounded-full shadow-md text-sm md:text-base">
+                👁️ 隐藏/显示面
+            </button>
+            <button id="btn-anim-edge" class="btn-macaron bg-macaron-pink hover:bg-[#ff9eb0] text-gray-800 font-bold py-2 px-3 md:px-5 rounded-full shadow-md text-sm md:text-base">
+                〰️ 验证一条边
+            </button>
+            <button id="btn-anim-surface" class="btn-macaron bg-macaron-green hover:bg-[#7ce07c] text-gray-800 font-bold py-2 px-3 md:px-5 rounded-full shadow-md text-sm md:text-base">
+                🪄 验证一个面
+            </button>
+            <button id="btn-game" class="btn-macaron bg-macaron-yellow hover:bg-[#ebd500] text-gray-800 font-bold py-2 px-3 md:px-5 rounded-full shadow-md text-sm md:text-base">
+                🐜 蚂蚁吃面包屑
+            </button>
+            <button id="btn-conveyor" class="btn-macaron bg-macaron-purple hover:bg-[#cbb5f0] text-gray-800 font-bold py-2 px-3 md:px-5 rounded-full shadow-md text-sm md:text-base">
+                ⚙️ 传动带应用
+            </button>
+            <!-- 新增对比普通圆环功能按钮 -->
+            <button id="btn-compare" class="btn-macaron bg-[#FFA07A] hover:bg-[#ff8c5a] text-gray-800 font-bold py-2 px-3 md:px-5 rounded-full shadow-md text-sm md:text-base">
+                🔄 对比普通圆环
+            </button>
+        </div>
+
+        <div id="game-panel" class="w-full px-4 mt-2">
+            <div class="flex justify-between w-full max-w-[400px] mx-auto text-sm font-bold text-gray-600 mb-1">
+                <span>内侧起点</span>
+                <span id="game-status" class="text-macaron-red animate-pulse">滑动控制蚂蚁出发！</span>
+                <span>回到起点</span>
+            </div>
+            <input type="range" id="ant-slider" min="0" max="100" value="0" class="w-full">
+            <button id="btn-back" class="mt-2 text-sm text-gray-500 underline hover:text-gray-800">返回主菜单</button>
+        </div>
+
+        <div id="anim-panel" style="display: none;" class="w-full flex-col items-center px-4 mt-2 fade-in">
+            <div id="anim-title" class="text-sm font-bold text-gray-600 mb-2">正在演示</div>
+            
+            <!-- 新增动画手动控制滑块 -->
+            <div id="anim-slider-container" class="w-full max-w-[400px] mx-auto mb-3" style="display: none;">
+                <div class="flex justify-between w-full text-xs font-bold text-gray-500 mb-1">
+                    <span>起点</span>
+                    <span id="anim-slider-status" class="text-macaron-red">滑动查看过程</span>
+                    <span>终点</span>
+                </div>
+                <input type="range" id="anim-slider" min="0" max="100" value="0" class="w-full">
+            </div>
+
+            <div class="flex justify-center gap-3 md:gap-4 w-full">
+                <button id="btn-anim-pause" class="btn-macaron bg-macaron-yellow hover:bg-[#ebd500] text-gray-800 font-bold py-1.5 px-4 rounded-full shadow-md text-sm md:text-base">暂停</button>
+                <button id="btn-anim-restart" class="btn-macaron bg-macaron-blue hover:bg-[#30c0b0] text-gray-800 font-bold py-1.5 px-4 rounded-full shadow-md text-sm md:text-base">重新开始</button>
+                <button id="btn-anim-back" class="btn-macaron bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-1.5 px-4 rounded-full shadow-md text-sm md:text-base">返回</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心变量 ---
+        let scene, camera, renderer, controls;
+        let baseMesh, edgeTube, fillMesh;
+        let antGroup, crumbMesh, edgeDot, antLegs = []; 
+        let antTrailLine; 
+        
+        let edgeStartMarker; 
+        let surfaceStartMarker; 
+        
+        let conveyorGroup, beltMesh, wheel1, wheel2, beltTexture;
+        let conveyorCurveInfo;
+
+        let cylinderGroup, cylSurfaceMesh;
+        let cylinderProgress = 0;
+        
+        let animState = 'idle'; 
+        let edgeProgress = 0;
+        let surfaceProgress = 0;
+        let isPaused = false; 
+        let baseMeshTargetOpacity = 1.0; 
+        let isWireframe = false; 
+        
+        // 新增：语音播报状态锁，防止在终点处重复触发播报
+        let hasSpokenEdge = false;
+        let hasSpokenSurface = false;
+
+        const R = 4;      
+        const w = 1.2;    
+        const h = 0.05;   
+        const segmentsU = 160;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 8, 12);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 35;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight1.position.set(10, 15, 10);
+            scene.add(dirLight1);
+            
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            dirLight2.position.set(-10, -10, -10);
+            scene.add(dirLight2);
+
+            buildMobiusElements();
+            buildGameElements();
+            buildConveyorElements();
+            buildCylinderElements(); // 构建对比用普通圆环
+
+            window.addEventListener('resize', onWindowResize, false);
+            bindEvents();
+            animate();
+        }
+
+        // --- 普通圆柱彩带几何体构建 ---
+        function buildCylinderElements() {
+            cylinderGroup = new THREE.Group();
+            
+            // 1. 两条独立的边缘线 (顶部和底部)
+            const edgePointsTop = [];
+            const edgePointsBottom = [];
+            for (let i = 0; i <= segmentsU; i++) {
+                let u = (i / segmentsU) * Math.PI * 2;
+                edgePointsTop.push(new THREE.Vector3(R * Math.cos(u), R * Math.sin(u), w));
+                edgePointsBottom.push(new THREE.Vector3(R * Math.cos(u), R * Math.sin(u), -w));
+            }
+            const edgeMat = new THREE.MeshStandardMaterial({ color: 0xFF6B81, roughness: 0.4 });
+            const topCurve = new THREE.CatmullRomCurve3(edgePointsTop);
+            const bottomCurve = new THREE.CatmullRomCurve3(edgePointsBottom);
+            
+            const topTube = new THREE.Mesh(new THREE.TubeGeometry(topCurve, segmentsU, 0.06, 8, true), edgeMat);
+            const bottomTube = new THREE.Mesh(new THREE.TubeGeometry(bottomCurve, segmentsU, 0.06, 8, true), edgeMat);
+            cylinderGroup.add(topTube);
+            cylinderGroup.add(bottomTube);
+            
+            // 2. 圆柱侧面 (带厚度，外蓝内白，支持消去动画)
+            const vertices = [];
+            const indices = [];
+            const colors = [];
+            
+            const colorOut = new THREE.Color('#1E3A8A'); 
+            const colorIn = new THREE.Color('#ffffff');  
+            
+            for (let i = 0; i <= segmentsU; i++) {
+                let u = (i / segmentsU) * Math.PI * 2;
+                let cosU = Math.cos(u), sinU = Math.sin(u);
+                
+                let p0 = new THREE.Vector3((R + h) * cosU, (R + h) * sinU, w);
+                let p1 = new THREE.Vector3((R + h) * cosU, (R + h) * sinU, -w);
+                let p2 = new THREE.Vector3((R - h) * cosU, (R - h) * sinU, w);
+                let p3 = new THREE.Vector3((R - h) * cosU, (R - h) * sinU, -w);
+                
+                vertices.push(
+                    p0.x, p0.y, p0.z,
+                    p1.x, p1.y, p1.z,
+                    p2.x, p2.y, p2.z,
+                    p3.x, p3.y, p3.z
+                );
+                
+                colors.push(
+                    colorOut.r, colorOut.g, colorOut.b,
+                    colorOut.r, colorOut.g, colorOut.b,
+                    colorIn.r, colorIn.g, colorIn.b,
+                    colorIn.r, colorIn.g, colorIn.b
+                );
+            }
+            
+            for (let i = 0; i < segmentsU; i++) {
+                let curr = i * 4;
+                let next = (i + 1) * 4;
+                indices.push(curr+0, curr+1, next+1,   curr+0, next+1, next+0); // 外表面
+                indices.push(curr+3, next+2, curr+2,   curr+3, next+3, next+2); // 内表面
+                indices.push(curr+0, next+0, next+2,   curr+0, next+2, curr+2); // 顶部封口
+                indices.push(curr+1, curr+3, next+3,   curr+1, next+3, next+1); // 底部封口
+            }
+            
+            const cylGeo = new THREE.BufferGeometry();
+            cylGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            cylGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            cylGeo.setIndex(indices);
+            cylGeo.computeVertexNormals();
+            
+            const cylMat = new THREE.MeshStandardMaterial({ 
+                vertexColors: true, 
+                side: THREE.DoubleSide,
+                roughness: 0.3,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.9
+            });
+            cylSurfaceMesh = new THREE.Mesh(cylGeo, cylMat);
+            cylinderGroup.add(cylSurfaceMesh);
+            
+            cylinderGroup.visible = false;
+            scene.add(cylinderGroup);
+        }
+
+        class ConveyorCurve {
+            constructor() {
+                this.cx1 = -5.25; this.r1 = 1.6; 
+                this.cx2 = 5.25;  this.r2 = 3.2; 
+                this.dx = this.cx2 - this.cx1;
+                this.alpha = Math.asin((this.r2 - this.r1) / this.dx);
+                
+                this.lenR = this.r2 * (Math.PI + 2 * this.alpha);
+                this.lenT = Math.sqrt(this.dx * this.dx - (this.r2 - this.r1) * (this.r2 - this.r1));
+                this.lenL = this.r1 * (Math.PI - 2 * this.alpha);
+                this.lenB = this.lenT;
+                
+                this.totalLen = this.lenR + this.lenT + this.lenL + this.lenB;
+            }
+            
+            getPointAtDist(d) {
+                d = d % this.totalLen;
+                if (d < 0) d += this.totalLen;
+                
+                if (d <= this.lenR) {
+                    let u = d / this.lenR;
+                    let angle = (-Math.PI/2 + this.alpha) + u * (Math.PI + 2*this.alpha);
+                    return new THREE.Vector3(this.cx2 + this.r2 * Math.cos(angle), this.r2 * Math.sin(angle), 0);
+                }
+                d -= this.lenR;
+                
+                if (d <= this.lenT) {
+                    let u = d / this.lenT;
+                    let pStart = new THREE.Vector3(this.cx2 - this.r2 * Math.sin(this.alpha), this.r2 * Math.cos(this.alpha), 0);
+                    let pEnd = new THREE.Vector3(this.cx1 - this.r1 * Math.sin(this.alpha), this.r1 * Math.cos(this.alpha), 0);
+                    return pStart.lerp(pEnd, u);
+                }
+                d -= this.lenT;
+                
+                if (d <= this.lenL) {
+                    let u = d / this.lenL;
+                    let angle = (Math.PI/2 + this.alpha) + u * (Math.PI - 2*this.alpha);
+                    return new THREE.Vector3(this.cx1 + this.r1 * Math.cos(angle), this.r1 * Math.sin(angle), 0);
+                }
+                d -= this.lenL;
+                
+                let u = d / this.lenB;
+                let pStart = new THREE.Vector3(this.cx1 + this.r1 * Math.sin(this.alpha), -this.r1 * Math.cos(this.alpha), 0);
+                let pEnd = new THREE.Vector3(this.cx2 + this.r2 * Math.sin(this.alpha), -this.r2 * Math.cos(this.alpha), 0);
+                return pStart.lerp(pEnd, u);
+            }
+
+            getTangentAtDist(d) {
+                let d1 = d - 0.05;
+                let d2 = d + 0.05;
+                let p1 = this.getPointAtDist(d1);
+                let p2 = this.getPointAtDist(d2);
+                return p2.sub(p1).normalize();
+            }
+        }
+
+        function createBeltTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#b0b0b0'; 
+            for(let i=0; i<8; i++) {
+                ctx.fillRect(i * 64, 0, 4, 64);
+            }
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.anisotropy = 4;
+            return texture;
+        }
+
+        function createWheel(radius, thickness) {
+            let group = new THREE.Group();
+            
+            let metallicMat = new THREE.MeshStandardMaterial({
+                color: 0xaaaaaa, 
+                metalness: 0.9,   
+                roughness: 0.2    
+            });
+
+            let rimGeo = new THREE.TorusGeometry(radius - 0.05, 0.05, 16, 64);
+            let rim = new THREE.Mesh(rimGeo, metallicMat);
+            group.add(rim);
+
+            let innerGeo = new THREE.CylinderGeometry(radius - 0.1, radius - 0.1, thickness, 32);
+            innerGeo.rotateX(Math.PI / 2); 
+            let innerMat = new THREE.MeshStandardMaterial({color: 0x555555, roughness: 0.8});
+            let innerRim = new THREE.Mesh(innerGeo, innerMat);
+            group.add(innerRim);
+
+            let spokeGeo = new THREE.CylinderGeometry(0.04, 0.04, radius * 2 - 0.2, 8);
+            let numSpokes = 12;
+            for(let i=0; i<numSpokes; i++) {
+                let spoke = new THREE.Mesh(spokeGeo, metallicMat);
+                spoke.rotation.z = (Math.PI / numSpokes) * i;
+                group.add(spoke);
+            }
+
+            let hubGeo = new THREE.CylinderGeometry(0.3, 0.3, thickness + 0.2, 32);
+            hubGeo.rotateX(Math.PI / 2);
+            let hub = new THREE.Mesh(hubGeo, metallicMat);
+            group.add(hub);
+
+            let axleGeo = new THREE.CylinderGeometry(0.1, 0.1, thickness + 0.8, 16);
+            axleGeo.rotateX(Math.PI / 2);
+            let axle = new THREE.Mesh(axleGeo, metallicMat);
+            group.add(axle);
+
+            return group;
+        }
+
+        function buildConveyorElements() {
+            conveyorGroup = new THREE.Group();
+            conveyorCurveInfo = new ConveyorCurve();
+            
+            const segmentsU = 300; 
+            const totalLoops = segmentsU; 
+            const beltW = 1.2;
+            const beltH = 0.05;
+            
+            const vertices = [];
+            const colors = [];
+            const indices = [];
+            const uvs = [];
+            
+            const colorOut = new THREE.Color('#1E3A8A'); 
+            const colorIn = new THREE.Color('#ffffff');  
+            
+            for (let i = 0; i <= totalLoops; i++) {
+                let u = i / segmentsU;
+                
+                let d = u * conveyorCurveInfo.totalLen;
+                let P = conveyorCurveInfo.getPointAtDist(d);
+                let T = conveyorCurveInfo.getTangentAtDist(d);
+                let Z = new THREE.Vector3(0, 0, 1); 
+                let N = new THREE.Vector3().crossVectors(T, Z).normalize(); 
+                
+                let twist = 0;
+                let twistStart = conveyorCurveInfo.lenR + conveyorCurveInfo.lenT + conveyorCurveInfo.lenL;
+                if (d > twistStart) {
+                    let segU = (d - twistStart) / conveyorCurveInfo.lenB;
+                    let twistU = Math.max(0, Math.min(1, (segU - 0.15) / 0.7));
+                    twist = Math.PI * (0.5 - 0.5 * Math.cos(Math.PI * twistU)); 
+                }
+                
+                let cosT = Math.cos(twist);
+                let sinT = Math.sin(twist);
+                
+                let W = new THREE.Vector3().addVectors(
+                    Z.clone().multiplyScalar(cosT),
+                    N.clone().multiplyScalar(sinT)
+                ).normalize();
+                
+                let SurfNormal = new THREE.Vector3().addVectors(
+                    N.clone().multiplyScalar(cosT),
+                    Z.clone().multiplyScalar(-sinT)
+                ).normalize();
+                
+                let P_out = P.clone().add(SurfNormal.clone().multiplyScalar(beltH));
+                let P_in = P.clone().add(SurfNormal.clone().multiplyScalar(-beltH));
+                
+                let v0 = P_out.clone().add(W.clone().multiplyScalar(beltW));
+                let v1 = P_out.clone().add(W.clone().multiplyScalar(-beltW));
+                let v2 = P_in.clone().add(W.clone().multiplyScalar(-beltW));
+                let v3 = P_in.clone().add(W.clone().multiplyScalar(beltW));
+                
+                vertices.push(
+                    v0.x, v0.y, v0.z,
+                    v1.x, v1.y, v1.z,
+                    v2.x, v2.y, v2.z,
+                    v3.x, v3.y, v3.z
+                );
+                
+                let uvX = u * 16; 
+                uvs.push( uvX, 1, uvX, 0, uvX, 0, uvX, 1 );
+                
+                colors.push(
+                    colorOut.r, colorOut.g, colorOut.b,
+                    colorOut.r, colorOut.g, colorOut.b,
+                    colorIn.r, colorIn.g, colorIn.b,
+                    colorIn.r, colorIn.g, colorIn.b
+                );
+            }
+            
+            for (let i = 0; i < totalLoops; i++) {
+                let curr = i * 4;
+                let next = (i + 1) * 4;
+                indices.push(curr+0, curr+1, next+1,   curr+0, next+1, next+0);
+                indices.push(curr+3, next+2, curr+2,   curr+3, next+3, next+2);
+                indices.push(curr+1, curr+2, next+2,   curr+1, next+2, next+1);
+                indices.push(curr+0, next+3, curr+3,   curr+0, next+0, next+3);
+            }
+            
+            const beltGeo = new THREE.BufferGeometry();
+            beltGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            beltGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            beltGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            beltGeo.setIndex(indices);
+            beltGeo.computeVertexNormals();
+            
+            beltTexture = createBeltTexture();
+            const beltMat = new THREE.MeshStandardMaterial({ 
+                vertexColors: true, 
+                map: beltTexture, 
+                roughness: 0.5,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+            
+            beltMesh = new THREE.Mesh(beltGeo, beltMat);
+            conveyorGroup.add(beltMesh);
+            
+            wheel1 = createWheel(conveyorCurveInfo.r1 - beltH - 0.04, beltW * 2.2);
+            wheel1.position.set(conveyorCurveInfo.cx1, 0, 0);
+            conveyorGroup.add(wheel1);
+            
+            wheel2 = createWheel(conveyorCurveInfo.r2 - beltH - 0.04, beltW * 2.2);
+            wheel2.position.set(conveyorCurveInfo.cx2, 0, 0);
+            conveyorGroup.add(wheel2);
+            
+            conveyorGroup.rotation.x = Math.PI / 6; 
+            conveyorGroup.position.set(0, 0, 0);
+            conveyorGroup.scale.set(1.8, 1.8, 1.8); 
+            conveyorGroup.visible = false; 
+            scene.add(conveyorGroup);
+        }
+
+        function getPosNormal(u, v) {
+            const cosU = Math.cos(u), sinU = Math.sin(u);
+            const cosU2 = Math.cos(u/2), sinU2 = Math.sin(u/2);
+            
+            const x = (R + v * cosU2) * cosU;
+            const y = (R + v * cosU2) * sinU;
+            const z = v * sinU2;
+            
+            const dx_du = - (R + v * cosU2) * sinU - 0.5 * v * sinU2 * cosU;
+            const dy_du =   (R + v * cosU2) * cosU - 0.5 * v * sinU2 * sinU;
+            const dz_du =   0.5 * v * cosU2;
+            
+            const dx_dv = cosU2 * cosU;
+            const dy_dv = cosU2 * sinU;
+            const dz_dv = sinU2;
+            
+            const dp_du = new THREE.Vector3(dx_du, dy_du, dz_du);
+            const dp_dv = new THREE.Vector3(dx_dv, dy_dv, dz_dv);
+            
+            const normal = new THREE.Vector3().crossVectors(dp_du, dp_dv).normalize();
+            
+            return { pos: new THREE.Vector3(x, y, z), normal: normal, dp_du: dp_du };
+        }
+
+        function buildMobiusElements() {
+            const vertices = [];
+            const colors = [];
+            const indices = [];
+            
+            const colorOut = new THREE.Color('#1E3A8A'); 
+            const colorIn = new THREE.Color('#ffffff');  
+            
+            for (let i = 0; i <= segmentsU; i++) {
+                let u = (i / segmentsU) * Math.PI * 2;
+                let data1 = getPosNormal(u, w);
+                let data2 = getPosNormal(u, -w);
+                
+                let c0 = data1.pos.clone().add(data1.normal.clone().multiplyScalar(h));
+                let c1 = data2.pos.clone().add(data2.normal.clone().multiplyScalar(h));
+                let c2 = data2.pos.clone().add(data2.normal.clone().multiplyScalar(-h));
+                let c3 = data1.pos.clone().add(data1.normal.clone().multiplyScalar(-h));
+                
+                vertices.push(
+                    c0.x, c0.y, c0.z,
+                    c1.x, c1.y, c1.z,
+                    c2.x, c2.y, c2.z,
+                    c3.x, c3.y, c3.z
+                );
+                
+                colors.push(
+                    colorOut.r, colorOut.g, colorOut.b,
+                    colorOut.r, colorOut.g, colorOut.b,
+                    colorIn.r, colorIn.g, colorIn.b,
+                    colorIn.r, colorIn.g, colorIn.b
+                );
+            }
+            
+            for (let i = 0; i < segmentsU; i++) {
+                let curr = i * 4;
+                let next = (i + 1) * 4;
+                indices.push(curr+0, curr+1, next+1,   curr+0, next+1, next+0);
+                indices.push(curr+3, next+2, curr+2,   curr+3, next+3, next+2);
+                indices.push(curr+1, curr+2, next+2,   curr+1, next+2, next+1);
+                indices.push(curr+0, next+3, curr+3,   curr+0, next+0, next+3);
+            }
+            
+            const baseGeo = new THREE.BufferGeometry();
+            baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            baseGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            baseGeo.setIndex(indices);
+            baseGeo.computeVertexNormals();
+            
+            const baseMat = new THREE.MeshStandardMaterial({ 
+                vertexColors: true, 
+                side: THREE.DoubleSide,
+                roughness: 0.3,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 1.0,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+            baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            scene.add(baseMesh);
+
+            const edgePoints = [];
+            for (let i = 0; i <= segmentsU * 2; i++) {
+                let u = (i / (segmentsU * 2)) * Math.PI * 4;
+                let data = getPosNormal(u, w);
+                edgePoints.push(data.pos);
+            }
+            const edgeCurve = new THREE.CatmullRomCurve3(edgePoints);
+            const edgeGeo = new THREE.TubeGeometry(edgeCurve, segmentsU * 2, 0.06, 8, true);
+            const edgeMat = new THREE.MeshStandardMaterial({ color: 0xFF6B81, roughness: 0.4 });
+            edgeTube = new THREE.Mesh(edgeGeo, edgeMat);
+            scene.add(edgeTube);
+
+            const dotGeo = new THREE.SphereGeometry(0.25, 16, 16);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xFFEA00 });
+            edgeDot = new THREE.Mesh(dotGeo, dotMat);
+            edgeDot.visible = false;
+            scene.add(edgeDot);
+
+            // --- 新增：起点的红色圆环与红色虚线标记 (穿透渲染优化) ---
+            // 1. 验证一条边的红色圆环标记 (套在边上)
+            const ringGeo = new THREE.TorusGeometry(0.3, 0.06, 16, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ 
+                color: 0xFF0000,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true, // 新增：强制进入透明渲染队列
+                opacity: 1.0
+            });
+            edgeStartMarker = new THREE.Mesh(ringGeo, ringMat);
+            edgeStartMarker.renderOrder = 999; // 强制最前面渲染
+            edgeStartMarker.visible = false;
+            scene.add(edgeStartMarker);
+
+            // 2. 验证一个面的红色虚线起跑线标记 (实体网格保证可见性，取消深度限制)
+            surfaceStartMarker = new THREE.Group();
+            const dashMat = new THREE.MeshBasicMaterial({ 
+                color: 0xFF0000,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true, // 新增：配合 renderOrder 彻底解决被半透明网格遮挡问题
+                opacity: 1.0
+            });
+            let d1_surf = getPosNormal(0, w * 0.95);
+            let d2_surf = getPosNormal(0, -w * 0.95);
+            
+            // 悬浮在绿色涂层上方，进一步增加偏移高度确保视觉清晰
+            let offset = -(h + 0.05);
+            let p1_surf = d1_surf.pos.clone().add(d1_surf.normal.clone().multiplyScalar(offset));
+            let p2_surf = d2_surf.pos.clone().add(d2_surf.normal.clone().multiplyScalar(offset));
+            
+            let dir_dash = p2_surf.clone().sub(p1_surf);
+            let totalLen = dir_dash.length();
+            dir_dash.normalize();
+            
+            let dashLen = 0.2;
+            let gapLen = 0.15;
+            let currDist = 0;
+            let up_dash = d1_surf.normal.clone().multiplyScalar(-1); 
+            
+            while(currDist < totalLen) {
+                let segLen = Math.min(dashLen, totalLen - currDist);
+                let center = p1_surf.clone().add(dir_dash.clone().multiplyScalar(currDist + segLen/2));
+                
+                // 加粗为 0.1 使虚线起跑线更加醒目
+                let mesh = new THREE.Mesh(new THREE.BoxGeometry(segLen, 0.1, 0.1), dashMat);
+                mesh.position.copy(center);
+                
+                let right = dir_dash.clone();
+                let forward = new THREE.Vector3().crossVectors(up_dash, right).normalize();
+                let realUp = new THREE.Vector3().crossVectors(right, forward).normalize();
+                let mat4 = new THREE.Matrix4().makeBasis(right, realUp, forward);
+                mesh.quaternion.setFromRotationMatrix(mat4);
+
+                mesh.renderOrder = 999; // 强制每个片段都在最前方渲染
+                surfaceStartMarker.add(mesh);
+                currDist += dashLen + gapLen;
+            }
+            surfaceStartMarker.visible = false;
+            scene.add(surfaceStartMarker);
+            // ----------------------------------------------
+
+            const fillVertices = [];
+            const fillIndices = [];
+            const segmentsU4PI = segmentsU * 2;
+            
+            for (let i = 0; i <= segmentsU4PI; i++) {
+                let u = (i / segmentsU4PI) * Math.PI * 4;
+                let data1 = getPosNormal(u, w);
+                let data2 = getPosNormal(u, -w);
+                
+                let fillH = h + 0.01;
+                let c0 = data1.pos.clone().add(data1.normal.clone().multiplyScalar(-fillH));
+                let c1 = data2.pos.clone().add(data2.normal.clone().multiplyScalar(-fillH));
+                
+                fillVertices.push(c0.x, c0.y, c0.z, c1.x, c1.y, c1.z);
+            }
+            
+            for (let i = 0; i < segmentsU4PI; i++) {
+                let curr = i * 2; 
+                let next = (i + 1) * 2;
+                fillIndices.push(curr, curr+1, next+1,   curr, next+1, next);
+            }
+            
+            const fillGeo = new THREE.BufferGeometry();
+            fillGeo.setAttribute('position', new THREE.Float32BufferAttribute(fillVertices, 3));
+            fillGeo.setIndex(fillIndices);
+            fillGeo.computeVertexNormals();
+            fillGeo.setDrawRange(0, 0); 
+            
+            const fillMat = new THREE.MeshStandardMaterial({ 
+                color: 0x98FB98, 
+                side: THREE.DoubleSide, 
+                roughness: 0.2,
+                transparent: true,
+                opacity: 0.85
+            });
+            fillMesh = new THREE.Mesh(fillGeo, fillMat);
+            scene.add(fillMesh);
+        }
+
+        // --- 构建蚂蚁与面包屑游戏 ---
+        function buildGameElements() {
+            const crumbRadius = 0.18; 
+            const crumbGeo = new THREE.DodecahedronGeometry(crumbRadius, 0);
+            const crumbMat = new THREE.MeshStandardMaterial({ color: 0xDEB887, roughness: 1.0, flatShading: true });
+            crumbMesh = new THREE.Mesh(crumbGeo, crumbMat);
+            crumbMesh.scale.set(1.2, 0.6, 0.9); 
+            
+            const smallCrumbGeo = new THREE.DodecahedronGeometry(crumbRadius * 0.6, 0);
+            const smallCrumb = new THREE.Mesh(smallCrumbGeo, crumbMat);
+            smallCrumb.position.set(0.12, 0.075, 0.075); 
+            crumbMesh.add(smallCrumb);
+            
+            let startOffset = Math.PI * 2 + (Math.PI * 4 * 0.15); 
+            let crumbU = 0.6 * Math.PI * 4 + startOffset;
+            let chData = getPosNormal(crumbU, 0);
+            
+            let up = chData.normal;
+            let forward = chData.dp_du.normalize();
+            let right = new THREE.Vector3().crossVectors(forward, up).normalize();
+            
+            crumbMesh.position.copy(chData.pos).add(up.clone().multiplyScalar(h + 0.108 + 0.05));
+            crumbMesh.position.x -= 0.02;
+            
+            forward.crossVectors(up, right).normalize();
+            let mat4 = new THREE.Matrix4().makeBasis(right, up, forward); 
+            crumbMesh.quaternion.setFromRotationMatrix(mat4);
+            
+            crumbMesh.visible = false;
+            scene.add(crumbMesh);
+
+            antGroup = new THREE.Group();
+            const antMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 });
+            
+            const bodyGeo = new THREE.SphereGeometry(0.25, 16, 16);
+            const body = new THREE.Mesh(bodyGeo, antMat);
+            body.scale.set(1.2, 0.8, 0.8);
+            
+            const headGeo = new THREE.SphereGeometry(0.18, 16, 16);
+            const head = new THREE.Mesh(headGeo, antMat);
+            head.position.set(0.4, 0, 0);
+            
+            const eyeGeo = new THREE.SphereGeometry(0.04, 8, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const eye1 = new THREE.Mesh(eyeGeo, eyeMat);
+            eye1.position.set(0.45, 0.1, 0.1);
+            const eye2 = new THREE.Mesh(eyeGeo, eyeMat);
+            eye2.position.set(0.45, 0.1, -0.1);
+
+            const legGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.35, 8);
+            antLegs = [];
+            for (let i = 0; i < 6; i++) {
+                const leg = new THREE.Mesh(legGeo, antMat);
+                const xOffset = (i % 3 - 1) * 0.15; 
+                const zOffset = (i < 3) ? 0.2 : -0.2; 
+                leg.position.set(xOffset, -0.1, zOffset);
+                leg.rotation.x = (i < 3) ? Math.PI / 3 : -Math.PI / 3;
+                leg.rotation.z = (i % 3 === 0) ? 0.2 : ((i % 3 === 2) ? -0.2 : 0);
+                antLegs.push(leg);
+                antGroup.add(leg);
+            }
+
+            const antennaGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.25, 8);
+            const ant1 = new THREE.Mesh(antennaGeo, antMat);
+            ant1.position.set(0.45, 0.15, 0.08);
+            ant1.rotation.z = -Math.PI / 3;
+            ant1.rotation.x = Math.PI / 6;
+
+            const ant2 = new THREE.Mesh(antennaGeo, antMat);
+            ant2.position.set(0.45, 0.15, -0.08);
+            ant2.rotation.z = -Math.PI / 3;
+            ant2.rotation.x = -Math.PI / 6;
+
+            antGroup.add(body, head, eye1, eye2, ant1, ant2);
+            antGroup.visible = false;
+            scene.add(antGroup);
+            
+            const trailPoints = [];
+            const trailSegments = 600; 
+            for (let i = 0; i <= trailSegments; i++) {
+                let t_val = i / trailSegments;
+                let startOff = Math.PI * 2 + (Math.PI * 4 * 0.15); 
+                let u_val = t_val * Math.PI * 4 + startOff;
+                let tData = getPosNormal(u_val, 0);
+                
+                let pt = tData.pos.clone().add(tData.normal.clone().multiplyScalar(h + 0.02));
+                trailPoints.push(pt);
+            }
+            const trailGeo = new THREE.BufferGeometry().setFromPoints(trailPoints);
+            
+            const trailMat = new THREE.LineDashedMaterial({
+                color: 0xff0000, 
+                dashSize: 0.15,
+                gapSize: 0.1,
+                linewidth: 2
+            });
+            antTrailLine = new THREE.Line(trailGeo, trailMat);
+            antTrailLine.computeLineDistances(); 
+            antTrailLine.userData.segments = trailSegments; 
+            antTrailLine.visible = false;
+            scene.add(antTrailLine);
+
+            updateAntPosition(0);
+        }
+
+        function updateAntPosition(t) {
+            let startOffset = Math.PI * 2 + (Math.PI * 4 * 0.15); 
+            let u = t * Math.PI * 4 + startOffset;
+            let data = getPosNormal(u, 0);
+            
+            antGroup.position.copy(data.pos).add(data.normal.clone().multiplyScalar(h + 0.22));
+            
+            let up = data.normal;
+            let forward = data.dp_du.normalize();
+            let right = new THREE.Vector3().crossVectors(forward, up).normalize();
+            forward.crossVectors(up, right).normalize();
+            
+            let mat4 = new THREE.Matrix4().makeBasis(forward, up, right);
+            antGroup.quaternion.setFromRotationMatrix(mat4);
+
+            if (typeof antTrailLine !== 'undefined') {
+                let count = Math.floor(t * antTrailLine.userData.segments);
+                antTrailLine.geometry.setDrawRange(0, count);
+            }
+
+            if (typeof antLegs !== 'undefined' && antLegs.length === 6) {
+                let swing = Math.sin(u * 20) * 0.4;
+                for (let i = 0; i < 6; i++) {
+                    let baseZ = (i % 3 === 0) ? 0.3 : ((i % 3 === 2) ? -0.3 : 0); 
+                    let isLeft = i < 3;
+                    let legIndex = i % 3;
+                    let isGroup1 = (isLeft && legIndex % 2 === 0) || (!isLeft && legIndex % 2 === 1);
+                    let swingDir = isGroup1 ? 1 : -1;
+                    antLegs[i].rotation.z = baseZ + swing * swingDir;
+                }
+            }
+        }
+
+        function bindEvents() {
+            const btnFill = document.getElementById('btn-toggle-fill');
+            const btnEdge = document.getElementById('btn-anim-edge');
+            const btnSurface = document.getElementById('btn-anim-surface');
+            const btnGame = document.getElementById('btn-game');
+            const btnConveyor = document.getElementById('btn-conveyor');
+            const btnCompare = document.getElementById('btn-compare'); 
+            const btnBack = document.getElementById('btn-back');
+            const slider = document.getElementById('ant-slider');
+            
+            const mainPanel = document.getElementById('main-panel');
+            const gamePanel = document.getElementById('game-panel');
+            const gameStatus = document.getElementById('game-status');
+
+            const animPanel = document.getElementById('anim-panel');
+            const animTitle = document.getElementById('anim-title');
+            const btnAnimPause = document.getElementById('btn-anim-pause');
+            const btnAnimRestart = document.getElementById('btn-anim-restart');
+            const btnAnimBack = document.getElementById('btn-anim-back');
+            
+            // 新增滑块控制元素获取
+            const animSliderContainer = document.getElementById('anim-slider-container');
+            const animSlider = document.getElementById('anim-slider');
+            const animSliderStatus = document.getElementById('anim-slider-status');
+
+            btnFill.addEventListener('click', () => {
+                resetAnimations();
+                isWireframe = !isWireframe;
+                if (isWireframe) {
+                    baseMeshTargetOpacity = 0.0; 
+                } else {
+                    baseMeshTargetOpacity = 1.0; 
+                }
+                gsapCameraReset(new THREE.Vector3(0, 10, 15));
+            });
+
+            btnEdge.addEventListener('click', () => {
+                resetAnimations();
+                mainPanel.style.display = 'none';
+                animPanel.style.display = 'flex';
+                animTitle.innerText = "正在演示：验证一条边";
+
+                // 修改：将面不再完全隐藏，而是设为0.6的半透明，既能看到面，又能透视看到移动的点
+                baseMeshTargetOpacity = 0.6; 
+                edgeDot.visible = true;
+                
+                edgeStartMarker.visible = true;
+                let dataEdge = getPosNormal(0, w);
+                let nextDataEdge = getPosNormal(0.01, w);
+                let tangent = nextDataEdge.pos.clone().sub(dataEdge.pos).normalize();
+                edgeStartMarker.position.copy(dataEdge.pos);
+                edgeStartMarker.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+                
+                animState = 'edge';
+                edgeProgress = 0;
+                isPaused = false;
+                
+                // 新增：切换为滑块控制，隐藏暂停/重新开始按钮
+                animSliderContainer.style.display = 'block';
+                animSlider.value = 0;
+                animSliderStatus.innerText = "滑动滑块验证一条边";
+                animSliderStatus.className = "text-macaron-red animate-pulse";
+                btnAnimPause.style.display = 'none';
+                btnAnimRestart.style.display = 'none';
+                
+                gsapCameraReset(new THREE.Vector3(0, 10, 15));
+            });
+
+            btnSurface.addEventListener('click', () => {
+                resetAnimations();
+                mainPanel.style.display = 'none';
+                animPanel.style.display = 'flex';
+                animTitle.innerText = "正在演示：验证一个面";
+
+                baseMeshTargetOpacity = 0.3; 
+                
+                surfaceStartMarker.visible = true;
+
+                animState = 'surface';
+                surfaceProgress = 0;
+                isPaused = false;
+                
+                // 新增：切换为滑块控制，隐藏暂停/重新开始按钮
+                animSliderContainer.style.display = 'block';
+                animSlider.value = 0;
+                animSliderStatus.innerText = "滑动滑块验证一个面";
+                animSliderStatus.className = "text-macaron-red animate-pulse";
+                btnAnimPause.style.display = 'none';
+                btnAnimRestart.style.display = 'none';
+                
+                gsapCameraReset(new THREE.Vector3(0, 10, 15));
+            });
+
+            btnConveyor.addEventListener('click', () => {
+                resetAnimations();
+                mainPanel.style.display = 'none';
+                animPanel.style.display = 'flex';
+                animTitle.innerText = "正在演示：默比乌斯传动带";
+
+                baseMeshTargetOpacity = 0.0;
+                baseMesh.material.opacity = 0.0;
+                baseMesh.visible = false;
+                edgeTube.visible = false;
+                
+                conveyorGroup.visible = true;
+                
+                animState = 'conveyor';
+                isPaused = false;
+                
+                // 恢复默认的播放控制按钮显示，隐藏动画滑块
+                animSliderContainer.style.display = 'none';
+                btnAnimPause.style.display = 'block';
+                btnAnimRestart.style.display = 'block';
+                btnAnimPause.innerText = "暂停";
+                
+                gsapCameraReset(new THREE.Vector3(0, 12, 24)); 
+            });
+
+            btnCompare.addEventListener('click', () => {
+                resetAnimations();
+                mainPanel.style.display = 'none';
+                animPanel.style.display = 'flex';
+                animTitle.innerText = "正在演示：普通圆环对比 (2条边)";
+
+                baseMeshTargetOpacity = 0.0;
+                baseMesh.visible = false;
+                edgeTube.visible = false;
+                
+                if (typeof cylinderGroup !== 'undefined') {
+                    cylinderGroup.visible = true;
+                }
+                
+                animState = 'cylinder';
+                cylinderProgress = 0; 
+                isPaused = false;
+                
+                // 恢复默认的播放控制按钮显示，隐藏动画滑块
+                animSliderContainer.style.display = 'none';
+                btnAnimPause.style.display = 'block';
+                btnAnimRestart.style.display = 'block';
+                btnAnimPause.innerText = "暂停";
+                
+                gsapCameraReset(new THREE.Vector3(0, 10, 15)); 
+            });
+
+            btnAnimPause.addEventListener('click', () => {
+                isPaused = !isPaused;
+                btnAnimPause.innerText = isPaused ? "继续" : "暂停";
+            });
+
+            btnAnimRestart.addEventListener('click', () => {
+                if (animState === 'edge') {
+                    edgeProgress = 0;
+                } else if (animState === 'surface') {
+                    surfaceProgress = 0;
+                    fillMesh.geometry.setDrawRange(0, 0);
+                } else if (animState === 'cylinder') {
+                    cylinderProgress = 0; 
+                }
+                isPaused = false;
+                btnAnimPause.innerText = "暂停";
+            });
+
+            btnAnimBack.addEventListener('click', () => {
+                resetAnimations();
+                animPanel.style.display = 'none';
+                mainPanel.style.display = 'flex';
+                gsapCameraReset(new THREE.Vector3(0, 10, 15));
+            });
+
+            btnGame.addEventListener('click', () => {
+                resetAnimations();
+                mainPanel.style.display = 'none';
+                gamePanel.style.display = 'flex';
+                gamePanel.classList.add('fade-in');
+                
+                baseMeshTargetOpacity = 0.8;
+                antGroup.visible = true;
+                crumbMesh.visible = true;
+                if (typeof antTrailLine !== 'undefined') antTrailLine.visible = true; 
+                
+                slider.value = 0;
+                updateAntPosition(0);
+                gameStatus.innerText = "滑动控制蚂蚁出发！";
+                gameStatus.className = "text-macaron-red animate-pulse";
+                
+                gsapCameraReset(new THREE.Vector3(0, 10, 15));
+            });
+
+            btnBack.addEventListener('click', () => {
+                resetAnimations();
+                gamePanel.style.display = 'none';
+                mainPanel.style.display = 'flex';
+                antGroup.visible = false;
+                crumbMesh.visible = false;
+                if (typeof antTrailLine !== 'undefined') antTrailLine.visible = false; 
+                
+                gsapCameraReset(new THREE.Vector3(0, 10, 15));
+            });
+
+            slider.addEventListener('input', (e) => {
+                e.stopPropagation();
+                let val = e.target.value / 100;
+                updateAntPosition(val);
+                
+                if (val >= 0.99) { 
+                    gameStatus.innerText = "🎊 走完完整的带子，回到起点啦！只有一个面！";
+                    gameStatus.className = "text-macaron-blue font-extrabold";
+                    crumbMesh.visible = false; 
+                } else if (val >= 0.6) { 
+                    gameStatus.innerText = "🎉 吃到面包屑！请继续滑动滑块回到起点！";
+                    gameStatus.className = "text-macaron-green font-bold";
+                    crumbMesh.visible = false; 
+                } else {
+                    crumbMesh.visible = true;
+                    gameStatus.innerText = "努力爬行中...";
+                    gameStatus.className = "text-gray-600";
+                }
+            });
+            
+            slider.addEventListener('pointerdown', e => e.stopPropagation());
+            gamePanel.addEventListener('pointerdown', e => e.stopPropagation());
+
+            // --- 新增：绑定动画专属滑块的事件 ---
+            animSlider.addEventListener('input', (e) => {
+                e.stopPropagation();
+                let val = parseFloat(e.target.value) / 100;
+                if (animState === 'edge') {
+                    edgeProgress = val;
+                    if (val >= 0.99) {
+                        animSliderStatus.innerText = "🎊 回到起点，只有一条边！";
+                        animSliderStatus.className = "text-macaron-blue font-extrabold";
+                        
+                        // 触发一次语音播报
+                        if (!hasSpokenEdge && 'speechSynthesis' in window) {
+                            hasSpokenEdge = true;
+                            let msg = new SpeechSynthesisUtterance("回到起点，只有一条边！");
+                            msg.lang = 'zh-CN';
+                            window.speechSynthesis.speak(msg);
+                        }
+                    } else {
+                        animSliderStatus.innerText = "滑动滑块验证一条边";
+                        animSliderStatus.className = "text-macaron-red";
+                        hasSpokenEdge = false; // 滑回来时重置标志，允许再次播报
+                    }
+                } else if (animState === 'surface') {
+                    surfaceProgress = val;
+                    if (val >= 0.99) {
+                        animSliderStatus.innerText = "🎊 涂满整个面，只有一个面！";
+                        animSliderStatus.className = "text-macaron-green font-extrabold";
+                        
+                        // 触发一次语音播报
+                        if (!hasSpokenSurface && 'speechSynthesis' in window) {
+                            hasSpokenSurface = true;
+                            let msg = new SpeechSynthesisUtterance("涂满整个面，只有一个面！");
+                            msg.lang = 'zh-CN';
+                            window.speechSynthesis.speak(msg);
+                        }
+                    } else {
+                        animSliderStatus.innerText = "滑动滑块验证一个面";
+                        animSliderStatus.className = "text-macaron-red";
+                        hasSpokenSurface = false; // 滑回来时重置标志，允许再次播报
+                    }
+                }
+            });
+            animSlider.addEventListener('pointerdown', e => e.stopPropagation());
+            // ------------------------------------
+        }
+
+        function resetAnimations() {
+            animState = 'idle';
+            isPaused = false;
+            isWireframe = false; 
+            baseMeshTargetOpacity = 1.0; 
+            baseMesh.visible = true;
+            edgeTube.visible = true; 
+            edgeDot.visible = false;
+            fillMesh.geometry.setDrawRange(0, 0);
+            
+            // 重置语音播报状态并打断正在进行的播报
+            hasSpokenEdge = false;
+            hasSpokenSurface = false;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+
+            if (typeof antTrailLine !== 'undefined') {
+                antTrailLine.visible = false;
+            }
+            
+            if (typeof edgeStartMarker !== 'undefined') {
+                edgeStartMarker.visible = false;
+            }
+            if (typeof surfaceStartMarker !== 'undefined') {
+                surfaceStartMarker.visible = false;
+            }
+            
+            if (typeof conveyorGroup !== 'undefined') {
+                conveyorGroup.visible = false;
+            }
+            
+            if (typeof cylinderGroup !== 'undefined') {
+                cylinderGroup.visible = false;
+            }
+        }
+
+        function gsapCameraReset(targetPos = new THREE.Vector3(0, 10, 15)) {
+            let frame = 0;
+            function moveCam() {
+                frame++;
+                camera.position.lerp(targetPos, 0.05);
+                controls.update();
+                if(frame < 60) requestAnimationFrame(moveCam);
+            }
+            moveCam();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            controls.update();
+
+            if (animState !== 'conveyor' && animState !== 'cylinder') {
+                if (Math.abs(baseMesh.material.opacity - baseMeshTargetOpacity) > 0.01) {
+                    if (baseMesh.material.opacity > baseMeshTargetOpacity) {
+                        baseMesh.material.opacity -= 0.5 * delta;
+                        if (baseMesh.material.opacity < baseMeshTargetOpacity) baseMesh.material.opacity = baseMeshTargetOpacity;
+                    } else {
+                        baseMesh.material.opacity += 0.5 * delta;
+                        if (baseMesh.material.opacity > baseMeshTargetOpacity) baseMesh.material.opacity = baseMeshTargetOpacity;
+                    }
+                } else {
+                    baseMesh.material.opacity = baseMeshTargetOpacity;
+                }
+                baseMesh.visible = baseMesh.material.opacity > 0.01;
+            }
+
+            if (!isPaused) { 
+                if (animState === 'edge') {
+                    // 修改：由滑块完全接管进度控制，不再自动累加 delta
+                    let u = edgeProgress * Math.PI * 4;
+                    let data = getPosNormal(u, w);
+                    edgeDot.position.copy(data.pos);
+                } 
+                else if (animState === 'surface') {
+                    // 修改：由滑块完全接管进度控制，不再自动累加 delta
+                    let p = Math.min(surfaceProgress, 1.0);
+                    const totalIndices = (segmentsU * 2) * 6;
+                    fillMesh.geometry.setDrawRange(0, Math.floor(p * totalIndices));
+                }
+                else if (animState === 'cylinder') {
+                    cylinderProgress += delta * 0.01125; 
+                    if (cylinderProgress > 1.5) cylinderProgress = 0; 
+                    
+                    let p = Math.min(cylinderProgress, 1.0);
+                    const totalIndicesCyl = segmentsU * 24; 
+                    let eraseCount = Math.floor(p * totalIndicesCyl);
+                    eraseCount = eraseCount - (eraseCount % 24); 
+                    
+                    cylSurfaceMesh.geometry.setDrawRange(eraseCount, totalIndicesCyl - eraseCount);
+                }
+                else if (animState === 'conveyor') {
+                    let beltSpeed = 4.0; 
+                    
+                    let repeatCount = 16; 
+                    let uvSpeed = beltSpeed * (repeatCount / conveyorCurveInfo.totalLen);
+                    beltTexture.offset.x -= uvSpeed * delta; 
+                    
+                    wheel1.rotation.z -= (beltSpeed / conveyorCurveInfo.r1) * delta;
+                    wheel2.rotation.z -= (beltSpeed / conveyorCurveInfo.r2) * delta;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>

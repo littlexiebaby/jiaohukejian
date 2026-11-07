@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>植树问题交互课件</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="_site/math/daohang/ku/tailwindcss.js"></script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script src="_site/math/daohang/ku/react.production.min.js"></script>
+    <script src="_site/math/daohang/ku/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用于解析 JSX -->
+    <script src="_site/math/daohang/ku/babel.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #f8fafc; overflow: hidden; user-select: none; -webkit-user-select: none; }
+        /* 禁用所有滚动条 */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 图标组件 ---
+        const IconLayoutTemplate = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <rect width="18" height="7" x="3" y="3" rx="1" />
+                <rect width="9" height="7" x="3" y="14" rx="1" />
+                <rect width="5" height="7" x="16" y="14" rx="1" />
+            </svg>
+        );
+
+        const IconMousePointer2 = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="m12 12 6.88 2.29a2.5 2.5 0 0 1 1.09-3.97L4.03 2.03a2.5 2.5 0 0 0-3.32 3.32l8.26 15.96a2.5 2.5 0 0 0 3.97 1.09l2.29-6.88L12 12Z" />
+            </svg>
+        );
+
+        const IconMoveHorizontal = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <polyline points="18 8 22 12 18 16" />
+                <polyline points="6 8 2 12 6 16" />
+                <line x1="2" x2="22" y1="12" y2="12" />
+            </svg>
+        );
+
+        const IconCombine = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <rect x="2" y="9" width="20" height="6" rx="1" />
+                <path d="M2 12h20" strokeDasharray="2 2" />
+            </svg>
+        );
+
+        const IconRefreshCcw = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
+            </svg>
+        );
+
+        const IconMaximize = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+        );
+
+        const IconTrash2 = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" x2="10" y1="11" y2="17" />
+                <line x1="14" x2="14" y1="11" y2="17" />
+            </svg>
+        );
+
+        const IconEye = ({ size = 18, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+            </svg>
+        );
+
+        const IconEyeOff = ({ size = 18, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7c.44 0 .87-.03 1.28-.09" />
+                <line x1="2" x2="22" y1="2" y2="22" />
+            </svg>
+        );
+
+        const IconTriangle = ({ size = 20, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M12 3L22 20H2L12 3z"/>
+            </svg>
+        );
+
+        // --- 道具组件 ---
+
+        const TreeGinkgo = ({ size = 40, className = "" }) => {
+            const style = { fill: "#FBC02D", stroke: "#F57F17" };
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`drop-shadow-lg ${className}`}>
+                    <ellipse cx="12" cy="22" rx="6" ry="1.5" fill="#000" fillOpacity="0.2" />
+                    <path d="M10.5 22V14C10.5 14 10 12 9 11M13.5 22V14C13.5 14 14 12 15 11" stroke="#5D4037" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M12 22V12" stroke="#5D4037" strokeWidth="3" strokeLinecap="round" />
+                    <circle cx="12" cy="9" r="6" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
+                    <circle cx="9" cy="11" r="3.5" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
+                    <circle cx="15" cy="11" r="3.5" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
+                    <circle cx="12" cy="6" r="3.5" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
+                </svg>
+            );
+        };
+
+        const TreePine = ({ size = 40, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`drop-shadow-lg ${className}`}>
+                <ellipse cx="12" cy="22" rx="5" ry="1.5" fill="#000" fillOpacity="0.2" />
+                <path d="M12 22V18" stroke="#5D4037" strokeWidth="3" />
+                <path d="M12 2L4 12H7L5 18H19L17 12H20L12 2Z" fill="#2E7D32" stroke="#1B5E20" strokeWidth="1.5" strokeLinejoin="round" />
+                <path d="M12 5L15 12H13.5L15.5 18" stroke="#66BB6A" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.5" />
+            </svg>
+        );
+
+        const StreetLamp = ({ size = 40, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`drop-shadow-md ${className}`}>
+                <ellipse cx="12" cy="22" rx="3" ry="1" fill="#000" fillOpacity="0.3" />
+                <rect x="11" y="4" width="2" height="18" fill="#455A64" rx="1" />
+                <rect x="10" y="20" width="4" height="2" fill="#37474F" rx="0.5" />
+                <path d="M12 4L15 4C17 4 18 5 18 7" stroke="#455A64" strokeWidth="2" fill="none"/>
+                <path d="M16 7L20 7L21 9H15L16 7Z" fill="#37474F" />
+                <circle cx="18" cy="10" r="2.5" fill="#FFEB3B" fillOpacity="0.9" />
+                <circle cx="18" cy="10" r="4" fill="#FFEB3B" fillOpacity="0.3" />
+            </svg>
+        );
+
+        const Flag = ({ size = 40, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`drop-shadow-md ${className}`}>
+                <ellipse cx="12" cy="22" rx="3" ry="1" fill="#000" fillOpacity="0.3" />
+                <line x1="12" y1="22" x2="12" y2="2" stroke="#795548" strokeWidth="2" strokeLinecap="round" />
+                <path d="M12 3 L20 8 L12 13 V3 Z" fill="#F44336" stroke="#C62828" strokeWidth="1" strokeLinejoin="round" />
+            </svg>
+        );
+
+        const Building = ({ size = 60, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={`drop-shadow-lg ${className}`}>
+                <ellipse cx="12" cy="22" rx="7" ry="2" fill="#000" fillOpacity="0.3" />
+                <rect x="6" y="2" width="12" height="20" rx="1" fill="#607D8B" stroke="#455A64" strokeWidth="1.5"/>
+                <rect x="8" y="4" width="2" height="2" fill="#CFD8DC" />
+                <rect x="14" y="4" width="2" height="2" fill="#CFD8DC" />
+                <rect x="8" y="8" width="2" height="2" fill="#CFD8DC" />
+                <rect x="14" y="8" width="2" height="2" fill="#CFD8DC" />
+                <rect x="8" y="12" width="2" height="2" fill="#CFD8DC" />
+                <rect x="14" y="12" width="2" height="2" fill="#CFD8DC" />
+                <rect x="8" y="16" width="2" height="2" fill="#CFD8DC" />
+                <rect x="14" y="16" width="2" height="2" fill="#CFD8DC" />
+                <rect x="10" y="19" width="4" height="3" fill="#37474F" />
+            </svg>
+        );
+
+        // --- RoadCanvas ---
+        function RoadCanvas({ roadType, trees, onPlant, itemType, isDistributed, mode }) {
+            const svgRef = useRef(null);
+            const [size, setSize] = useState({ w: 0, h: 0 });
+
+            useEffect(() => {
+                const element = svgRef.current;
+                if (!element) return;
+
+                const observer = new ResizeObserver((entries) => {
+                    for (let entry of entries) {
+                        const { width, height } = entry.contentRect;
+                        if (width > 0 && height > 0) {
+                            setSize({ w: width, h: height });
+                        }
+                    }
+                });
+
+                observer.observe(element);
+
+                const { clientWidth, clientHeight } = element;
+                if (clientWidth > 0) {
+                    setSize({ w: clientWidth, h: clientHeight });
+                }
+
+                return () => observer.disconnect();
+            }, []);
+
+            const getTriangleGeo = (w, h) => {
+                const s = Math.min(w, h) * 0.75;
+                const hTri = s * Math.sqrt(3) / 2;
+                const cx = w / 2;
+                const yTop = (h - hTri) / 2 + hTri * 0.05; 
+                return { p1: { x: cx, y: yTop }, p2: { x: cx + s / 2, y: yTop + hTri }, p3: { x: cx - s / 2, y: yTop + hTri }, side: s, perimeter: s * 3 };
+            };
+
+            const getRectGeo = (w, h) => {
+                const rw = w * 0.65; 
+                const rh = h * 0.55;
+                const x = (w - rw) / 2; 
+                const y = (h - rh) / 2 + 15;
+                return { x, y, rw, rh, perimeter: 2 * (rw + rh), left: x, right: x + rw, top: y, bottom: y + rh };
+            };
+
+            const getPos = (tree, w, h) => {
+                const t = typeof tree === 'object' ? tree.t : tree;
+                const side = tree.side || 'default';
+                
+                if (roadType === 'line') return { x: w*0.1 + t * w*0.8, y: h/2 };
+                else if (roadType === 'highway') {
+                    const baseY = h/2; const offset = 95; 
+                    const y = side === 'top' ? baseY - offset : baseY + offset;
+                    return { x: w*0.1 + t * w*0.8, y: y };
+                } else if (roadType === 'circle') {
+                    const r = Math.min(w, h)/3; const angle = t * 2 * Math.PI - Math.PI/2;
+                    return { x: w/2 + r * Math.cos(angle), y: h/2 + r * Math.sin(angle) };
+                } else if (roadType === 'rect') {
+                    const { left, top, rw, rh, perimeter } = getRectGeo(w, h);
+                    const val = t * perimeter;
+                    if (val <= rw) return { x: left + val, y: top };
+                    if (val <= rw + rh) return { x: left + rw, y: top + (val - rw) };
+                    if (val <= 2*rw + rh) return { x: left + rw - (val - (rw + rh)), y: top + rh };
+                    return { x: left, y: top + rh - (val - (2*rw + rh)) };
+                } else if (roadType === 'triangle') {
+                    const { p1, p2, p3, side } = getTriangleGeo(w, h);
+                    const totalLen = side * 3; const currLen = t * totalLen;
+                    if (currLen <= side) { const r = currLen / side; return { x: p1.x + r*(p2.x-p1.x), y: p1.y + r*(p2.y-p1.y) }; }
+                    else if (currLen <= side * 2) { const r = (currLen - side) / side; return { x: p2.x + r*(p3.x-p2.x), y: p2.y + r*(p3.y-p2.y) }; }
+                    else { const r = (currLen - side*2) / side; return { x: p3.x + r*(p1.x-p3.x), y: p3.y + r*(p1.y-p3.y) }; }
+                }
+                return { x: 0, y: 0 };
+            };
+
+            const renderIntervals = () => {
+                if (!isDistributed || trees.length === 0) return null;
+
+                const getIntervalSegments = (sideTrees) => {
+                    const tValues = sideTrees.map(t => t.t).sort((a,b) => a-b);
+                    if (roadType !== 'line' && roadType !== 'highway') {
+                        const segments = [];
+                        for (let i = 0; i < tValues.length; i++) {
+                            const start = tValues[i];
+                            const end = tValues[(i + 1) % tValues.length];
+                            segments.push({ start, end, label: i + 1 });
+                        }
+                        return segments;
+                    } 
+                    const allPoints = Array.from(new Set([0, ...tValues, 1])).sort((a,b) => a-b);
+                    const segments = [];
+                    for (let i = 0; i < allPoints.length - 1; i++) {
+                        if (Math.abs(allPoints[i+1] - allPoints[i]) > 0.001) {
+                            segments.push({ start: allPoints[i], end: allPoints[i+1], label: segments.length + 1 });
+                        }
+                    }
+                    return segments;
+                };
+
+                const drawSegment = (seg, side, keyPrefix) => {
+                    let midT = (seg.start + seg.end) / 2;
+                    if (roadType !== 'line' && roadType !== 'highway' && seg.end < seg.start) {
+                        midT = (seg.start + (seg.end + 1)) / 2;
+                        if (midT > 1) midT -= 1;
+                    }
+
+                    const pStart = getPos({ t: seg.start, side }, size.w, size.h);
+                    const pEnd = getPos({ t: seg.end, side }, size.w, size.h);
+                    const pMid = getPos({ t: midT, side }, size.w, size.h);
+
+                    let pathD = "";
+                    if (roadType === 'line' || roadType === 'highway') {
+                        pathD = `M${pStart.x},${pStart.y} L${pEnd.x},${pEnd.y}`;
+                    } else if (roadType === 'circle') {
+                        const r = Math.min(size.w, size.h)/3;
+                        let diff = seg.end - seg.start;
+                        if (diff < 0) diff += 1;
+                        const largeArc = diff > 0.5 ? 1 : 0;
+                        pathD = `M${pStart.x},${pStart.y} A${r},${r} 0 ${largeArc},1 ${pEnd.x},${pEnd.y}`;
+                    } else if (roadType === 'rect') {
+                        const { left, top, rw, rh, perimeter } = getRectGeo(size.w, size.h);
+                        const c1 = rw / perimeter; const c2 = (rw + rh) / perimeter; const c3 = (2 * rw + rh) / perimeter;
+                        const pCorner1 = { x: left + rw, y: top }; const pCorner2 = { x: left + rw, y: top + rh }; const pCorner3 = { x: left, y: top + rh }; const pCorner0 = { x: left, y: top };
+                        const corners = [{ t: c1, p: pCorner1 }, { t: c2, p: pCorner2 }, { t: c3, p: pCorner3 }];
+                        let pts = [pStart];
+                        if (seg.end > seg.start) {
+                            corners.forEach(c => { if (c.t > seg.start && c.t < seg.end) pts.push(c.p); });
+                        } else {
+                            corners.forEach(c => { if (c.t > seg.start) pts.push(c.p); });
+                            pts.push(pCorner0);
+                            corners.forEach(c => { if (c.t < seg.end) pts.push(c.p); });
+                        }
+                        pts.push(pEnd);
+                        pathD = `M${pts[0].x},${pts[0].y}` + pts.slice(1).map(p => ` L${p.x},${p.y}`).join('');
+                    } else if (roadType === 'triangle') {
+                        const { p1, p2, p3 } = getTriangleGeo(size.w, size.h);
+                        const corners = [{ t: 1/3, p: p2 }, { t: 2/3, p: p3 }];
+                        let pts = [pStart];
+                        if (seg.end > seg.start) {
+                            corners.forEach(c => { if (c.t > seg.start && c.t < seg.end) pts.push(c.p); });
+                        } else {
+                            corners.forEach(c => { if (c.t > seg.start) pts.push(c.p); });
+                            pts.push(p1);
+                            corners.forEach(c => { if (c.t < seg.end) pts.push(c.p); });
+                        }
+                        pts.push(pEnd);
+                        pathD = `M${pts[0].x},${pts[0].y}` + pts.slice(1).map(p => ` L${p.x},${p.y}`).join('');
+                    }
+
+                    let labelYOffset = -25;
+                    if (roadType === 'highway' && side === 'bottom') labelYOffset = 25;
+                    if (roadType === 'line') labelYOffset = -25;
+
+                    return (
+                        <g key={`${keyPrefix}-${seg.label}`}>
+                            <path d={pathD} stroke="#FFEB3B" strokeWidth="8" fill="none" strokeOpacity="0.5" strokeLinecap="round" strokeLinejoin="round" className="animate-in fade-in"/>
+                            <circle cx={pMid.x} cy={pMid.y + labelYOffset} r="16" fill="#2196F3" stroke="white" strokeWidth="2"/>
+                            <text x={pMid.x} y={pMid.y + labelYOffset} dy="6" textAnchor="middle" fill="white" fontSize="18" fontWeight="bold">{seg.label}</text>
+                        </g>
+                    );
+                };
+
+                if (roadType === 'highway') {
+                    const topSegs = getIntervalSegments(trees.filter(t => t.side === 'top'));
+                    const botSegs = getIntervalSegments(trees.filter(t => t.side === 'bottom'));
+                    return (
+                        <>
+                            {topSegs.map(s => drawSegment(s, 'top', 't'))}
+                            {botSegs.map(s => drawSegment(s, 'bottom', 'b'))}
+                        </>
+                    );
+                } else {
+                    const segs = getIntervalSegments(trees);
+                    return segs.map(s => drawSegment(s, 'default', 'd'));
+                }
+            };
+
+            const renderObstacles = () => {
+                if ((roadType !== 'line' && roadType !== 'highway') || mode === 'both' || mode === 'closed') return null;
+
+                const obstacles = [];
+                const createBuilding = (t, side, key) => {
+                    const pos = getPos({ t, side }, size.w, size.h);
+                    return (
+                        <div 
+                            key={key} 
+                            className="absolute transform -translate-x-1/2 -translate-y-full transition-all duration-500 ease-in-out pointer-events-none"
+                            style={{ left: pos.x, top: pos.y + 10, zIndex: Math.floor(pos.y) - 1 }} 
+                        >
+                            <Building size={100} />
+                        </div>
+                    );
+                };
+
+                const hasStartBuilding = mode === 'none' || mode === 'right';
+                const hasEndBuilding = mode === 'none' || mode === 'left';
+
+                if (roadType === 'line') {
+                    if (hasStartBuilding) obstacles.push(createBuilding(0, 'default', 'b-start'));
+                    if (hasEndBuilding) obstacles.push(createBuilding(1, 'default', 'b-end'));
+                } else if (roadType === 'highway') {
+                    if (hasStartBuilding) {
+                        obstacles.push(createBuilding(0, 'top', 'b-top-start'));
+                        obstacles.push(createBuilding(0, 'bottom', 'b-bot-start'));
+                    }
+                    if (hasEndBuilding) {
+                        obstacles.push(createBuilding(1, 'top', 'b-top-end'));
+                        obstacles.push(createBuilding(1, 'bottom', 'b-bot-end'));
+                    }
+                }
+
+                return obstacles;
+            };
+
+            const renderRoad = () => {
+                const { w, h } = size;
+                if (w === 0) return null;
+                const roadColor = "#8D6E63"; const grassFill = "#E8F5E9"; 
+                const trackColor = "#5D4037"; const trackWidth = 2; const trackOpacity = 0.3; const trackOffset = 7; 
+
+                if (roadType === 'line') {
+                    const startX = w * 0.1; const endX = w * 0.9; const y = h / 2; const roadWidth = 28;
+                    return (<g><line x1={startX} y1={y} x2={endX} y2={y} stroke={roadColor} strokeWidth={roadWidth} strokeLinecap="round" /><line x1={startX} y1={y-trackOffset} x2={endX} y2={y-trackOffset} stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} strokeLinecap="round" /><line x1={startX} y1={y+trackOffset} x2={endX} y2={y+trackOffset} stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} strokeLinecap="round" /><line x1={startX} y1={y-15} x2={startX} y2={y+15} stroke="#3E2723" strokeWidth="2" /><line x1={endX} y1={y-15} x2={endX} y2={y+15} stroke="#3E2723" strokeWidth="2" /></g>);
+                } else if (roadType === 'highway') {
+                    const startX = w * 0.1; const endX = w * 0.9; const y = h / 2; const roadWidth = 160; const laneColor = "#37474F"; 
+                    return (<g><line x1={startX} y1={y} x2={endX} y2={y} stroke={laneColor} strokeWidth={roadWidth} strokeLinecap="round" /><line x1={startX} y1={y-75} x2={endX} y2={y-75} stroke="#ECEFF1" strokeWidth="3" /><line x1={startX} y1={y+75} x2={endX} y2={y+75} stroke="#ECEFF1" strokeWidth="3" /><line x1={startX} y1={y} x2={endX} y2={y} stroke="#ECEFF1" strokeWidth="3" strokeDasharray="25 25" strokeOpacity="0.8" /><line x1={startX} y1={y-80} x2={startX} y2={y+80} stroke="#263238" strokeWidth="4" /><line x1={endX} y1={y-80} x2={endX} y2={y+80} stroke="#263238" strokeWidth="4" /></g>);
+                } else if (roadType === 'circle') {
+                    const r = Math.min(w, h)/3; const roadWidth = 28;
+                    return (<g><circle cx={w/2} cy={h/2} r={r} fill={grassFill} stroke={roadColor} strokeWidth={roadWidth} /><circle cx={w/2} cy={h/2} r={r-trackOffset} fill="none" stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} /><circle cx={w/2} cy={h/2} r={r+trackOffset} fill="none" stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} /></g>);
+                } else if (roadType === 'rect') {
+                    const { x, y, rw, rh } = getRectGeo(w, h); const roadWidth = 28;
+                    return (<g><rect x={x} y={y} width={rw} height={rh} fill={grassFill} stroke={roadColor} strokeWidth={roadWidth} strokeLinejoin="round" /><rect x={x+trackOffset} y={y+trackOffset} width={rw-trackOffset*2} height={rh-trackOffset*2} fill="none" stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} strokeLinejoin="round" /><rect x={x-trackOffset} y={y-trackOffset} width={rw+trackOffset*2} height={rh+trackOffset*2} fill="none" stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} strokeLinejoin="round" /></g>);
+                } else if (roadType === 'triangle') {
+                    const { p1, p2, p3 } = getTriangleGeo(w, h); const roadWidth = 28;
+                    const getScaledPath = (offset) => {
+                        const cx = (p1.x + p2.x + p3.x) / 3; const cy = (p1.y + p2.y + p3.y) / 3; const scale = (offset > 0) ? 1.05 : 0.95; 
+                        const scalePt = (p) => ({ x: cx + (p.x-cx)*scale, y: cy + (p.y-cy)*scale });
+                        const np1 = scalePt(p1); const np2 = scalePt(p2); const np3 = scalePt(p3);
+                        return `M${np1.x},${np1.y} L${np2.x},${np2.y} L${np3.x},${np3.y} Z`;
+                    };
+                    const pathD = `M${p1.x},${p1.y} L${p2.x},${p2.y} L${p3.x},${p3.y} Z`;
+                    return (<g><path d={pathD} fill={grassFill} stroke={roadColor} strokeWidth={roadWidth} strokeLinejoin="round" /><path d={getScaledPath(1)} fill="none" stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} strokeLinejoin="round" /><path d={getScaledPath(-1)} fill="none" stroke={trackColor} strokeWidth={trackWidth} strokeOpacity={trackOpacity} strokeLinejoin="round" /></g>);
+                }
+            };
+
+            const handleClick = (e) => {
+                const rect = svgRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                const w = rect.width; const h = rect.height;
+                let t = -1; let side = 'default';
+
+                if (roadType === 'line') { if (y > h/2 - 40 && y < h/2 + 40) t = Math.max(0, Math.min(1, (x - w*0.1) / (w*0.8))); }
+                else if (roadType === 'highway') { 
+                    const distY = Math.abs(y - h/2);
+                    if (distY > 50 && distY < 300) { 
+                        t = Math.max(0, Math.min(1, (x - w*0.1) / (w*0.8))); 
+                        side = y < h/2 ? 'top' : 'bottom'; 
+                    } 
+                }
+                else if (roadType === 'circle') { const r = Math.min(w, h)/3; const dx = x - w/2; const dy = y - h/2; if (Math.abs(Math.sqrt(dx*dx + dy*dy) - r) < 50) { let angle = Math.atan2(dy, dx); if (angle < 0) angle += 2 * Math.PI; let tRaw = angle / (2 * Math.PI) + 0.25; if (tRaw > 1) tRaw -= 1; t = tRaw; } }
+                else if (roadType === 'rect') { const { left, right, top, bottom, rw, rh, perimeter } = getRectGeo(w, h); const dt = Math.abs(y-top), db = Math.abs(y-bottom), dl = Math.abs(x-left), dr = Math.abs(x-right); const min = Math.min(dt, db, dl, dr); if (min < 40) { if (min === dt) t = (x - left) / perimeter; else if (min === dr) t = (rw + (y - top)) / perimeter; else if (min === db) t = (rw + rh + (right - x)) / perimeter; else t = (rw + rh + rw + (bottom - y)) / perimeter; } }
+                else if (roadType === 'triangle') { const { p1, p2, p3, side, perimeter } = getTriangleGeo(w, h); const getProj = (px, py, a, b, startOffset) => { const l2 = (a.x-b.x)**2 + (a.y-b.y)**2; if (l2===0) return null; let t0 = Math.max(0, Math.min(1, ((px-a.x)*(b.x-a.x) + (py-a.y)*(b.y-a.y)) / l2)); const projX = a.x + t0*(b.x-a.x), projY = a.y + t0*(b.y-a.y); return { dist: Math.sqrt((px-projX)**2 + (py-projY)**2), tTotal: (startOffset + t0 * side) / perimeter }; }; const best = [getProj(x,y,p1,p2,0), getProj(x,y,p2,p3,side), getProj(x,y,p3,p1,side*2)].sort((a,b)=>a.dist-b.dist)[0]; if (best.dist < 40) t = best.tTotal; }
+                
+                if (t >= 0 && t <= 1) onPlant(t, side);
+            };
+
+            // 防止初始化时宽度为0导致渲染异常，只有宽度>0才渲染内容
+            if (size.w === 0) return (
+                <div className="w-full h-full relative cursor-crosshair group">
+                    <svg ref={svgRef} className="w-full h-full" onClick={handleClick} />
+                </div>
+            );
+
+            return (
+                <div className="w-full h-full relative cursor-crosshair group">
+                    <svg ref={svgRef} className="w-full h-full" onClick={handleClick}>
+                        {renderRoad()}
+                        {renderIntervals()}
+                        {(roadType === 'line' || roadType === 'highway') && size.w > 0 && (
+                            <>
+                                <text x={size.w * 0.1} y={size.h/2 + (roadType==='highway'?95:40)} textAnchor="middle" className="text-xs fill-slate-500 font-bold">起点</text>
+                                <text x={size.w * 0.9} y={size.h/2 + (roadType==='highway'?95:40)} textAnchor="middle" className="text-xs fill-slate-500 font-bold">终点</text>
+                            </>
+                        )}
+                    </svg>
+                    
+                    {renderObstacles()}
+
+                    {trees.map((tree, idx) => {
+                        const pos = getPos(tree, size.w, size.h);
+                        let Component; let yOffset = 5; let sizeIcon = 80; 
+                        if (itemType === 'lamp') { Component = StreetLamp; yOffset = 8; sizeIcon = 70; } 
+                        else if (itemType === 'tree2') { Component = TreePine; } 
+                        else if (itemType === 'flag') { Component = Flag; yOffset = 8; sizeIcon = 60; }
+                        else { Component = TreeGinkgo; }
+                        
+                        return (
+                            <div 
+                                key={idx} 
+                                className="absolute transform -translate-x-1/2 -translate-y-full transition-all duration-500 ease-in-out pointer-events-none"
+                                style={{ left: pos.x, top: pos.y + yOffset, zIndex: Math.floor(pos.y) }}
+                            >
+                                <Component size={sizeIcon} index={idx} className="animate-in zoom-in duration-300" />
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        const ControlGroup = ({ title, children }) => (
+            <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-bold text-slate-500 mb-0.5">{title}</h3>
+                {children}
+            </div>
+        );
+
+        const OptionBtn = ({ active, label, onClick, icon, disabled }) => (
+            <button
+                onClick={onClick}
+                disabled={disabled}
+                className={`
+                    flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm font-bold border transition-all flex-1 justify-center
+                    ${active 
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}
+                    ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'active:scale-95'}
+                `}
+            >
+                {icon}
+                {label}
+            </button>
+        );
+
+        function TreePlantingApp() {
+            const [leftWidth, setLeftWidth] = useState(70); 
+            const [topHeight, setTopHeight] = useState(70);
+            
+            const [roadType, setRoadType] = useState('line'); 
+            const [mode, setMode] = useState('both'); 
+            const [selectedItem, setSelectedItem] = useState('tree1'); 
+            const [trees, setTrees] = useState([]); 
+            const [showData, setShowData] = useState(true); 
+            const [showFormula, setShowFormula] = useState(true);
+            const [isDistributed, setIsDistributed] = useState(false);
+            
+            const [isResizingX, setIsResizingX] = useState(false);
+            const [isResizingY, setIsResizingY] = useState(false);
+            const containerRef = useRef(null);
+
+            useEffect(() => {
+                setTrees([]);
+                setIsDistributed(false);
+                if (roadType === 'circle' || roadType === 'rect' || roadType === 'triangle') {
+                    setMode('closed');
+                } else if (mode === 'closed') {
+                    setMode('both');
+                }
+            }, [roadType]);
+
+            const handleAddTree = (position, side = 'default') => {
+                setIsDistributed(false); 
+                const isOverlap = trees.some(t => {
+                    const sameSide = t.side === side;
+                    const samePos = Math.abs(t.t - position) < 0.01;
+                    return sameSide && samePos;
+                });
+
+                if (!isOverlap) {
+                    setTrees(prev => [...prev, { t: position, side }].sort((a, b) => a.t - b.t));
+                }
+            };
+
+            const handleDistribute = () => {
+                if (trees.length < 1) return;
+
+                const generatePoints = (count, modeStr) => {
+                    let points = [];
+                    if (modeStr === 'both') { 
+                        if (count === 1) points = [0.5];
+                        else for (let i = 0; i < count; i++) points.push(i / (count - 1));
+                    } else if (modeStr === 'none') { 
+                        const gap = 1 / (count + 1);
+                        for (let i = 0; i < count; i++) points.push(gap * (i + 1));
+                    } else if (modeStr === 'left') { 
+                        const gap = 1 / count;
+                        for (let i = 0; i < count; i++) points.push(gap * i);
+                    } else if (modeStr === 'right') { 
+                        const gap = 1 / count;
+                        for (let i = 0; i < count; i++) points.push(gap * (i + 1));
+                    } else if (modeStr === 'closed') { 
+                        const gap = 1 / count;
+                        for (let i = 0; i < count; i++) points.push(gap * i);
+                    }
+                    return points;
+                };
+
+                let newTrees = [];
+
+                if (roadType === 'highway') {
+                    const totalCount = trees.length;
+                    const sideCount = Math.max(1, Math.ceil(totalCount / 2)); 
+                    const points = generatePoints(sideCount, mode); 
+                    
+                    newTrees = [
+                        ...points.map(t => ({ t, side: 'top' })),
+                        ...points.map(t => ({ t, side: 'bottom' }))
+                    ];
+                } else {
+                    const points = generatePoints(trees.length, mode);
+                    newTrees = points.map(t => ({ t, side: 'default' }));
+                }
+                
+                setTrees(newTrees);
+                setIsDistributed(true);
+            };
+
+            const handleClear = () => {
+                setTrees([]);
+                setIsDistributed(false);
+            };
+
+            const handleMouseMove = (e) => {
+                if (!containerRef.current) return;
+                const rect = containerRef.current.getBoundingClientRect();
+                if (isResizingX) {
+                    const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+                    if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
+                }
+                if (isResizingY) {
+                    const newHeight = ((e.clientY - rect.top) / rect.height) * 100;
+                    if (newHeight > 30 && newHeight < 80) setTopHeight(newHeight);
+                }
+            };
+
+            const handleMouseUp = () => {
+                setIsResizingX(false);
+                setIsResizingY(false);
+            };
+
+            useEffect(() => {
+                if (isResizingX || isResizingY) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                }
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                };
+            }, [isResizingX, isResizingY]);
+
+            const treeCount = trees.length;
+            let intervalCount = 0;
+            let relationText = "";
+            let formula = "";
+            const unitName = selectedItem === 'lamp' ? "盏数" : (selectedItem === 'flag' ? "面数" : "棵数");
+
+            const calcIntervals = (cnt, m) => {
+                if (cnt === 0) return 0;
+                if (m === 'both') return Math.max(0, cnt - 1);
+                if (m === 'none') return cnt + 1;
+                return cnt;
+            };
+
+            if (roadType === 'line') {
+                intervalCount = calcIntervals(treeCount, mode);
+                if (mode === 'both') {
+                    relationText = "两端都种";
+                    formula = `${unitName} = 间隔数 + 1`;
+                } else if (mode === 'none') {
+                    relationText = "两端都不种";
+                    formula = `${unitName} = 间隔数 - 1`;
+                } else {
+                    relationText = "只种一端";
+                    formula = `${unitName} = 间隔数`;
+                }
+            } else if (roadType === 'highway') {
+                const topCount = trees.filter(t => t.side === 'top').length;
+                const bottomCount = trees.filter(t => t.side === 'bottom').length;
+                intervalCount = calcIntervals(topCount, mode) + calcIntervals(bottomCount, mode);
+                
+                relationText = "公路两侧植树";
+                if (mode === 'both') formula = `总${unitName} = (间隔数 + 1) × 2`;
+                else if (mode === 'none') formula = `总${unitName} = (间隔数 - 1) × 2`;
+                else formula = `总${unitName} = 间隔数 × 2`;
+                
+                if (treeCount === 0) formula = "两侧各自计算";
+            } else {
+                intervalCount = treeCount;
+                relationText = "封闭路线";
+                formula = `${unitName} = 间隔数`;
+            }
+
+            if (treeCount === 0) {
+                intervalCount = 0;
+                formula = "请先添加";
+            }
+
+            return (
+                <div ref={containerRef} className="flex flex-col w-full h-screen bg-slate-50 overflow-hidden select-none font-sans text-slate-700">
+                    <div className="flex w-full" style={{ height: `${topHeight}%` }}>
+                        <div className="relative bg-white border-r border-slate-200 overflow-hidden" style={{ width: `${leftWidth}%` }}>
+                            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#8D6E63 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+
+                            <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-base font-bold text-slate-600 shadow-md border border-slate-200 flex items-center gap-2">
+                                <IconMousePointer2 size={20} className="text-blue-600"/> 
+                                <span>点击路面{selectedItem === 'lamp' ? '安装路灯' : (selectedItem === 'flag' ? '插彩旗' : '种树')}</span>
+                            </div>
+                            
+                            <RoadCanvas 
+                                roadType={roadType} 
+                                trees={trees} 
+                                onPlant={handleAddTree} 
+                                itemType={selectedItem}
+                                isDistributed={isDistributed} 
+                                mode={mode} 
+                            />
+
+                            
+
+                            <div 
+                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 z-20 transition-colors bg-transparent hover:delay-75"
+                                onMouseDown={() => setIsResizingX(true)}
+                            />
+                        </div>
+
+                        <div className="flex-1 bg-slate-100 p-3 flex flex-col gap-3 overflow-hidden z-10">
+                            {/* 实时数据板块 - 稍微压缩高度 */}
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 shrink-0">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h2 className="text-base font-bold text-slate-500 flex items-center gap-2">
+                                        <IconLayoutTemplate className="w-5 h-5 text-blue-500"/> 实时数据
+                                    </h2>
+                                    <button onClick={() => setShowData(!showData)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors" title={showData ? "隐藏数据" : "显示数据"}>
+                                        {showData ? <IconEye size={18} /> : <IconEyeOff size={18} />}
+                                    </button>
+                                </div>
+                                
+                                {showData ? (
+                                    <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300">
+                                        <div className="bg-green-50 p-3 rounded-xl border border-green-100 text-center transition-all duration-300">
+                                            <div className="text-3xl font-black text-green-600 mb-0.5">{treeCount}</div>
+                                            <div className="text-xs font-bold text-green-700/70 uppercase">总{unitName}</div>
+                                        </div>
+                                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center transition-all duration-300">
+                                            <div className="text-3xl font-black text-blue-600 mb-0.5">{intervalCount}</div>
+                                            <div className="text-xs font-bold text-blue-700/70 uppercase">总间隔数</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="py-6 text-center text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200 animate-in fade-in duration-300">数据已隐藏</div>
+                                )}
+                            </div>
+
+                            {/* 核心公式板块 - 占据剩余空间并凸显 */}
+                            <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col items-center text-center overflow-hidden relative">
+                                
+                                {/* 当前模式标题 */}
+                                <div className="mt-4 mb-2 shrink-0">
+                                    <h3 className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">当前模式</h3>
+                                    <div className="text-2xl font-black text-slate-800">{relationText}</div>
+                                </div>
+                                
+                                {/* 公式卡片 - 视觉重心 */}
+                                <div className="flex-1 w-full flex flex-col justify-center px-2 py-2 w-full">
+                                    <div className="w-full bg-gradient-to-br from-[#FFFBE6] to-[#FFF3C4] border-2 border-[#FFE58F] rounded-2xl p-4 shadow-sm relative group flex flex-col justify-center h-full max-h-40">
+                                        
+                                        {/* 公式卡片标题栏 */}
+                                        <div className="absolute top-3 left-4 right-4 flex justify-between items-center pb-2 border-b border-[#FFE58F]/50">
+                                            <span className="text-xs font-bold text-[#D48806] uppercase tracking-wider">数量关系公式</span>
+                                            <button onClick={() => setShowFormula(!showFormula)} className="p-1 rounded-md hover:bg-[#FFE58F] text-[#D48806] transition-colors">
+                                                {showFormula ? <IconEye size={16} /> : <IconEyeOff size={16} />}
+                                            </button>
+                                        </div>
+                                        
+                                        {/* 公式内容 - 强制单行，字体自适应 */}
+                                        <div className="mt-6 flex items-center justify-center w-full overflow-hidden">
+                                            {showFormula ? (
+                                                <div className="text-xl xl:text-2xl font-black text-[#D46B08] font-mono tracking-wide whitespace-nowrap">
+                                                    {formula}
+                                                </div>
+                                            ) : (
+                                                <div className="text-lg text-[#D48806]/40 font-mono tracking-wide italic">请先添加</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 底部辅助信息 */}
+                                {treeCount > 1 && (
+                                    <div className="mb-3 shrink-0 text-xs text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                                        平均间距 <span className="font-mono font-bold text-blue-500">{(100 / (mode === 'none' ? Math.ceil(treeCount/(roadType==='highway'?2:1)) + 1 : (mode === 'both' ? Math.max(1, Math.ceil(treeCount/(roadType==='highway'?2:1)) -1) : Math.ceil(treeCount/(roadType==='highway'?2:1))))).toFixed(1)}</span> 米
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="h-1 w-full cursor-row-resize bg-slate-200 hover:bg-blue-400 z-20 transition-colors" onMouseDown={() => setIsResizingY(true)} />
+
+                    <div className="bg-white border-t border-slate-200 p-2 overflow-hidden flex flex-col justify-center" style={{ minHeight: '180px' }}>
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-start justify-between w-full">
+                            
+                            <div className="flex flex-col gap-2 flex-1">
+                                <ControlGroup title="1. 选择路形">
+                                    <div className="flex gap-2 w-full">
+                                        <OptionBtn active={roadType === 'line'} onClick={() => setRoadType('line')} label="直线" icon={<IconMoveHorizontal size={20}/>} />
+                                        <OptionBtn active={roadType === 'highway'} onClick={() => setRoadType('highway')} label="公路(两侧)" icon={<IconCombine size={20}/>} />
+                                    </div>
+                                    <div className="flex gap-2 w-full">
+                                        <OptionBtn active={roadType === 'circle'} onClick={() => setRoadType('circle')} label="圆形" icon={<IconRefreshCcw size={20}/>} />
+                                        <OptionBtn active={roadType === 'rect'} onClick={() => setRoadType('rect')} label="长方形" icon={<IconMaximize size={20}/>} />
+                                        <OptionBtn active={roadType === 'triangle'} onClick={() => setRoadType('triangle')} label="三角形" icon={<IconTriangle size={20}/>} />
+                                    </div>
+                                </ControlGroup>
+                            </div>
+
+                            <div className="w-px bg-slate-200 self-stretch hidden md:block"></div>
+
+                            <div className="flex flex-col gap-2 flex-1">
+                                <ControlGroup title="2. 排列模式">
+                                    <div className="flex flex-col gap-2 w-full">
+                                        {(roadType === 'line' || roadType === 'highway') ? (
+                                            <>
+                                                <div className="flex gap-2 w-full">
+                                                    <OptionBtn active={mode === 'both'} onClick={() => setMode('both')} label="两端都种" />
+                                                    <OptionBtn active={mode === 'none'} onClick={() => setMode('none')} label="两端不种" />
+                                                </div>
+                                                <div className="flex gap-2 w-full">
+                                                    <OptionBtn active={mode === 'left'} onClick={() => setMode('left')} label="只种左端" />
+                                                    <OptionBtn active={mode === 'right'} onClick={() => setMode('right')} label="只种右端" />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <OptionBtn active={true} disabled label="封闭图形 (默认)" />
+                                        )}
+                                    </div>
+                                </ControlGroup>
+                            </div>
+
+                            <div className="w-px bg-slate-200 self-stretch hidden md:block"></div>
+
+                            <div className="flex flex-col gap-2 flex-1">
+                                <ControlGroup title="3. 工具箱">
+                                    <div className="flex items-center gap-2 mb-1 justify-between px-2">
+                                        <button onClick={() => setSelectedItem('tree1')} className={`flex flex-col items-center gap-1 p-1 rounded-xl transition-all ${selectedItem === 'tree1' ? 'bg-green-100 text-green-800 ring-2 ring-green-500 scale-105' : 'hover:bg-slate-100 text-slate-500'}`}>
+                                            <TreeGinkgo size={36} />
+                                            <span className="text-xs font-bold">银杏</span>
+                                        </button>
+                                        <button onClick={() => setSelectedItem('tree2')} className={`flex flex-col items-center gap-1 p-1 rounded-xl transition-all ${selectedItem === 'tree2' ? 'bg-green-100 text-green-800 ring-2 ring-green-500 scale-105' : 'hover:bg-slate-100 text-slate-500'}`}>
+                                            <TreePine size={36} />
+                                            <span className="text-xs font-bold">松树</span>
+                                        </button>
+                                        <button onClick={() => setSelectedItem('lamp')} className={`flex flex-col items-center gap-1 p-1 rounded-xl transition-all ${selectedItem === 'lamp' ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-500 scale-105' : 'hover:bg-slate-100 text-slate-500'}`}>
+                                            <StreetLamp size={36} />
+                                            <span className="text-xs font-bold">路灯</span>
+                                        </button>
+                                        <button onClick={() => setSelectedItem('flag')} className={`flex flex-col items-center gap-1 p-1 rounded-xl transition-all ${selectedItem === 'flag' ? 'bg-red-100 text-red-800 ring-2 ring-red-500 scale-105' : 'hover:bg-slate-100 text-slate-500'}`}>
+                                            <Flag size={36} />
+                                            <span className="text-xs font-bold">彩旗</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex gap-2 w-full mt-1">
+                                        <button 
+                                            onClick={handleDistribute}
+                                            className="flex-1 flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 rounded-xl shadow-md active:scale-95 transition-all"
+                                        >
+                                            <IconMoveHorizontal size={18} /> 均匀排列
+                                        </button>
+                                        
+                                        <button 
+                                            onClick={handleClear}
+                                            className="flex flex-col justify-center items-center gap-0.5 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 w-16 rounded-xl border-2 border-slate-200 hover:border-red-200 active:scale-95 transition-all"
+                                        >
+                                            <IconTrash2 size={18} />
+                                            <span className="text-[10px] font-bold">重置</span>
+                                        </button>
+                                    </div>
+                                </ControlGroup>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TreePlantingApp />);
+    </script>
+</body>
+</html>

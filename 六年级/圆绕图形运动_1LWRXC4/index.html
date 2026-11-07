@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>圆的运动轨迹与扫过面积</title>
+    <style>
+        :root {
+            --bg-color: #F0F9F0;
+            --primary-color: #4CAF50;
+            --control-bg: #FFFFFF;
+            --text-color: #333333;
+            --accent-color: #FF9800;
+            --trajectory-color: #2196F3;
+            --area-color: rgba(33, 150, 243, 0.5);
+            --corner-color: #F44336;
+            --btn-hover: #e8f5e9;
+            --btn-active: #c8e6c9;
+            --dead-zone-color: #9E9E9E;
+            --snap-highlight: #E91E63;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            touch-action: none; 
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #canvas-container {
+            position: relative;
+            flex: 1; 
+            width: 100%;
+            cursor: crosshair;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        
+
+        /* --- 缩放控制器 --- */
+        #zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 50;
+            backdrop-filter: blur(4px);
+        }
+
+        #zoom-controls button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            color: #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        #zoom-controls button:hover {
+            background-color: #f5f5f5;
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        #zoom-controls button:active {
+            transform: scale(0.95);
+            background-color: var(--btn-active);
+        }
+
+        #zoomLevel {
+            font-size: 13px;
+            min-width: 45px;
+            text-align: center;
+            color: #333;
+            font-family: monospace;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        #zoomLevel:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
+        /* --- 控制栏自适应布局 --- */
+        #controls {
+            height: auto;
+            min-height: 80px;
+            max-height: 40vh; /* 防止在小屏幕上占用过多高度 */
+            background-color: var(--control-bg);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+            padding: 10px;
+            display: flex;
+            flex-direction: row; 
+            flex-wrap: wrap; /* 允许换行 */
+            justify-content: center; /* 整体居中 */
+            align-items: center; 
+            gap: 10px;
+            z-index: 10;
+            overflow-y: auto; /* 内容过多时垂直滚动 */
+        }
+
+        .divider {
+            width: 1px;
+            height: 40px;
+            background-color: #eee;
+            flex-shrink: 0;
+            margin: 0 5px;
+        }
+
+        /* 1. 说明书 */
+        .section-manual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #555;
+            min-width: 50px;
+        }
+        
+        .help-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 2px;
+        }
+
+        /* 2. 图形选择 */
+        .section-shapes {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .shape-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            min-width: 50px;
+        }
+
+        .shape-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .shape-item.active {
+            background-color: #e8f5e9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .shape-item.active .shape-label {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        .shape-item.active svg {
+            stroke: var(--primary-color);
+            stroke-width: 2.5;
+        }
+
+        .shape-icon {
+            width: 32px; 
+            height: 32px;
+        }
+        
+        .shape-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: #555;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .shape-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            white-space: nowrap;
+        }
+
+        /* 3. 大小调节 */
+        .section-sliders {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            min-width: 140px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 20px;
+        }
+
+        .slider-label {
+            font-size: 12px;
+            color: #666;
+            width: 45px;
+            text-align: right;
+            margin-right: 8px;
+        }
+
+        .value-display {
+            font-family: monospace;
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 13px;
+            width: 20px;
+            text-align: right;
+        }
+
+        /* 4. 演示功能 */
+        .section-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button.action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 16px; 
+            border-radius: 8px;
+            font-size: 14px; 
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            white-space: nowrap;
+            font-weight: 600; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 36px;
+            width: 130px; 
+        }
+
+        button.action-btn:active {
+            transform: scale(0.96);
+        }
+
+        button.secondary {
+            background-color: #fff;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color); 
+        }
+        
+        button.secondary:hover {
+            background-color: var(--btn-hover);
+        }
+
+        button.danger {
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+            font-size: 15px; 
+        }
+        
+        button:disabled {
+            background-color: #e0e0e0;
+            color: #999;
+            border-color: transparent;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 5. 模式开关 */
+        .section-modes {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toggle-group {
+            display: flex;
+            background: #e0e0e0;
+            border-radius: 4px;
+            padding: 2px;
+            width: 140px;
+        }
+        
+        .toggle-group button {
+            flex: 1;
+            background: transparent;
+            color: #555;
+            border: none;
+            padding: 4px 0;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        .toggle-group button.active {
+            background: white;
+            color: var(--primary-color);
+            font-weight: bold;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* 6. 设置区 */
+        .section-settings {
+            display: flex;
+            flex-direction: row; 
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .icon-text-btn {
+            background: transparent;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 0 12px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+            transition: all 0.2s;
+            min-width: 90px;
+            white-space: nowrap;
+        }
+        
+        .icon-text-btn:hover {
+            background: #f5f5f5;
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .icon-text-btn.active {
+            background: var(--btn-active);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        input[type=range] {
+            width: 100px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .hidden {
+            visibility: hidden;
+        }
+
+        /* 移动端/小屏幕适配优化 */
+        @media (max-width: 768px) {
+            #controls {
+                gap: 5px;
+                padding: 5px;
+            }
+            .divider {
+                display: none; /* 小屏幕隐藏分割线 */
+            }
+            .section-shapes {
+                gap: 2px;
+            }
+            .shape-item {
+                min-width: 40px;
+                padding: 2px 4px;
+            }
+            .shape-icon {
+                width: 24px;
+                height: 24px;
+            }
+            .shape-label {
+                font-size: 10px;
+            }
+            .toggle-group {
+                width: 120px;
+            }
+            input[type=range] {
+                width: 80px;
+            }
+            button.action-btn {
+                width: 110px;
+                font-size: 12px;
+            }
+            .icon-text-btn {
+                min-width: 70px;
+                font-size: 11px;
+                padding: 0 8px;
+            }
+            #zoom-controls {
+                top: 10px;
+                right: 10px;
+            }
+        }
+
+        /* 弹窗 */
+        #helpModal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            width: 80%;
+            max-width: 500px;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #999;
+        }
+
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div id="canvas-container">
+        <canvas id="mainCanvas"></canvas>
+        
+        
+        <!-- 缩放控制器 -->
+        <div id="zoom-controls">
+            <button id="btnZoomOut" title="缩小">-</button>
+            <span id="zoomLevel" title="点击重置">100%</span>
+            <button id="btnZoomIn" title="放大">+</button>
+        </div>
+
+        <div id="toast" style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; z-index: 100;">提示信息</div>
+        
+        <div id="helpModal">
+            <div class="modal-content">
+                <button class="close-btn" id="closeHelp">&times;</button>
+                <h3 style="color:var(--primary-color); margin-top:0;">📚 交互课件使用说明</h3>
+                <div style="font-size:14px; line-height:1.6; color:#444;">
+                    <p><strong>1. 基础操作：</strong></p>
+                    <ul>
+                        <li>点击下方图标切换几何图形（正三角形、正五边形等）。</li>
+                        <li>拖动中间的滑块调整图形参数。</li>
+                        <li>可以拖动画面中的几何图形改变位置。</li>
+                        <li><strong>右上角缩放：</strong>点击 + / - 按钮调整画面大小，点击数字重置为 100%。</li>
+                    </ul>
+                    <p><strong>2. 演示模式：</strong></p>
+                    <ul>
+                        <li><strong>圆心轨迹</strong>：观察圆心运动路径。</li>
+                        <li><strong>扫过面积</strong>：观察圆运动覆盖的区域。</li>
+                        <li>点击 <strong>▶ 自动演示</strong> 或直接<strong>拖动圆球</strong>绕图形一周。</li>
+                    </ul>
+                    <p><strong>3. 拆解验证 (核心)：</strong></p>
+                    <ul>
+                        <li>圆滚动一周后，点击红色 <strong>✂ 拆解验证</strong> 按钮。</li>
+                        <li><strong>外切模式</strong>：将红色圆弧拖动拼合，验证 $C=2\pi r$；将蓝色线段拖动吸附到边长验证长度。</li>
+                        <li><strong>内切模式</strong>：拖动四个角落的灰色“回旋镖”，让它们的<strong>尖端互相靠近</strong>，会自动吸附拼成一个<strong>方中圆</strong>（正方形挖去一个圆）。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <!-- 1. 说明书 -->
+        <div class="section-manual" id="btnHelp">
+            <svg class="help-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <span style="font-size:11px;">说明书</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 2. 图形选择 -->
+        <div class="section-shapes">
+            <div class="shape-item" data-shape="circle">
+                <div class="shape-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div>
+                <span class="shape-label">圆形</span>
+            </div>
+            <div class="shape-item" data-shape="triangle">
+                <div class="shape-icon"><svg viewBox="0 0 24 24"><path d="M12 4 L20 20 L4 20 Z"/></svg></div>
+                <span class="shape-label">正三角形</span>
+            </div>
+            <div class="shape-item active" data-shape="rectangle">
+                <div class="shape-icon"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12"/></svg></div>
+                <span class="shape-label">长方形</span>
+            </div>
+            <div class="shape-item" data-shape="pentagon">
+                <div class="shape-icon"><svg viewBox="0 0 24 24"><path d="M12 2 L22 9 L18 21 L6 21 L2 9 Z"/></svg></div>
+                <span class="shape-label">正五边形</span>
+            </div>
+            <div class="shape-item" data-shape="hexagon">
+                <div class="shape-icon"><svg viewBox="0 0 24 24"><path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z"/></svg></div>
+                <span class="shape-label">正六边形</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 3. 大小调节 (纵向: 半径-长-宽) -->
+        <div class="section-sliders">
+            <div class="slider-row">
+                <div class="slider-label">圆半径</div>
+                <input type="range" id="radiusSlider" min="1" max="8" value="2" step="1">
+                <span id="radiusValue" class="value-display">2</span>
+            </div>
+            <div class="slider-row">
+                <div class="slider-label" id="lblSize">长</div>
+                <input type="range" id="sizeSlider" min="2" max="15" value="8" step="1">
+                <span id="sizeValue" class="value-display">8</span>
+            </div>
+            <div class="slider-row" id="heightRow">
+                <div class="slider-label">宽</div>
+                <input type="range" id="heightSlider" min="2" max="15" value="6" step="1">
+                <span id="heightValue" class="value-display">6</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 4. 演示功能 -->
+        <div class="section-actions">
+            <button id="btnAuto" class="action-btn secondary">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                自动演示
+            </button>
+            <button id="btnVerify" disabled class="action-btn danger">
+                ✂ 拆解验证
+            </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 5. 模式开关 -->
+        <div class="section-modes">
+            <div class="toggle-group" id="modeToggle">
+                <button data-val="trajectory" class="active">圆心轨迹</button>
+                <button data-val="area">扫过面积</button>
+            </div>
+            <div class="toggle-group" id="posToggle">
+                <button data-val="outside" class="active">外切滚动</button>
+                <button data-val="inside">内切滚动</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 6. 设置区 (横向) -->
+        <div class="section-settings">
+            <button class="icon-text-btn active" id="btnToggleDims">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                数据显示
+            </button>
+            <button class="icon-text-btn" id="btnReset">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1 2.12-9.36L23 10"/></svg>
+                重置画布
+            </button>
+        </div>
+    </div>
+
+<script>
+/**
+ * 核心逻辑：Canvas 绘制与交互引擎
+ */
+
+const CONFIG = {
+    colors: {
+        polyStroke: '#333',
+        polyFill: '#E8F5E9',
+        rollerFill: 'rgba(255, 152, 0, 0.2)',
+        rollerStroke: '#F57C00',
+        trajectoryLine: '#2196F3', 
+        trajectoryArc: '#F44336',  
+        areaRect: 'rgba(33, 150, 243, 0.5)', 
+        areaSector: 'rgba(244, 67, 54, 0.5)',  
+        snapTarget: 'rgba(0, 0, 0, 0.1)',
+        deadZone: '#9E9E9E',
+        polySelected: '#C8E6C9',
+        snapPoint: '#E91E63' 
+    },
+    animSpeed: 2
+};
+
+const STATE = {
+    shape: 'rectangle', 
+    shapeSizeUnit: 8, // 默认长 8
+    shapeHeightUnit: 6, // 默认宽 6
+    rollerRadiusUnit: 2, 
+    
+    // 动态计算缩放比例
+    pixelScale: 25, 
+    cameraZoom: 1.0, // 新增：相机手动缩放倍率
+    
+    get shapeSize() { return this.shapeSizeUnit * this.pixelScale; },
+    get shapeHeight() { return this.shapeHeightUnit * this.pixelScale; },
+    get rollerRadius() { return this.rollerRadiusUnit * this.pixelScale; },
+
+    isOutside: true, 
+    mode: 'trajectory',
+    showDims: true,
+    
+    progress: 0,
+    lastProgress: 0, 
+    totalPathLength: 0,
+    isAnimating: false,
+    hasCompletedLoop: false,
+    
+    isDraggingRoller: false,
+    isDraggingPoly: false,
+    polyX: 0, 
+    polyY: 0, 
+    dragStartX: 0,
+    dragStartY: 0,
+    
+    isSegmented: false, 
+    draggables: [], 
+    draggedItem: null,
+    snapHint: null
+};
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const toast = document.getElementById('toast');
+const btnVerify = document.getElementById('btnVerify');
+const zoomLevelDisplay = document.getElementById('zoomLevel');
+
+// --- 安全保护：防F12, 防保存, 防右键 ---
+document.addEventListener('keydown', function(e) {
+    if (
+        e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && e.key === 'I') || // Chrome DevTools
+        (e.ctrlKey && e.shiftKey && e.key === 'J') || // Chrome DevTools Console
+        (e.ctrlKey && (e.key === 's' || e.key === 'u' || e.key === 'p')) // Save, View Source, Print
+    ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+});
+
+// --- 几何计算 ---
+
+class Geometry {
+    static getVertices(type, size) {
+        const vertices = [];
+        if (type === 'circle') return []; 
+
+        if (type === 'rectangle') {
+            const w = size; 
+            const h = STATE.shapeHeight;
+            vertices.push({x: -w/2, y: -h/2}); 
+            vertices.push({x: w/2, y: -h/2});  
+            vertices.push({x: w/2, y: h/2});   
+            vertices.push({x: -w/2, y: h/2});  
+        } else {
+            let sides = 3;
+            if (type === 'triangle') sides = 3;
+            else if (type === 'pentagon') sides = 5;
+            else if (type === 'hexagon') sides = 6;
+            
+            const R = size / (2 * Math.sin(Math.PI / sides));
+            
+            const startAngle = -Math.PI / 2;
+            for (let i = 0; i < sides; i++) {
+                const angle = startAngle + (i * 2 * Math.PI / sides);
+                vertices.push({
+                    x: Math.cos(angle) * R, 
+                    y: Math.sin(angle) * R
+                });
+            }
+        }
+        return vertices;
+    }
+
+    static dist(p1, p2) {
+        return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+    }
+
+    static lerp(start, end, t) {
+        return start + (end - start) * t;
+    }
+}
+
+// --- 路径生成 ---
+
+class PathSystem {
+    constructor() {
+        this.segments = []; 
+        this.totalLength = 0;
+    }
+
+    buildPath(vertices, r, isOutside) {
+        this.segments = [];
+        this.totalLength = 0;
+        const n = vertices.length;
+
+        // 1. 圆形基底处理
+        if (n === 0) { 
+            const baseR = STATE.shapeSizeUnit * STATE.pixelScale; 
+            const pathR = isOutside ? baseR + r : baseR - r;
+            // 修复 Bug：防止路径半径为负或0导致计算错误
+            if (pathR <= 0) return; 
+            
+            this.segments.push({
+                type: 'circle_path',
+                cx: 0, cy: 0,
+                radius: pathR,
+                length: 2 * Math.PI * pathR,
+                baseR: baseR,
+                startDist: 0 
+            });
+            this.totalLength = 2 * Math.PI * pathR;
+            return;
+        }
+
+        for (let i = 0; i < n; i++) {
+            const curr = vertices[i];
+            const next = vertices[(i + 1) % n];
+
+            const dx = next.x - curr.x;
+            const dy = next.y - curr.y;
+            const len = Math.sqrt(dx*dx + dy*dy);
+            
+            let nx, ny;
+            if (isOutside) {
+                nx = dy / len;
+                ny = -dx / len;
+            } else {
+                nx = -dy / len;
+                ny = dx / len;
+            }
+
+            const p1 = { x: curr.x + nx * r, y: curr.y + ny * r };
+            const p2 = { x: next.x + nx * r, y: next.y + ny * r };
+
+            if (isOutside) {
+                this.segments.push({
+                    type: 'line',
+                    p1: p1,
+                    p2: p2,
+                    length: len,
+                    angle: Math.atan2(dy, dx), 
+                    baseStart: curr, 
+                    baseEnd: next,
+                    normal: {x: nx, y: ny}
+                });
+
+                const nextIdx = (i + 1) % n;
+                const nextNextIdx = (i + 2) % n;
+                const nextV = vertices[nextIdx];
+                const nextNextV = vertices[nextNextIdx];
+                const dx2 = nextNextV.x - nextV.x;
+                const dy2 = nextNextV.y - nextV.y;
+                
+                const nx2 = dy2 / Math.sqrt(dx2*dx2 + dy2*dy2);
+                const ny2 = -dx2 / Math.sqrt(dx2*dx2 + dy2*dy2);
+
+                const startAngle = Math.atan2(ny, nx);
+                let endAngle = Math.atan2(ny2, nx2);
+                
+                if (endAngle < startAngle) endAngle += Math.PI * 2;
+                
+                const arcLen = (endAngle - startAngle) * r;
+                
+                this.segments.push({
+                    type: 'arc',
+                    cx: next.x, cy: next.y,
+                    r: r,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    length: arcLen,
+                    vertex: next
+                });
+
+            } else {
+                 this.segments.push({
+                    type: 'line',
+                    p1: p1,
+                    p2: p2,
+                    length: len,
+                    angle: Math.atan2(dy, dx),
+                    isInsideRaw: true,
+                    normal: {x: nx, y: ny},
+                    baseStart: curr,
+                    baseEnd: next
+                });
+            }
+        }
+
+        if (!isOutside && STATE.shape === 'rectangle') {
+            const w = STATE.shapeSize - 2 * r;
+            const h = STATE.shapeHeight - 2 * r;
+            
+            this.segments = []; 
+            if (w < 0 || h < 0) return;
+
+            const innerVerts = [
+                {x: -w/2, y: -h/2},
+                {x: w/2, y: -h/2},
+                {x: w/2, y: h/2},
+                {x: -w/2, y: h/2}
+            ];
+            
+            for(let j=0; j<4; j++) {
+                const curr = innerVerts[j];
+                const next = innerVerts[(j+1)%4];
+                const len = Geometry.dist(curr, next);
+                this.segments.push({
+                    type: 'line',
+                    p1: curr, p2: next,
+                    length: len,
+                    angle: Math.atan2(next.y - curr.y, next.x - curr.x),
+                    baseStart: vertices[j], 
+                    baseEnd: vertices[(j+1)%4]
+                });
+            }
+        }
+
+        this.totalLength = 0;
+        this.segments.forEach(seg => {
+            seg.startDist = this.totalLength;
+            this.totalLength += seg.length;
+        });
+    }
+
+    getPointAtDist(dist) {
+        if (this.totalLength === 0) return {x:0, y:0, angle:0};
+        
+        dist = dist % this.totalLength;
+        if (dist < 0) dist += this.totalLength;
+
+        const seg = this.segments.find(s => dist >= s.startDist && dist < s.startDist + s.length);
+        if (!seg) return this.segments[0] ? this.getPointAtDist(0) : {x:0, y:0, angle:0};
+
+        const localDist = dist - seg.startDist;
+
+        if (seg.type === 'circle_path') {
+            const angle = (localDist / seg.radius) - Math.PI/2;
+            return {
+                x: Math.cos(angle) * seg.radius,
+                y: Math.sin(angle) * seg.radius,
+                angle: angle + Math.PI/2,
+                isCorner: false
+            };
+        }
+
+        if (seg.type === 'line') {
+            const t = localDist / seg.length;
+            return {
+                x: Geometry.lerp(seg.p1.x, seg.p2.x, t),
+                y: Geometry.lerp(seg.p1.y, seg.p2.y, t),
+                angle: seg.angle,
+                isCorner: false,
+                segData: seg
+            };
+        } else if (seg.type === 'arc') {
+            const angle = seg.startAngle + (localDist / seg.r); 
+            return {
+                x: seg.cx + Math.cos(angle) * seg.r,
+                y: seg.cy + Math.sin(angle) * seg.r,
+                angle: angle + Math.PI/2, 
+                isCorner: true,
+                vertex: seg.vertex,
+                segData: seg
+            };
+        }
+    }
+    
+    getClosestPoint(x, y) {
+        if (this.totalLength < 1e-6) return 0;
+
+        let minDist = Infinity;
+        let closestDistOnPath = 0;
+        const samples = 150;
+        for(let i=0; i<=samples; i++) {
+            const d = (i / samples) * this.totalLength;
+            const pt = this.getPointAtDist(d);
+            const dist = Geometry.dist({x, y}, pt);
+            if (dist < minDist) {
+                minDist = dist;
+                closestDistOnPath = d;
+            }
+        }
+        const step = this.totalLength / samples;
+        const startD = closestDistOnPath - step;
+        const endD = closestDistOnPath + step;
+        for(let d = startD; d <= endD; d += step/10) {
+             const pt = this.getPointAtDist(d);
+             const dist = Geometry.dist({x, y}, pt);
+             if (dist < minDist) {
+                minDist = dist;
+                closestDistOnPath = d;
+            }
+        }
+        return closestDistOnPath;
+    }
+}
+
+const pathSystem = new PathSystem();
+let vertices = [];
+
+function init() {
+    resizeCanvas();
+    updateGeometry();
+    window.addEventListener('resize', resizeCanvas);
+    requestAnimationFrame(loop);
+    
+    canvas.addEventListener('mousedown', onPointerDown);
+    canvas.addEventListener('mousemove', onPointerMove);
+    canvas.addEventListener('mouseup', onPointerUp);
+    canvas.addEventListener('touchstart', (e) => onPointerDown(e.touches[0]), {passive: false});
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); onPointerMove(e.touches[0]); }, {passive: false});
+    canvas.addEventListener('touchend', onPointerUp);
+    
+    document.addEventListener('keydown', (e) => {
+        if(e.ctrlKey && (e.key === 's' || e.key === 'u')) e.preventDefault();
+        if(e.key === 'F12') e.preventDefault();
+    });
+
+    // 形状按钮逻辑
+    document.querySelectorAll('.shape-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.shape-item').forEach(b => b.classList.remove('active'));
+            const target = e.currentTarget;
+            target.classList.add('active');
+            STATE.shape = target.dataset.shape;
+            
+            const heightRow = document.getElementById('heightRow');
+            const lblSize = document.getElementById('lblSize');
+            if (STATE.shape === 'rectangle') {
+                heightRow.style.visibility = 'visible';
+                lblSize.textContent = '长';
+            } else if (STATE.shape === 'circle') {
+                heightRow.style.visibility = 'hidden';
+                lblSize.textContent = '半径 R';
+            } else {
+                heightRow.style.visibility = 'hidden';
+                lblSize.textContent = '边长';
+            }
+
+            if(!STATE.isOutside && STATE.shape !== 'rectangle' && STATE.shape !== 'circle') {
+                showToast("内侧滚动仅支持长方形/圆形");
+                setPos('outside');
+            }
+            updateGeometry();
+        });
+    });
+
+    document.querySelectorAll('#posToggle button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const val = e.target.dataset.val;
+            setPos(val);
+        });
+    });
+
+    document.querySelectorAll('#modeToggle button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const val = e.target.dataset.val;
+            STATE.mode = val;
+            document.querySelectorAll('#modeToggle button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            updateGeometry();
+        });
+    });
+    
+    // 数据显示开关
+    document.getElementById('btnToggleDims').addEventListener('click', (e) => {
+        STATE.showDims = !STATE.showDims;
+        const btn = e.currentTarget;
+        btn.classList.toggle('active', STATE.showDims);
+    });
+    
+    // 手动缩放控制逻辑
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+        STATE.cameraZoom = Math.min(STATE.cameraZoom + 0.1, 3.0); // 最大3倍
+        updateZoomDisplay();
+    });
+    
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+        STATE.cameraZoom = Math.max(STATE.cameraZoom - 0.1, 0.5); // 最小0.5倍
+        updateZoomDisplay();
+    });
+    
+    document.getElementById('zoomLevel').addEventListener('click', () => {
+        STATE.cameraZoom = 1.0;
+        updateZoomDisplay();
+    });
+    
+    // 说明书逻辑
+    const helpModal = document.getElementById('helpModal');
+    document.getElementById('btnHelp').addEventListener('click', () => {
+        helpModal.style.display = 'flex';
+    });
+    document.getElementById('closeHelp').addEventListener('click', () => {
+        helpModal.style.display = 'none';
+    });
+    helpModal.addEventListener('click', (e) => {
+        if(e.target === helpModal) helpModal.style.display = 'none';
+    });
+}
+
+function updateZoomDisplay() {
+    zoomLevelDisplay.textContent = Math.round(STATE.cameraZoom * 100) + '%';
+}
+
+function setPos(val) {
+    STATE.isOutside = (val === 'outside');
+    document.querySelectorAll('#posToggle button').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === val);
+    });
+    
+    if (val === 'inside') {
+        STATE.rollerRadiusUnit = 2; // Fixed: Default radius to 2
+        document.getElementById('radiusSlider').value = 2;
+        document.getElementById('radiusValue').textContent = 2;
+    }
+    
+    if(!STATE.isOutside && STATE.shape !== 'rectangle' && STATE.shape !== 'circle') {
+        const rectBtn = document.querySelector('.shape-item[data-shape="rectangle"]');
+        rectBtn.click(); 
+        showToast("已自动切换为长方形以演示内滚");
+    }
+    updateGeometry();
+}
+
+function resizeCanvas() {
+    const parent = document.getElementById('canvas-container');
+    canvas.width = parent.clientWidth;
+    canvas.height = parent.clientHeight;
+    updateGeometry(); 
+}
+
+function updateScale() {
+    let logicalMax = 0;
+    if (STATE.shape === 'rectangle') {
+        logicalMax = Math.max(STATE.shapeSizeUnit, STATE.shapeHeightUnit) + STATE.rollerRadiusUnit * 4;
+    } else {
+        logicalMax = STATE.shapeSizeUnit * 2.5 + STATE.rollerRadiusUnit * 4; 
+    }
+    
+    // Optimized Scale Logic for 20% more space
+    const canvasMinDim = Math.min(canvas.width, canvas.height) - 40; 
+    let scale = (canvasMinDim / logicalMax) * 0.95; // 安全比例，防止溢出
+    
+    // 特定形状缩放调整
+    if (STATE.shape === 'triangle') {
+        scale *= 1.45; // 正三角形放大 45% (原1.3 + 0.15) - 进一步增加
+    } else if (STATE.shape === 'pentagon' || STATE.shape === 'hexagon') {
+        scale *= 1.1; // 五边形和六边形放大 10%
+    }
+
+    scale = Math.min(scale, 50); 
+    scale = Math.max(scale, 10);
+    STATE.pixelScale = scale;
+}
+
+function updateGeometry() {
+    updateScale();
+
+    STATE.progress = 0;
+    STATE.lastProgress = 0;
+    STATE.hasCompletedLoop = false;
+    STATE.isSegmented = false;
+    STATE.draggables = [];
+    STATE.isAnimating = false;
+    
+    btnVerify.disabled = true;
+    
+    document.getElementById('sizeValue').textContent = STATE.shapeSizeUnit;
+    document.getElementById('heightValue').textContent = STATE.shapeHeightUnit;
+    document.getElementById('radiusValue').textContent = STATE.rollerRadiusUnit;
+    
+    vertices = Geometry.getVertices(STATE.shape, STATE.shapeSize);
+    pathSystem.buildPath(vertices, STATE.rollerRadius, STATE.isOutside);
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.opacity = 1;
+    setTimeout(() => {
+        t.style.opacity = 0;
+        setTimeout(() => t.style.display = 'none', 300);
+    }, 2000);
+}
+
+function createDraggables() {
+    STATE.draggables = [];
+    let sectorRotation = 0;
+
+    pathSystem.segments.forEach(seg => {
+        const item = {
+            id: Math.random(),
+            x: 0, y: 0, 
+            originX: 0, originY: 0, 
+            isSnapped: false,
+            segData: seg, 
+            type: 'unknown'
+        };
+
+        if (seg.type === 'circle_path') {
+            if (STATE.mode === 'trajectory') {
+                item.type = 'circle_traj'; 
+                item.originX = STATE.polyX;
+                item.originY = STATE.polyY;
+                item.r = seg.radius;
+            } else {
+                item.type = 'circle_area'; 
+                item.originX = STATE.polyX;
+                item.originY = STATE.polyY;
+                item.rOuter = seg.radius + STATE.rollerRadius;
+                item.rInner = seg.radius - STATE.rollerRadius;
+            }
+        }
+        else if (STATE.mode === 'trajectory') {
+            if (seg.type === 'line') {
+                item.type = 'line_traj';
+                item.originX = (seg.p1.x + seg.p2.x)/2 + STATE.polyX; 
+                item.originY = (seg.p1.y + seg.p2.y)/2 + STATE.polyY;
+                item.drawData = { length: seg.length, angle: seg.angle };
+            } else if (seg.type === 'arc') {
+                item.type = 'arc_traj';
+                item.originX = seg.cx + STATE.polyX;
+                item.originY = seg.cy + STATE.polyY;
+                
+                const span = seg.endAngle - seg.startAngle;
+                item.targetInfo = {
+                    start: sectorRotation,
+                    end: sectorRotation + span
+                };
+                sectorRotation += span;
+            }
+        } else {
+            // Area Mode
+            if (seg.type === 'line') {
+                item.type = 'rect_area';
+                if (STATE.isOutside) {
+                    const baseMidX = (seg.baseStart.x + seg.baseEnd.x)/2;
+                    const baseMidY = (seg.baseStart.y + seg.baseEnd.y)/2;
+                    const nx = seg.normal.x; 
+                    const ny = seg.normal.y;
+                    const r = STATE.rollerRadius;
+                    item.originX = baseMidX + nx * r + STATE.polyX;
+                    item.originY = baseMidY + ny * r + STATE.polyY;
+                    item.drawData = { w: seg.length, h: 2*r, angle: seg.angle };
+                } else {
+                    item.originX = (seg.p1.x + seg.p2.x)/2 + STATE.polyX;
+                    item.originY = (seg.p1.y + seg.p2.y)/2 + STATE.polyY;
+                    item.drawData = { w: seg.length, h: 2*STATE.rollerRadius, angle: seg.angle, isInner: true };
+                }
+            } else if (seg.type === 'arc') {
+                item.type = 'sector_area';
+                item.originX = seg.vertex.x + STATE.polyX;
+                item.originY = seg.vertex.y + STATE.polyY;
+                item.targetInfo = {
+                    start: sectorRotation,
+                    end: sectorRotation + (seg.endAngle - seg.startAngle)
+                };
+                sectorRotation += (seg.endAngle - seg.startAngle);
+            }
+        }
+        
+        if (item.type !== 'unknown') {
+            item.x = item.originX;
+            item.y = item.originY;
+            STATE.draggables.push(item);
+        }
+    });
+
+    // Deadzone logic
+    if (!STATE.isOutside && STATE.mode === 'area' && STATE.shape === 'rectangle') {
+        const r = STATE.rollerRadius;
+        const w = STATE.shapeSize;
+        const h = STATE.shapeHeight;
+        
+        const corners = [
+            {x: -w/2, y: -h/2, rot: 0},
+            {x: w/2, y: -h/2, rot: Math.PI/2},
+            {x: w/2, y: h/2, rot: Math.PI},
+            {x: -w/2, y: h/2, rot: -Math.PI/2}
+        ];
+        
+        corners.forEach(c => {
+            STATE.draggables.push({
+                type: 'deadzone',
+                x: c.x + STATE.polyX, 
+                y: c.y + STATE.polyY,
+                originX: c.x + STATE.polyX, 
+                originY: c.y + STATE.polyY,
+                rot: c.rot,
+                size: r,
+                isSnapped: false
+            });
+        });
+    }
+}
+
+// 碰撞检测
+function isPointInItem(px, py, item) {
+    const dx = px - item.x;
+    const dy = py - item.y;
+
+    if (item.type === 'circle_traj' || item.type === 'circle_area') {
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (item.type === 'circle_traj') return Math.abs(dist - item.r) < 30; 
+        return dist < item.rOuter; 
+    }
+
+    if (item.type === 'arc_traj') {
+        const r = STATE.rollerRadius;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        return Math.abs(dist - r) < 30;
+    }
+
+    if (item.type === 'line_traj' || item.type === 'rect_area') {
+        const angle = -(item.drawData?.angle ?? item.segData?.angle ?? 0);
+        const lx = dx * Math.cos(angle) - dy * Math.sin(angle);
+        const ly = dx * Math.sin(angle) + dy * Math.cos(angle);
+        
+        if (item.type === 'line_traj') {
+            const halfLen = (item.drawData?.length ?? item.segData?.length ?? 0) / 2;
+            return Math.abs(lx) < halfLen + 30 && Math.abs(ly) < 30;
+        } else {
+            const w = item.drawData.w;
+            const h = item.drawData.h;
+            return Math.abs(lx) < w/2 + 20 && Math.abs(ly) < h/2 + 20;
+        }
+    }
+    
+    // Deadzone (Square-ish)
+    if (item.type === 'deadzone') {
+        const r = item.size;
+        // Bounding box check slightly relaxed
+        return (dx*dx + dy*dy) < (r*r*2.0); 
+    }
+    
+    const r = (item.r || item.size || STATE.rollerRadius * 2); 
+    return (dx*dx + dy*dy) < (r*r); 
+}
+
+// 获取物体的端点 (World Coords)
+function getEndPointsWorld(item) {
+    if (item.type === 'line_traj') {
+        const len = item.drawData.length;
+        const angle = item.drawData.angle; 
+        const dx = Math.cos(angle) * len/2;
+        const dy = Math.sin(angle) * len/2;
+        return [
+            { x: item.x - dx, y: item.y - dy },
+            { x: item.x + dx, y: item.y + dy }
+        ];
+    } else if (item.type === 'rect_area') {
+        const w = item.drawData.w;
+        const angle = item.drawData.angle;
+        const dx = Math.cos(angle) * w/2;
+        const dy = Math.sin(angle) * w/2;
+        return [
+            { x: item.x - dx, y: item.y - dy }, 
+            { x: item.x + dx, y: item.y + dy }
+        ];
+    }
+    return null;
+}
+
+// 获取圆弧的端点 (相对于圆心 item.x, item.y)
+function getArcEndpointsRelative(item) {
+    const r = (item.type === 'arc_traj') ? STATE.rollerRadius : STATE.rollerRadius * 2;
+    const s = item.segData.startAngle;
+    const e = item.segData.endAngle;
+    return [
+        { x: Math.cos(s)*r, y: Math.sin(s)*r },
+        { x: Math.cos(e)*r, y: Math.sin(e)*r }
+    ];
+}
+
+// Deadzone Tip points relative to center (item.x/y is the SHARP corner)
+function getDeadzoneTipsRelative(item) {
+    const r = item.size;
+    const rot = item.rot;
+    // Tips relative to sharp corner (0,0 local)
+    // T1: (r, 0) rotated by rot
+    // T2: (0, r) rotated by rot
+    const t1 = {
+        x: r * Math.cos(rot),
+        y: r * Math.sin(rot)
+    };
+    const t2 = {
+        x: r * Math.cos(rot + Math.PI/2),
+        y: r * Math.sin(rot + Math.PI/2)
+    };
+    return [t1, t2];
+}
+
+function onPointerDown(e) {
+    const rect = canvas.getBoundingClientRect();
+    // 考虑手动缩放因素
+    const cx = (e.clientX - rect.left - canvas.width/2) / STATE.cameraZoom;
+    const cy = (e.clientY - rect.top - canvas.height/2) / STATE.cameraZoom;
+
+    // 0. 拆解模式下的拖拽
+    if (STATE.isSegmented) {
+        for (let i = STATE.draggables.length - 1; i >= 0; i--) {
+            const item = STATE.draggables[i];
+            if (isPointInItem(cx, cy, item)) {
+                STATE.draggedItem = item;
+                STATE.draggedItem.offsetX = cx - item.x;
+                STATE.draggedItem.offsetY = cy - item.y;
+                STATE.draggables.splice(i, 1);
+                STATE.draggables.push(item);
+                if(item.isSnapped) item.isSnapped = false;
+                return;
+            }
+        }
+    }
+
+    // 1. 多边形拖拽判定
+    if (!STATE.isSegmented || STATE.shape !== 'circle') {
+        if (vertices.length > 0) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            vertices.forEach(v => {
+                minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+            });
+            minX += STATE.polyX; maxX += STATE.polyX;
+            minY += STATE.polyY; maxY += STATE.polyY;
+            
+            if (cx > minX - 20 && cx < maxX + 20 && cy > minY - 20 && cy < maxY + 20) {
+                 const pt = pathSystem.getPointAtDist(STATE.progress);
+                 const rollerX = pt.x + STATE.polyX;
+                 const rollerY = pt.y + STATE.polyY;
+                 const distToRoller = Math.sqrt((cx-rollerX)**2 + (cy-rollerY)**2);
+                 
+                 if (distToRoller > STATE.rollerRadius * 1.5) {
+                     STATE.isDraggingPoly = true;
+                     STATE.dragStartX = cx - STATE.polyX;
+                     STATE.dragStartY = cy - STATE.polyY;
+                     return;
+                 }
+            }
+        }
+    }
+
+    // 2. 正常模式：圆拖拽判定
+    if (!STATE.isSegmented) {
+        const pt = pathSystem.getPointAtDist(STATE.progress);
+        const rollerX = pt.x + STATE.polyX;
+        const rollerY = pt.y + STATE.polyY;
+        const distToRollerCenter = Math.sqrt((cx-rollerX)**2 + (cy-rollerY)**2);
+        
+        if (distToRollerCenter < STATE.rollerRadius * 1.5) {
+            STATE.isDraggingRoller = true;
+            STATE.isAnimating = false; 
+        }
+    }
+}
+
+function onPointerMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    // 考虑手动缩放因素
+    const cx = (e.clientX - rect.left - canvas.width/2) / STATE.cameraZoom;
+    const cy = (e.clientY - rect.top - canvas.height/2) / STATE.cameraZoom;
+
+    if (STATE.isSegmented && STATE.draggedItem) {
+        STATE.draggedItem.x = cx - STATE.draggedItem.offsetX;
+        STATE.draggedItem.y = cy - STATE.draggedItem.offsetY;
+        
+        // --- 实时吸附检测 (Snap Hint) ---
+        STATE.snapHint = null;
+        const item = STATE.draggedItem;
+        
+        // 1. 线段/矩形 互吸
+        if (item.type === 'line_traj' || item.type === 'rect_area') {
+            const myEnds = getEndPointsWorld(item); // [P1, P2]
+            let closestDist = 60; 
+            
+            for (let other of STATE.draggables) {
+                if (other === item) continue;
+                if (other.type !== item.type) continue; // 仅同类吸附
+                
+                const otherEnds = getEndPointsWorld(other);
+                if (!otherEnds) continue;
+                
+                for (let i=0; i<2; i++) {
+                    for (let j=0; j<2; j++) {
+                        const d = Math.sqrt((myEnds[i].x - otherEnds[j].x)**2 + (myEnds[i].y - otherEnds[j].y)**2);
+                        if (d < closestDist) {
+                            closestDist = d;
+                            STATE.snapHint = { x: otherEnds[j].x, y: otherEnds[j].y };
+                        }
+                    }
+                }
+            }
+        }
+        // 2. 圆弧/扇形 互吸
+        else if (item.type === 'arc_traj' || item.type === 'sector_area') {
+            const myRelEnds = getArcEndpointsRelative(item);
+            const myEnds = [
+                {x: item.x + myRelEnds[0].x, y: item.y + myRelEnds[0].y},
+                {x: item.x + myRelEnds[1].x, y: item.y + myRelEnds[1].y}
+            ];
+            
+            let closestDist = 60;
+            
+            for (let other of STATE.draggables) {
+                if (other === item) continue;
+                if (other.type !== item.type) continue;
+                
+                const otherRelEnds = getArcEndpointsRelative(other);
+                const otherEnds = [
+                    {x: other.x + otherRelEnds[0].x, y: other.y + otherRelEnds[0].y},
+                    {x: other.x + otherRelEnds[1].x, y: other.y + otherRelEnds[1].y}
+                ];
+                
+                for (let i=0; i<2; i++) {
+                    for (let j=0; j<2; j++) {
+                        const d = Math.sqrt((myEnds[i].x - otherEnds[j].x)**2 + (myEnds[i].y - otherEnds[j].y)**2);
+                        if (d < closestDist) {
+                            closestDist = d;
+                            STATE.snapHint = { x: other.x, y: other.y, type: 'center', highlight: otherEnds[j] };
+                        }
+                    }
+                }
+            }
+        }
+        // 3. Deadzone Snapping (Tip-to-Tip)
+        else if (item.type === 'deadzone') {
+            // 加大吸附距离，提升手感
+            let closestDist = 80; 
+            
+            const myTipsRel = getDeadzoneTipsRelative(item);
+            const myTips = [
+                {x: item.x + myTipsRel[0].x, y: item.y + myTipsRel[0].y},
+                {x: item.x + myTipsRel[1].x, y: item.y + myTipsRel[1].y}
+            ];
+            
+            for (let other of STATE.draggables) {
+                if (other === item) continue;
+                if (other.type !== 'deadzone') continue;
+                
+                const otherTipsRel = getDeadzoneTipsRelative(other);
+                const otherTips = [
+                    {x: other.x + otherTipsRel[0].x, y: other.y + otherTipsRel[0].y},
+                    {x: other.x + otherTipsRel[1].x, y: other.y + otherTipsRel[1].y}
+                ];
+                
+                // Compare every tip of dragged item to every tip of other items
+                // This allows promiscuous snapping (any corner to any corner)
+                for (let i=0; i<2; i++) {
+                    for (let j=0; j<2; j++) {
+                         const d = Math.sqrt((myTips[i].x - otherTips[j].x)**2 + (myTips[i].y - otherTips[j].y)**2);
+                         if (d < closestDist) {
+                             closestDist = d;
+                             // Calculate new Origin for dragged item such that Tip[i] matches OtherTip[j]
+                             // NewPos = TargetTipWorldPos - TipRelativePos
+                             STATE.snapHint = { 
+                                 x: otherTips[j].x - myTipsRel[i].x, 
+                                 y: otherTips[j].y - myTipsRel[i].y,
+                                 highlight: otherTips[j],
+                                 type: 'tip'
+                             };
+                         }
+                    }
+                }
+            }
+        }
+        
+        return;
+    }
+    
+    if (STATE.isDraggingPoly) {
+        STATE.polyX = cx - STATE.dragStartX;
+        STATE.polyY = cy - STATE.dragStartY;
+        return;
+    }
+
+    if (STATE.isDraggingRoller) {
+        const relX = cx - STATE.polyX;
+        const relY = cy - STATE.polyY;
+        let d = pathSystem.getClosestPoint(relX, relY);
+        const total = pathSystem.totalLength;
+        const diff = d - STATE.lastProgress;
+
+        // --- Anti-Mistouch / Anti-Jump Logic ---
+        // 检测是否发生跨越起终点的大跳变
+        const isWrapping = Math.abs(diff) > total * 0.5;
+        
+        if (isWrapping) {
+             if (diff > 0) {
+                 // 场景: 从 0 拖拽变成了 990 (向左拖动，倒退跨越起点)
+                 // 如果之前还没跑完一圈，禁止这种倒退导致的"伪完成"
+                 if (!STATE.hasCompletedLoop) {
+                     d = 0; // 强制留在起点
+                 }
+                 // 如果已经跑完过一圈，允许自由倒退查看
+             } else {
+                 // 场景: 从 990 拖拽变成了 10 (向右拖动，正向跨越终点)
+                 // 这是一次有效的过线
+                 STATE.hasCompletedLoop = true;
+             }
+        } else {
+             // 正常移动
+             // 如果非常接近终点，也可以算完成
+             if (d > total - 10) STATE.hasCompletedLoop = true;
+        }
+        
+        STATE.lastProgress = d;
+        STATE.progress = d;
+        
+        if (STATE.hasCompletedLoop) {
+            btnVerify.disabled = false;
+        }
+    }
+}
+
+function onPointerUp() {
+    STATE.isDraggingPoly = false;
+    
+    if (STATE.isSegmented && STATE.draggedItem) {
+        const item = STATE.draggedItem;
+        
+        if (STATE.snapHint) {
+            if (item.type === 'arc_traj' || item.type === 'sector_area') {
+                item.x = STATE.snapHint.x;
+                item.y = STATE.snapHint.y;
+                item.isSnapped = true;
+                showToast("拼合成功！");
+            } 
+            else if (item.type === 'line_traj' || item.type === 'rect_area') {
+                const myEnds = getEndPointsWorld(item);
+                const targetPt = STATE.snapHint;
+                
+                const d0 = Math.sqrt((myEnds[0].x - targetPt.x)**2 + (myEnds[0].y - targetPt.y)**2);
+                const d1 = Math.sqrt((myEnds[1].x - targetPt.x)**2 + (myEnds[1].y - targetPt.y)**2);
+                
+                const offsetX = (d0 < d1) ? (targetPt.x - myEnds[0].x) : (targetPt.x - myEnds[1].x);
+                const offsetY = (d0 < d1) ? (targetPt.y - myEnds[0].y) : (targetPt.y - myEnds[1].y);
+                
+                item.x += offsetX;
+                item.y += offsetY;
+                item.isSnapped = true;
+                showToast("连接成功！");
+            }
+            else if (item.type === 'deadzone') {
+                item.x = STATE.snapHint.x;
+                item.y = STATE.snapHint.y;
+                item.isSnapped = true;
+                showToast("吸附成功！");
+            }
+        }
+        
+        STATE.snapHint = null;
+        STATE.draggedItem = null;
+    }
+    STATE.isDraggingRoller = false;
+}
+
+function startAutoPlay() {
+    if (STATE.isSegmented) updateGeometry(); 
+    STATE.progress = 0;
+    STATE.lastProgress = 0;
+    STATE.hasCompletedLoop = false;
+    STATE.isAnimating = true;
+}
+
+function toggleSegmentation() {
+    if (!STATE.hasCompletedLoop) {
+        showToast("请先滚动一整圈再进行拆解！");
+        return;
+    }
+    STATE.isSegmented = true;
+    STATE.isAnimating = false;
+    createDraggables();
+    showToast("图形已拆解！试着将碎片拼在一起。");
+}
+
+document.getElementById('sizeSlider').addEventListener('input', (e) => {
+    STATE.shapeSizeUnit = parseInt(e.target.value);
+    document.getElementById('sizeValue').textContent = STATE.shapeSizeUnit;
+    updateGeometry();
+});
+
+document.getElementById('heightSlider').addEventListener('input', (e) => {
+    STATE.shapeHeightUnit = parseInt(e.target.value);
+    document.getElementById('heightValue').textContent = STATE.shapeHeightUnit;
+    updateGeometry();
+});
+
+document.getElementById('radiusSlider').addEventListener('input', (e) => {
+    STATE.rollerRadiusUnit = parseInt(e.target.value);
+    document.getElementById('radiusValue').textContent = STATE.rollerRadiusUnit;
+    updateGeometry();
+});
+
+btnVerify.addEventListener('click', toggleSegmentation);
+document.getElementById('btnAuto').addEventListener('click', startAutoPlay);
+document.getElementById('btnReset').addEventListener('click', () => {
+    STATE.polyX = 0; STATE.polyY = 0; 
+    STATE.cameraZoom = 1.0; // 重置缩放
+    updateZoomDisplay();
+    updateGeometry();
+});
+
+
+// --- 6. 渲染循环 ---
+
+function loop() {
+    if (STATE.isAnimating) {
+        STATE.progress += CONFIG.animSpeed;
+        const total = pathSystem.totalLength;
+        if (STATE.progress >= total) {
+            STATE.progress = total;
+            STATE.isAnimating = false;
+            STATE.hasCompletedLoop = true;
+            btnVerify.disabled = false;
+            showToast("演示结束，点击“拆解验证”！");
+        }
+    } 
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(canvas.width/2, canvas.height/2);
+    
+    // 应用手动缩放
+    ctx.scale(STATE.cameraZoom, STATE.cameraZoom);
+
+    drawGrid();
+    drawPolygon();
+
+    if (STATE.isSegmented) {
+        drawSegmentedView();
+    } else {
+        drawRealtimeSwept(); 
+        drawRoller();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(loop);
+}
+
+function drawGrid() {
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    // 增加网格范围以适应缩放
+    const step = 25; 
+    const w = canvas.width; // 扩大绘制范围
+    const h = canvas.height;
+    for(let x = 0; x < w; x+=step) { ctx.moveTo(x, -h); ctx.lineTo(x, h); ctx.moveTo(-x, -h); ctx.lineTo(-x, h); }
+    for(let y = 0; y < h; y+=step) { ctx.moveTo(-w, y); ctx.lineTo(w, y); ctx.moveTo(-w, -y); ctx.lineTo(w, -y); }
+    ctx.stroke();
+}
+
+function drawPolygon() {
+    ctx.save();
+    ctx.translate(STATE.polyX, STATE.polyY); 
+
+    if (vertices.length === 0) { 
+         const R = STATE.shapeSizeUnit * STATE.pixelScale; 
+         ctx.beginPath();
+         ctx.arc(0,0, R, 0, Math.PI*2);
+         ctx.fillStyle = CONFIG.colors.polyFill;
+         ctx.fill();
+         ctx.strokeStyle = CONFIG.colors.polyStroke;
+         ctx.lineWidth = 4;
+         ctx.stroke();
+         
+         if (STATE.showDims) {
+             ctx.fillStyle = '#333';
+             ctx.font = 'bold 14px Arial';
+             ctx.textAlign = 'center';
+             ctx.fillText(`R=${STATE.shapeSizeUnit}`, 0, 0);
+         }
+         ctx.restore();
+         return;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(vertices[0].x, vertices[0].y);
+    for(let i=1; i<vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+    ctx.closePath();
+    
+    if (STATE.isDraggingPoly) {
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = CONFIG.colors.polySelected;
+    } else {
+        ctx.fillStyle = CONFIG.colors.polyFill;
+    }
+    
+    ctx.fill();
+    ctx.strokeStyle = CONFIG.colors.polyStroke;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    if (STATE.showDims) {
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        if (STATE.shape === 'rectangle') {
+            ctx.fillText(`长=${STATE.shapeSizeUnit}`, 0, STATE.shapeHeight/2 + 15);
+            ctx.fillText(`宽=${STATE.shapeHeightUnit}`, STATE.shapeSize*0.5 + 25, 0);
+        } else {
+            const v0 = vertices[0];
+            const v1 = vertices[1];
+            const mx = (v0.x + v1.x)/2;
+            const my = (v0.y + v1.y)/2;
+            const angle = Math.atan2(my, mx);
+            ctx.fillText(`边长=${STATE.shapeSizeUnit}`, mx + Math.cos(angle)*25, my + Math.sin(angle)*25);
+        }
+    }
+    
+    ctx.restore();
+}
+
+// 实时绘制
+function drawRealtimeSwept() {
+    const maxProgress = STATE.hasCompletedLoop ? pathSystem.totalLength + 0.1 : STATE.progress;
+
+    ctx.save();
+    ctx.translate(STATE.polyX, STATE.polyY);
+
+    pathSystem.segments.forEach(seg => {
+        if (seg.startDist > maxProgress) return;
+        
+        let drawPercent = 1;
+        if (maxProgress < seg.startDist + seg.length) {
+            drawPercent = (maxProgress - seg.startDist) / seg.length;
+        }
+        if (drawPercent < 0) drawPercent = 0;
+        if (drawPercent > 1) drawPercent = 1;
+
+        if (STATE.mode === 'trajectory') {
+            drawTrajectorySegment(seg, drawPercent);
+        } else {
+            drawAreaSegment(seg, drawPercent);
+        }
+    });
+    ctx.restore();
+}
+
+function drawTrajectorySegment(seg, percent) {
+    ctx.lineWidth = 4; 
+    if (seg.type === 'line') {
+        ctx.strokeStyle = CONFIG.colors.trajectoryLine;
+        ctx.beginPath();
+        const endX = Geometry.lerp(seg.p1.x, seg.p2.x, percent);
+        const endY = Geometry.lerp(seg.p1.y, seg.p2.y, percent);
+        ctx.moveTo(seg.p1.x, seg.p1.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+    } else if (seg.type === 'arc') {
+        ctx.strokeStyle = CONFIG.colors.trajectoryArc;
+        ctx.beginPath();
+        const currentEndAngle = seg.startAngle + (seg.endAngle - seg.startAngle) * percent;
+        ctx.arc(seg.cx, seg.cy, seg.r, seg.startAngle, currentEndAngle);
+        ctx.stroke();
+    } else if (seg.type === 'circle_path') {
+        ctx.strokeStyle = CONFIG.colors.trajectoryLine;
+        ctx.beginPath();
+        const endAngle = -Math.PI/2 + (Math.PI*2 * percent);
+        ctx.arc(0, 0, seg.radius, -Math.PI/2, endAngle);
+        ctx.stroke();
+    }
+}
+
+function drawAreaSegment(seg, percent) {
+    if (percent <= 0) return;
+
+    if (seg.type === 'line') {
+        if (STATE.isOutside) {
+            if (!seg.baseStart || !seg.baseEnd) return; 
+            const p1_base = seg.baseStart;
+            const p2_base = {
+                x: Geometry.lerp(seg.baseStart.x, seg.baseEnd.x, percent),
+                y: Geometry.lerp(seg.baseStart.y, seg.baseEnd.y, percent)
+            };
+            const nx = seg.normal.x; 
+            const ny = seg.normal.y;
+            const r2 = STATE.rollerRadius * 2;
+            
+            ctx.fillStyle = CONFIG.colors.areaRect;
+            ctx.beginPath();
+            ctx.moveTo(p1_base.x, p1_base.y);
+            ctx.lineTo(p1_base.x + nx * r2, p1_base.y + ny * r2);
+            ctx.lineTo(p2_base.x + nx * r2, p2_base.y + ny * r2);
+            ctx.lineTo(p2_base.x, p2_base.y);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            // Inner: draw rounded strip
+            if (!seg.p1 || !seg.p2) return; 
+            const startP = seg.p1;
+            const currentEndP = {
+                x: Geometry.lerp(seg.p1.x, seg.p2.x, percent),
+                y: Geometry.lerp(seg.p1.y, seg.p2.y, percent)
+            };
+            
+            const dx = seg.p2.x - seg.p1.x;
+            const dy = seg.p2.y - seg.p1.y;
+            const len = Math.sqrt(dx*dx + dy*dy);
+            if (len < 0.001) return;
+            const nx = -dy / len; 
+            const ny = dx / len;
+            const r = STATE.rollerRadius;
+
+            ctx.fillStyle = CONFIG.colors.areaRect;
+            ctx.beginPath(); ctx.arc(startP.x, startP.y, r, 0, Math.PI*2); ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(startP.x + nx*r, startP.y + ny*r);
+            ctx.lineTo(currentEndP.x + nx*r, currentEndP.y + ny*r);
+            ctx.lineTo(currentEndP.x - nx*r, currentEndP.y - ny*r);
+            ctx.lineTo(startP.x - nx*r, startP.y - ny*r);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath(); ctx.arc(currentEndP.x, currentEndP.y, r, 0, Math.PI*2); ctx.fill();
+        }
+    } else if (seg.type === 'arc') {
+        if (!STATE.isOutside) return; 
+        ctx.fillStyle = CONFIG.colors.areaSector;
+        ctx.beginPath();
+        ctx.moveTo(seg.vertex.x, seg.vertex.y);
+        const currentEndAngle = seg.startAngle + (seg.endAngle - seg.startAngle) * percent;
+        ctx.arc(seg.vertex.x, seg.vertex.y, STATE.rollerRadius * 2, seg.startAngle, currentEndAngle);
+        ctx.closePath();
+        ctx.fill();
+    } else if (seg.type === 'circle_path') {
+        const endAngle = -Math.PI/2 + (Math.PI*2 * percent);
+        ctx.beginPath();
+        ctx.arc(0,0, seg.radius + STATE.rollerRadius, -Math.PI/2, endAngle); 
+        ctx.arc(0,0, seg.radius - STATE.rollerRadius, endAngle, -Math.PI/2, true); 
+        ctx.fillStyle = CONFIG.colors.areaRect;
+        ctx.fill();
+    }
+}
+
+// 绘制拆解后的可拖动碎片
+function drawSegmentedView() {
+    STATE.draggables.forEach(item => {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        
+        // 0. 圆形拆解
+        if (item.type === 'circle_traj') {
+            ctx.strokeStyle = CONFIG.colors.trajectoryLine;
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.arc(0, 0, item.r, 0, Math.PI*2); ctx.stroke();
+        } 
+        else if (item.type === 'circle_area') {
+            ctx.beginPath();
+            ctx.arc(0, 0, item.rOuter, 0, Math.PI*2);
+            ctx.arc(0, 0, item.rInner, 0, Math.PI*2, true);
+            ctx.fillStyle = CONFIG.colors.areaRect;
+            ctx.fill();
+        }
+        
+        // 1. 轨迹线段
+        else if (item.type === 'line_traj') {
+            ctx.strokeStyle = CONFIG.colors.trajectoryLine;
+            ctx.lineWidth = 4;
+            ctx.rotate(item.drawData.angle);
+            ctx.beginPath();
+            const halfLen = item.drawData.length / 2;
+            ctx.moveTo(-halfLen, 0); ctx.lineTo(halfLen, 0);
+            ctx.stroke();
+            
+            if (STATE.draggedItem === item) {
+                ctx.fillStyle = CONFIG.colors.snapPoint;
+                ctx.beginPath(); ctx.arc(-halfLen, 0, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(halfLen, 0, 5, 0, Math.PI*2); ctx.fill();
+            }
+        }
+        // 2. 圆弧
+        else if (item.type === 'arc_traj') {
+            const start = item.segData.startAngle;
+            const end = item.segData.endAngle;
+            ctx.strokeStyle = CONFIG.colors.trajectoryArc;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, STATE.rollerRadius, start, end);
+            ctx.stroke();
+            
+            if (STATE.draggedItem === item && !item.isSnapped) {
+                const r = STATE.rollerRadius;
+                ctx.fillStyle = CONFIG.colors.snapPoint;
+                ctx.beginPath(); ctx.arc(Math.cos(start)*r, Math.sin(start)*r, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(Math.cos(end)*r, Math.sin(end)*r, 5, 0, Math.PI*2); ctx.fill();
+            }
+        }
+        // 3. 面积矩形 (Corrected for Inner Mode)
+        else if (item.type === 'rect_area') {
+            ctx.fillStyle = CONFIG.colors.areaRect;
+            ctx.rotate(item.drawData.angle);
+            const w = item.drawData.w; 
+            const h = item.drawData.h;
+            
+            if (item.drawData.isInner) {
+                const r = h/2;
+                ctx.beginPath();
+                ctx.moveTo(-w/2, -h/2);
+                ctx.lineTo(w/2, -h/2);
+                ctx.arc(w/2, 0, r, -Math.PI/2, Math.PI/2);
+                ctx.lineTo(-w/2, h/2);
+                ctx.arc(-w/2, 0, r, Math.PI/2, -Math.PI/2);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                ctx.fillRect(-w/2, -h/2, w, h);
+                ctx.strokeStyle = '#fff'; ctx.strokeRect(-w/2, -h/2, w, h);
+            }
+            
+            if (STATE.draggedItem === item && !item.isSnapped) {
+                ctx.fillStyle = CONFIG.colors.snapPoint;
+                ctx.beginPath(); ctx.arc(-w/2, 0, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(w/2, 0, 5, 0, Math.PI*2); ctx.fill();
+            }
+        }
+        // 4. 扇形
+        else if (item.type === 'sector_area') {
+            const start = item.segData.startAngle;
+            const end = item.segData.endAngle;
+            const r2 = STATE.rollerRadius * 2;
+            ctx.fillStyle = CONFIG.colors.areaSector;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r2, start, end); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.stroke();
+        }
+        // 5. 死角 (Deadzone)
+        else if (item.type === 'deadzone') {
+            ctx.fillStyle = CONFIG.colors.deadZone;
+            const r = item.size;
+            // 修复：始终保持旋转，不要因为吸附就重置角度
+            ctx.rotate(item.rot);
+            
+            // Draw Boomerang shape
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(r, 0);
+            ctx.arc(r, r, r, -Math.PI/2, -Math.PI, true);
+            ctx.lineTo(0, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.stroke();
+            
+            // Visual feedback for tips (the snap magnets)
+            if (STATE.draggedItem === item || item.isSnapped) {
+                // Tips at (r,0) and (0,r) before rotation
+                // But we are already rotated by item.rot if not snapped
+                // If dragged, draw dots at the tips
+                ctx.fillStyle = CONFIG.colors.snapPoint;
+                
+                // Tip 1: (r, 0)
+                ctx.beginPath(); ctx.arc(r, 0, 4, 0, Math.PI*2); ctx.fill();
+                // Tip 2: (0, r)
+                ctx.beginPath(); ctx.arc(0, r, 4, 0, Math.PI*2); ctx.fill();
+            }
+            
+            if(item.isSnapped) {
+                 // 绘制吸附后的效果增强
+            } else if (STATE.draggedItem === item) {
+                // 拖动时高亮
+                ctx.shadowColor = CONFIG.colors.snapPoint;
+                ctx.shadowBlur = 10;
+            }
+        }
+
+        ctx.restore();
+    });
+    
+    // 绘制全局吸附提示
+    if (STATE.snapHint) {
+        ctx.save();
+        ctx.translate(STATE.snapHint.x, STATE.snapHint.y);
+        
+        ctx.strokeStyle = CONFIG.colors.snapPoint;
+        ctx.lineWidth = 2;
+        
+        // 十字准星
+        ctx.beginPath(); 
+        ctx.moveTo(-10, 0); ctx.lineTo(10, 0);
+        ctx.moveTo(0, -10); ctx.lineTo(0, 10);
+        ctx.stroke();
+        
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = 'rgba(233, 30, 99, 0.4)'; ctx.fill();
+        ctx.restore();
+    }
+}
+
+function drawRoller() {
+    const pt = pathSystem.getPointAtDist(STATE.progress);
+    
+    ctx.save();
+    ctx.translate(STATE.polyX, STATE.polyY); 
+    ctx.translate(pt.x, pt.y);
+    const rotation = STATE.progress / STATE.rollerRadius;
+    ctx.rotate(rotation);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, STATE.rollerRadius, 0, Math.PI * 2);
+    ctx.fillStyle = CONFIG.colors.rollerFill; ctx.fill();
+    ctx.strokeStyle = CONFIG.colors.rollerStroke; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(STATE.rollerRadius, 0); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fillStyle = '#F57C00'; ctx.fill();
+    
+    if (STATE.showDims) {
+        ctx.save();
+        ctx.translate(STATE.rollerRadius / 2, 0);
+        ctx.fillStyle = '#E65100';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`r=${STATE.rollerRadiusUnit}`, 0, -2);
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+// 启动
+init();
+
+</script>
+</body>
+</html>

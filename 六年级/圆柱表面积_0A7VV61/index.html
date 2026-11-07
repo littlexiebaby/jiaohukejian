@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圆柱的表面积</title>
+    
+    <!-- 采用传统的全局引用方式，完美兼容老式浏览器和双击本地直接运行 -->
+    <!-- 如果教室完全断网，只需将这8个文件下载到本地同级目录，并将下面的 src 改为 "./three.min.js" 等相对路径即可 -->
+    <script src="three.min.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script src="TransformControls.js"></script>
+    <script src="LineSegmentsGeometry.js"></script>
+    <script src="LineGeometry.js"></script>
+    <script src="LineMaterial.js"></script>
+    <script src="LineSegments2.js"></script>
+    <script src="Line2.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --accent-color: #f5a623;
+            --bg-color: #f0f2f5;
+            --panel-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e1e4e8;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none; /* 防止拖拽时误选文本 */
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        #app {
+            display: flex;
+            height: 100%;
+        }
+
+        /* Sidebar Styling - Compact */
+        #sidebar {
+            width: 260px; /* Reduced width */
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 10px; /* Reduced padding */
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .header {
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+        }
+
+        .header h2 {
+            font-size: 32px;
+            color: var(--primary-color);
+            margin-bottom: 2px;
+            line-height: 1.1;
+        }
+
+        .header p {
+            font-size: 22px;
+            color: #666;
+            line-height: 1.1;
+        }
+
+        .control-group {
+            margin-bottom: 8px; /* Reduced margin */
+            background: #f8f9fa;
+            padding: 8px; /* Reduced padding */
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group > label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        /* Buttons */
+        button {
+            cursor: pointer;
+            border: 2px solid #e7d7ff;
+            border-radius: 14px;
+            padding: 7px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            background: #ffffff;
+            color: #4a3b84;
+            box-shadow: 0 4px 0 rgba(74, 59, 132, 0.15);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        button:hover {
+            filter: brightness(0.96);
+        }
+
+        button:active, .mode-btn.active, .special-btn.active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 rgba(74, 59, 132, 0.15);
+        }
+
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .mode-btn {
+            background-color: #ffffff;
+            color: #4a3b84;
+            text-align: left;
+            border: 2px solid #e7d7ff;
+        }
+
+        .mode-btn:hover {
+            background-color: #f3e8ff;
+        }
+
+        .mode-btn.active {
+            background-color: #7dd3fc;
+            color: #0f172a;
+            border-color: #38bdf8;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .action-buttons button {
+            background-color: #ffffff;
+            border: 2px solid #bae6fd;
+            color: #2563eb;
+        }
+
+        .action-buttons button:hover {
+            background-color: #e0f2fe;
+            color: #1d4ed8;
+        }
+
+        .primary-btn {
+            background-color: #7dd3fc !important;
+            color: #0f172a !important;
+            border-color: #38bdf8 !important;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .secondary-btn {
+            background-color: #a7f3d0 !important;
+            color: #14532d !important;
+            border-color: #34d399 !important;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .warning-btn {
+            background-color: #fde047 !important;
+            color: #7c2d12 !important;
+            border-color: #f59e0b !important;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .special-btn { 
+            background-color: #e9d5ff !important; 
+            color: #4c1d95 !important; 
+            border-color: #d8b4fe !important; 
+            margin-top: 5px; 
+        }
+        
+        .special-btn.active { 
+            background-color: #c084fc !important; 
+            color: #ffffff !important; 
+            border-color: #a855f7 !important; 
+        }
+
+        /* Sliders */
+        .slider-container {
+            margin-bottom: 8px;
+        }
+
+        .slider-container > span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            margin-bottom: 0;
+            white-space: nowrap;
+            color: #4a3b84;
+            font-weight: 700;
+        }
+
+        .slider-container > span span {
+            display: inline;
+            margin: 0;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, #a7f3d0, #bfdbfe, #fbcfe8);
+            border-radius: 999px;
+            outline: none;
+            margin-top: 4px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid #4a3b84;
+            cursor: pointer;
+            box-shadow: 0 2px 0 #4a3b84;
+            transition: transform 0.1s;
+        }
+        
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.1) translateY(1px);
+            box-shadow: 0 1px 0 #4a3b84;
+        }
+
+        .color-scheme-select {
+            width: 100%;
+            padding: 6px 10px;
+            border: 2px solid #e7d7ff;
+            border-radius: 12px;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            color: #4a3b84;
+            box-shadow: 0 3px 0 #f1e5ff;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Main Stage */
+        #stage {
+            flex: 1;
+            position: relative;
+            background-color: #ffffff;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #canvas-container-3d {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background-color: #ffffff;
+            width: 100%;
+        }
+
+        .watermark {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            padding: 10px 16px;
+            font-size: 27px;
+            color: rgba(0,0,0,0.55);
+            background: rgba(255,255,255,0.7);
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* New Contrast Interface */
+        #contrast-interface {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #contrast-display {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            position: relative;
+        }
+
+        #contrast-3d-container, #contrast-2d-container {
+            position: relative;
+            border-right: 1px solid #ddd;
+            background-color: #fff;
+        }
+
+        #contrast-3d-container {
+            flex: 0 0 40%;
+            max-width: 40%;
+        }
+
+        #contrast-2d-container {
+            flex: 0 0 60%;
+            max-width: 60%;
+            border-right: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #canvas-contrast-2d {
+            display: block;
+        }
+
+        #canvas-contrast-3d-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #contrast-controls {
+            height: 115px; /* 原本是95px，再增加20px，防止沉没 */
+            background: linear-gradient(180deg, #fef7ff 0%, #f3f8ff 100%);
+            border-top: 1px solid #e6e8f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            padding: 0 20px 35px; /* 增加底部35px内边距防沉没 */
+            box-shadow: 0 -4px 14px rgba(30, 40, 80, 0.08);
+            flex-shrink: 0;
+        }
+
+        .contrast-slider-group {
+            display: flex;
+            flex-direction: column;
+            width: 200px;
+            background: #ffffff;
+            border: 2px solid #e7d7ff;
+            border-radius: 16px;
+            padding: 8px 10px;
+            box-shadow: 0 4px 0 #f1e5ff;
+        }
+
+        .contrast-slider-group > span {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #4a3b84;
+        }
+
+        .contrast-slider-group > span span {
+            display: inline;
+            margin: 0;
+        }
+
+        .view-label {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Unfold Page Layout */
+        #unfold-page {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+        }
+
+        #unfold-display {
+            flex: 1;
+            position: relative;
+            background-color: #f5f5f5;
+            overflow: hidden;
+        }
+
+        #unfold-3d-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #unfold-controls {
+            background: linear-gradient(180deg, #fef7ff 0%, #f3f8ff 100%);
+            border-top: 1px solid #e6e8f2;
+            padding: 10px 18px 47px; /* 底部原27px + 20px = 47px，防沉没 */
+            box-shadow: 0 -4px 14px rgba(30, 40, 80, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+        .unfold-row-1, .unfold-row-2 {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* 减小间距以适应单行 */
+            flex-wrap: nowrap; /* 强制不换行，锁定两大行布局 */
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .unfold-slider-group {
+            display: flex;
+            flex-direction: column;
+            width: 170px;
+        }
+
+        .unfold-slider-group span {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #4a3b84;
+        }
+
+        .kid-card {
+            background: #ffffff;
+            border: 2px solid #e7d7ff;
+            border-radius: 16px;
+            padding: 8px 10px;
+            box-shadow: 0 4px 0 #f1e5ff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .kid-card > span {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #4a3b84;
+            display: block; 
+            white-space: nowrap;
+        }
+
+        .kid-card > span span {
+            display: inline;
+            margin: 0;
+        }
+
+        .kid-select {
+            width: 100%;
+            padding: 6px 10px;
+            border: 2px solid #e7d7ff;
+            border-radius: 12px;
+            background: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            color: #4a3b84;
+            box-shadow: 0 3px 0 #f1e5ff;
+        }
+
+        .kid-btn {
+            border: 2px solid transparent;
+            border-radius: 14px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .kid-btn-primary {
+            background: #7dd3fc;
+            color: #0f172a;
+            border-color: #38bdf8;
+        }
+
+        .kid-btn-warning {
+            background: #fcd34d;
+            color: #7c2d12;
+            border-color: #fbbf24;
+        }
+
+        .kid-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 适配原本功能代码中的特殊交互类 */
+        .unfold-action-group {
+            display: flex;
+            gap: 6px; /* 缩小间距 */
+            align-items: stretch;
+            flex-shrink: 1;
+            flex: 1; /* 让按钮组占据整行的剩余所有空间 */
+        }
+        
+        .unfold-action-group button {
+            margin: 0 !important;
+            padding: 4px 6px; /* 缩小内边距 */
+            white-space: normal; /* 允许按钮文本在空间不足时自动换行显示 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: auto;
+            flex: 1; /* 核心：允许按钮大小自动缩放改变 */
+            text-align: center;
+            line-height: 1.2;
+            min-width: 0;
+            font-size: 12px;
+        }
+
+        /* 原本HTML使用的下拉菜单匹配为新色系 */
+        .custom-dropup {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropup-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 2px solid #e7d7ff;
+            color: #4a3b84;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-width: 100px; /* 原为130px，缩短尺寸方便排版进同一行 */
+            box-shadow: 0 3px 0 #f1e5ff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        
+        .dropup-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 0 0 #f1e5ff;
+        }
+        
+        .dropup-content {
+            position: absolute;
+            bottom: calc(100% + 10px); 
+            left: 0;
+            background: white;
+            border: 2px solid #e7d7ff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(74, 59, 132, 0.15);
+            min-width: 100%;
+            z-index: 1000;
+            padding: 6px;
+        }
+        
+        .dropup-item {
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 700;
+            color: #4a3b84;
+            white-space: nowrap;
+            transition: background 0.1s;
+            margin-bottom: 4px;
+        }
+        
+        .dropup-item:last-child { margin-bottom: 0; }
+        
+        .dropup-item:hover {
+            background: #f3e8ff;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        
+        <!-- ================= 页面 1：主界面（观察/切割） ================= -->
+        <div id="app">
+            <aside id="sidebar" class="card-style">
+                <div class="header">
+                    <h2>圆柱表面积</h2>
+                </div>
+
+                <div class="control-group">
+                    <label>⭐ 玩法模式</label>
+                    <div class="mode-buttons">
+                        <button id="btn-view" class="mode-btn active" data-mode="view">👀 观察模式</button>
+                        <button id="btn-cut" class="mode-btn" data-mode="cut">✂️ 切割模式</button>
+                        <button id="btn-unfold-nav" class="mode-btn">🎁 展开模式 (独立)</button>
+                        <!-- 将对比模式按钮移到了这里 -->
+                        <button id="btn-contrast-view" class="mode-btn">✨ 2D/3D 对比模式</button>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <button id="btn-reset-all" class="warning-btn">🔄 全部重置</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>📐 调整大小</label>
+                    <div class="slider-container">
+                        <span>半径 (r): <span id="val-r">2</span></span>
+                        <input type="range" id="slider-r" min="1" max="5" step="0.1" value="2">
+                    </div>
+                    <div class="slider-container">
+                        <span>高 (h): <span id="val-h">4</span></span>
+                        <input type="range" id="slider-h" min="1" max="8" step="0.1" value="4">
+                    </div>
+                </div>
+
+                <div id="cut-controls" class="control-group hidden">
+                    <label>⚔️ 怎么切？</label>
+                    <div class="action-buttons">
+                        <button id="btn-cut-h">➖ 横着切</button>
+                        <button id="btn-cut-v">丨 竖着切</button>
+                        <button id="btn-cut-o">◿ 斜着切</button>
+                    </div>
+                    
+                    <div id="cut-slider-container">
+                        <div class="slider-container hidden" id="cut-angle-container" style="margin-top: 12px;">
+                            <span>倾斜角度: <span id="val-cut-angle">60</span>°</span>
+                            <input type="range" id="slider-cut-pos" min="-90" max="90" step="1" value="60">
+                        </div>
+                        <div class="slider-container" style="margin-top: 12px;">
+                            <span>飞走速度: <span id="val-cut-speed">2.0</span>s</span>
+                            <input type="range" id="slider-cut-speed" min="0.8" max="4" step="0.1" value="2">
+                        </div>
+                        <button id="btn-confirm-cut" class="primary-btn">✅ 确定切开！</button>
+                    </div>
+                    <button id="btn-reset-cut" class="warning-btn hidden" style="margin-top:12px;">🔙 拼回去</button>
+                </div>
+            </aside>
+
+            <main id="stage">
+                <div id="canvas-container-3d"></div>
+            </main>
+        </div>
+
+        <!-- ================= 页面 2：全屏对比视图 ================= -->
+        <div id="contrast-interface" class="hidden">
+            <div id="contrast-display">
+                <div id="contrast-3d-container">
+                    <div class="view-label">📦 立体圆柱</div>
+                    <canvas id="canvas-contrast-3d-overlay"></canvas>
+                </div>
+                <div id="contrast-2d-container">
+                    <div class="view-label">📄 平面展开图</div>
+                    <canvas id="canvas-contrast-2d"></canvas>
+                </div>
+            </div>
+            
+            <div id="contrast-controls">
+                <div class="contrast-slider-group">
+                    <span>半径 (r): <span id="val-r-contrast">1.2</span></span>
+                    <input type="range" id="slider-r-contrast" min="0.5" max="1.8" step="0.1" value="1.2">
+                </div>
+                <div class="contrast-slider-group">
+                    <span>高 (h): <span id="val-h-contrast">2</span></span>
+                    <input type="range" id="slider-h-contrast" min="1" max="4" step="0.1" value="2">
+                </div>
+                <button id="btn-toggle-contrast-data" class="secondary-btn" style="width: 140px; margin: 0;">🔢 显示数据</button>
+                <button id="btn-exit-contrast" class="warning-btn" style="width: 160px; margin: 0;">🔙 返回主界面</button>
+            </div>
+        </div>
+
+        <!-- ================= 页面 3：独立展开模式 ================= -->
+        <div id="unfold-page" class="hidden">
+            <div id="unfold-display">
+                <div id="unfold-3d-container"></div>
+            </div>
+            
+            <div id="unfold-controls" class="card-style">
+                <div class="unfold-row-1">
+                    <div class="kid-card">
+                        <span>半径 (r): <span id="val-r-unfold">1.2</span></span>
+                        <input type="range" id="slider-r-unfold" min="0.8" max="1.8" step="0.1" value="1.2">
+                    </div>
+                    <div class="kid-card">
+                        <span>高 (h): <span id="val-h-unfold">4</span></span>
+                        <input type="range" id="slider-h-unfold" min="1" max="8" step="0.1" value="4">
+                    </div>
+                    <div class="kid-card">
+                        <span>侧面展开: <span id="val-side-progress">0</span>%</span>
+                        <input type="range" id="slider-side-progress" min="0" max="100" step="1" value="0">
+                    </div>
+                    <div class="kid-card">
+                        <span>周长验证: <span id="val-perimeter-progress">0</span>%</span>
+                        <input type="range" id="slider-perimeter-progress" min="0" max="100" step="1" value="0">
+                    </div>
+                </div>
+
+                <div class="unfold-row-2">
+                    <div class="kid-card" style="flex-direction: row; align-items: center; gap: 10px; flex: unset; overflow: visible;">
+                        <span style="margin: 0; font-size: 14px;">✂️ 怎么剪开侧面：</span>
+                        <div class="custom-dropup" id="unfold-cut-dropup">
+                            <button id="dropup-trigger" class="dropup-btn">
+                                <span id="dropup-label">丨 竖直剪</span> 
+                                <span style="font-size: 12px;">▲</span>
+                            </button>
+                            <div id="dropup-menu" class="dropup-content hidden">
+                                <div class="dropup-item" data-val="vertical">丨 竖直剪开</div>
+                                <div class="dropup-item" data-val="oblique">◿ 斜向剪开</div>
+                                <div class="dropup-item" data-val="irregular">~ 波浪剪开</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="unfold-action-group">
+                        <button id="btn-square-case" class="special-btn" style="background-color: #fbcfe8 !important; border-color: #f472b6 !important; color: #831843 !important;">⬛ 正方形侧面(r=1, h=6.28)</button>
+                        <button id="btn-toggle-no-top" class="special-btn">🍵 变身水杯(无盖)</button>
+                        <button id="btn-toggle-side-only" class="special-btn">🧻 变身纸筒(仅侧面)</button>
+                        <button id="btn-unfold-top" class="primary-btn">⬆️ 打开上盖</button>
+                        <button id="btn-unfold-bottom" class="primary-btn">⬇️ 打开下盖</button>
+                        <button id="btn-unfold-reset-all" class="warning-btn">🔄 全部复原</button>
+                        <button id="btn-back-main" class="secondary-btn">🏠 回到主页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 核心业务逻辑 (不改变功能，仅更改配置) ================= -->
+    <script>
+        // 移除了所有的 import 模块调用，已转为传统的 THREE.xxx 全局变量调用方式
+
+        // ---------------- 1. TWEEN 简易动画库 ----------------
+        const TWEEN = {
+            tweens: [],
+            update() {
+                const now = performance.now();
+                this.tweens = this.tweens.filter(t => t.update(now));
+            },
+            add(tween) {
+                this.tweens.push(tween);
+                tween.start(performance.now());
+            },
+            clear() {
+                this.tweens = [];
+            }
+        };
+
+        class Tween {
+            constructor(target, to, duration, onUpdate) {
+                this.target = target;
+                this.to = to;
+                this.duration = duration;
+                this.onUpdate = onUpdate;
+                this.startTime = 0;
+                this.from = {};
+            }
+            start(now) {
+                this.startTime = now;
+                for(let k in this.to) { this.from[k] = this.target[k] || 0; }
+            }
+            update(now) {
+                const elapsed = now - this.startTime;
+                let t = Math.min(1, elapsed / this.duration);
+                t = t * (2 - t); // Quad Out Easing
+                for(let k in this.to) {
+                    this.target[k] = this.from[k] + (this.to[k] - this.from[k]) * t;
+                }
+                if(this.onUpdate) this.onUpdate(this.target);
+                return t < 1;
+            }
+        }
+
+        // ---------------- 2. 场景环境通用生成器 ----------------
+        function createSceneEnvironment(container) {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(8, 6, 8);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.localClippingEnabled = true;
+            container.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 2;
+            controls.maxDistance = 20;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.85); // 提高环境光，让卡通色彩更鲜艳
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7); // 略微调高强度
+            dirLight2.position.set(-5, -10, -5); // 将原本在上方(y=5)的光源移到正下方(y=-10)，彻底解决底面背光导致的颜色不一致
+            scene.add(dirLight2);
+
+            window.addEventListener('resize', () => {
+                if(container.clientWidth === 0) return; 
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            function startAnimationLoop(callback) {
+                renderer.setAnimationLoop(() => {
+                    controls.update();
+                    if (callback) callback();
+                    renderer.render(scene, camera);
+                });
+            }
+
+            return { scene, camera, renderer, controls, startAnimationLoop };
+        }
+
+        // ---------------- 3. 圆柱模型系统 ----------------
+        class CylinderModel {
+            constructor(scene) {
+                this.scene = scene;
+                this.meshGroup = new THREE.Group();
+                this.scene.add(this.meshGroup);
+                this.params = { r: 2, h: 4, segments: 64 };
+
+                // 更新：采用更加柔和且清晰的马卡龙浅色系，完美适配若绿色背景
+                this.theme = {
+                    side: { color: 0x64B5F6, canvasColor: '#64B5F6', roughness: 0.2, metalness: 0.1 },  
+                    cap: { color: 0xEF6C00, canvasColor: '#FF9800', roughness: 0.7, metalness: 0.0 },   // 降低3D基础亮度+增加粗糙度，使其在强光照射下刚好呈现正橘黄(FF9800)
+                    cut: { color: 0x8B0000, canvasColor: '#8B0000', roughness: 0.4, metalness: 0.05 }   // 修改为深红色，不透明度100%
+                };
+                
+                this.materials = {
+                    side: new THREE.MeshStandardMaterial({ color: this.theme.side.color, side: THREE.DoubleSide, roughness: this.theme.side.roughness, metalness: this.theme.side.metalness }),
+                    cap: new THREE.MeshStandardMaterial({ color: this.theme.cap.color, side: THREE.DoubleSide, roughness: this.theme.cap.roughness, metalness: this.theme.cap.metalness }),
+                    cut: new THREE.MeshStandardMaterial({ color: this.theme.cut.color, side: THREE.DoubleSide, roughness: this.theme.cut.roughness, metalness: this.theme.cut.metalness })
+                };
+
+                this.state = {
+                    mode: 'view', isCut: false, cutType: null,
+                    unfoldTop: 0, unfoldBottom: 0, unfoldSide: 0, unfoldCutType: 'vertical', parts: [], currentCutId: null,
+                    showTop: true, showBottom: true
+                };
+                this.init();
+            }
+
+            setCapVisibility(top, bottom) {
+                this.state.showTop = top;
+                this.state.showBottom = bottom;
+                if (this.parts && this.parts.top) this.parts.top.visible = top;
+                if (this.parts && this.parts.bottom) this.parts.bottom.visible = bottom;
+            }
+
+            init() {
+                this.clear();
+                this.state.unfoldTop = 0;
+                this.state.unfoldBottom = 0;
+                this.state.unfoldSide = 0;
+                this.state.isCut = false;
+                this.state.currentCutId = null;
+                this.createBaseCylinder();
+                if (this.state.mode === 'unfold') {
+                    this.setUnfoldSide(this.state.unfoldSide);
+                }
+            }
+            
+            getColorSchemeData() { return this.theme; }
+
+            clear() {
+                if (this.cuttingPlaneMesh && this.cuttingPlaneMesh.parent) {
+                    this.cuttingPlaneMesh.parent.remove(this.cuttingPlaneMesh);
+                }
+                while(this.meshGroup.children.length > 0){ 
+                    const child = this.meshGroup.children[0];
+                    child.traverse(obj => { if(obj.geometry) obj.geometry.dispose(); });
+                    this.meshGroup.remove(child); 
+                }
+            }
+
+            createBaseCylinder() {
+                const { r, h, segments } = this.params;
+                const baseGroup = new THREE.Group();
+
+                const topGeo = new THREE.CircleGeometry(r, segments); topGeo.rotateX(-Math.PI / 2);
+                const topMesh = new THREE.Mesh(topGeo, this.materials.cap); topMesh.position.y = h / 2;
+
+                const bottomGeo = new THREE.CircleGeometry(r, segments); bottomGeo.rotateX(Math.PI / 2);
+                const bottomMesh = new THREE.Mesh(bottomGeo, this.materials.cap); bottomMesh.position.y = -h / 2;
+
+                topMesh.visible = this.state.showTop;
+                bottomMesh.visible = this.state.showBottom;
+
+                const perimeter = 2 * Math.PI * r;
+                
+                const heightSegments = 32; 
+                const sideGeo = new THREE.PlaneGeometry(perimeter, h, segments, heightSegments); 
+                const sideMesh = new THREE.Mesh(sideGeo, this.materials.side); 
+                
+                const posAttr = sideGeo.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    const vertex = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+                    const u = (vertex.x / perimeter) + 0.5;
+                    const angle = u * 2 * Math.PI + Math.PI;
+                    posAttr.setXYZ(i, r * Math.sin(angle), vertex.y, r * Math.cos(angle));
+                    if (sideGeo.attributes.normal) sideGeo.attributes.normal.setXYZ(i, Math.sin(angle), 0, Math.cos(angle));
+                }
+                posAttr.needsUpdate = true;
+                
+                baseGroup.add(topMesh, bottomMesh, sideMesh);
+                this.meshGroup.add(baseGroup);
+                this.parts = { top: topMesh, bottom: bottomMesh, side: sideMesh };
+            }
+
+            updateParams(r, h) {
+                this.params.r = r; this.params.h = h;
+                if (this.state.mode === 'view') { this.init(); } 
+                else if (this.state.mode === 'unfold') {
+                    const { unfoldTop, unfoldBottom, unfoldSide } = this.state;
+                    this.init(); this.state.unfoldTop = unfoldTop; this.state.unfoldBottom = unfoldBottom; this.state.unfoldSide = unfoldSide;
+                    this.setUnfoldSide(unfoldSide);
+                } else if (this.state.mode === 'cut') {
+                    this.activateUniversalCut();
+                }
+            }
+
+            setUnfoldSide(t) {
+                this.state.unfoldSide = t;
+                if (!this.parts?.side) return;
+                const { r, h, segments } = this.params;
+                const perimeter = 2 * Math.PI * r;
+                const posAttr = this.parts.side.geometry.attributes.position;
+                const heightSegments = 32; 
+                
+                for (let i = 0; i < posAttr.count; i++) {
+                    const col = i % (segments + 1);
+                    const row = Math.floor(i / (segments + 1));
+                    const u = col / segments;
+                    const y_plane = (h / 2) - (row / heightSegments) * h;
+                    
+                    let shift = 0;
+                    if (this.state.unfoldCutType === 'oblique') {
+                        shift = y_plane * Math.tan(-Math.PI/6);
+                    } else if (this.state.unfoldCutType === 'irregular') {
+                        const amp = r * 0.4;
+                        const freq = (Math.PI * 3) / h;
+                        shift = amp * Math.sin(freq * y_plane);
+                    }
+
+                    const uShifted = u + shift / perimeter;
+                    const x_plane = (uShifted - 0.5) * perimeter;
+                    const angle = uShifted * 2 * Math.PI + Math.PI; 
+                    
+                    posAttr.setXYZ(i, 
+                        (1 - t) * (r * Math.sin(angle)) + t * x_plane, 
+                        y_plane, 
+                        (1 - t) * (r * Math.cos(angle))
+                    );
+                }
+                posAttr.needsUpdate = true;
+                this.parts.side.geometry.computeVertexNormals();
+                this.updateCaps();
+            }
+            
+            setUnfoldCutType(type) { 
+                this.state.unfoldCutType = type; 
+                this.setUnfoldSide(this.state.unfoldSide); 
+            }
+            setUnfoldTop(t) { this.state.unfoldTop = t; this.updateCaps(); }
+            setUnfoldBottom(t) { this.state.unfoldBottom = t; this.updateCaps(); }
+            updateCaps() {
+                if (!this.parts) return;
+                const hingeZ = (1 - this.state.unfoldSide) * this.params.r; 
+                if (this.parts.top) {
+                    const a = this.state.unfoldTop * Math.PI / 2;
+                    this.parts.top.rotation.x = a;
+                    this.parts.top.position.y = this.params.h/2 + this.params.r * Math.sin(a);
+                    this.parts.top.position.z = hingeZ - this.params.r * Math.cos(a);
+                }
+                if (this.parts.bottom) {
+                    const a = this.state.unfoldBottom * Math.PI / 2;
+                    this.parts.bottom.rotation.x = -a;
+                    this.parts.bottom.position.y = -this.params.h/2 - this.params.r * Math.sin(a);
+                    this.parts.bottom.position.z = hingeZ - this.params.r * Math.cos(a);
+                }
+            }
+
+            activateUniversalCut() {
+                this.clear();
+                this.state.isCut = true; this.state.cutType = 'universal'; this.state.isCutConfirmed = false;
+                // 恢复切割平面的半透明绿板效果
+                const planeMat = new THREE.MeshBasicMaterial({ color: 0x4CAF50, side: THREE.DoubleSide, transparent: true, opacity: 0.3, depthWrite: false });
+                this.cuttingPlaneMesh = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), planeMat);
+                this.cuttingPlaneMesh.name = 'cuttingPlane';
+                this.cuttingPlaneMesh.rotation.x = -Math.PI / 2;
+                this.scene.add(this.cuttingPlaneMesh);
+
+                this.clipPlaneA = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+                this.clipPlaneB = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                
+                const createPart = (clipPlane) => {
+                    const group = new THREE.Group();
+                    const mOuter = this.materials.side.clone(); mOuter.clippingPlanes = [clipPlane];
+                    const mCap = this.materials.cap.clone(); mCap.clippingPlanes = [clipPlane];
+                    const mInner = this.materials.cut.clone(); mInner.side = THREE.BackSide; mInner.clippingPlanes = [clipPlane];
+                    
+                    const geo = new THREE.CylinderGeometry(this.params.r, this.params.r, this.params.h, this.params.segments);
+                    group.add(new THREE.Mesh(geo, [mOuter, mCap, mCap]), new THREE.Mesh(geo, mInner));
+                    return group;
+                };
+
+                this.partA = createPart(this.clipPlaneA); this.partB = createPart(this.clipPlaneB);
+                this.meshGroup.add(this.partA, this.partB);
+                this.updateUniversalCut();
+            }
+
+            updateUniversalCut() {
+                if (!this.cuttingPlaneMesh) return;
+                const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(this.cuttingPlaneMesh.quaternion).normalize();
+                const constant = -normal.dot(this.cuttingPlaneMesh.position);
+                this.clipPlaneA.normal.copy(normal); this.clipPlaneA.constant = constant;
+                this.clipPlaneB.copy(this.clipPlaneA).negate();
+            }
+
+            confirmCut() {
+                if (!this.state.isCut || this.state.isCutConfirmed) return;
+                this.state.isCutConfirmed = true;
+                
+                const getLocalPlane = (part, wNormal, wPoint) => {
+                    const inv = part.matrixWorld.clone().invert();
+                    return { normal: wNormal.clone().transformDirection(inv).normalize(), point: wPoint.clone().applyMatrix4(inv) };
+                };
+                
+                this.localPlaneA = getLocalPlane(this.partA, this.clipPlaneA.normal, this.cuttingPlaneMesh.position);
+                this.localPlaneB = getLocalPlane(this.partB, this.clipPlaneB.normal, this.cuttingPlaneMesh.position);
+                
+                // 必须传入 clipPlane 参数，这是生成不透光“实心切面”的核心逻辑修复
+                this.addStencilCap(this.partA, this.localPlaneA, this.clipPlaneA, 10);
+                this.addStencilCap(this.partB, this.localPlaneB, this.clipPlaneB, 20);
+                if (this.cuttingPlaneMesh) this.cuttingPlaneMesh.visible = false;
+            }
+
+            addStencilCap(part, localPlane, clipPlane, ro) {
+                const sGroup = new THREE.Group(); part.add(sGroup);
+                
+                // 修复点：给用于填充实心的模板材质加上 clippingPlanes，否则模板会漏计算整个圆柱
+                const m0 = new THREE.MeshBasicMaterial({ depthWrite: false, colorWrite: false, stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, side: THREE.BackSide, stencilZPass: THREE.IncrementWrapStencilOp, clippingPlanes: [clipPlane] });
+                const m1 = new THREE.MeshBasicMaterial({ depthWrite: false, colorWrite: false, stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, side: THREE.FrontSide, stencilZPass: THREE.DecrementWrapStencilOp, clippingPlanes: [clipPlane] });
+                
+                part.traverse(obj => {
+                    if (obj.isMesh && Array.isArray(obj.material)) { // 仅对外部受光面应用遮罩
+                        const msh0 = new THREE.Mesh(obj.geometry, m0); msh0.renderOrder = ro; sGroup.add(msh0);
+                        const msh1 = new THREE.Mesh(obj.geometry, m1); msh1.renderOrder = ro; sGroup.add(msh1);
+                    }
+                });
+
+                const pMat = new THREE.MeshStandardMaterial({ color: this.getColorSchemeData().cut.color, roughness: this.getColorSchemeData().cut.roughness, stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc, side: THREE.DoubleSide });
+                const pMesh = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), pMat);
+                pMesh.renderOrder = ro + 1;
+                pMesh.onBeforeRender = r => r.clearStencil();
+                pMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), localPlane.normal.clone().negate());
+                pMesh.position.copy(localPlane.point);
+                sGroup.add(pMesh);
+            }
+
+            update() {
+                if (this.state.isCutConfirmed) {
+                    if (this.partA && this.localPlaneA) {
+                        const n = this.localPlaneA.normal.clone().transformDirection(this.partA.matrixWorld).normalize();
+                        const p = this.localPlaneA.point.clone().applyMatrix4(this.partA.matrixWorld);
+                        this.clipPlaneA.setFromNormalAndCoplanarPoint(n, p);
+                    }
+                    if (this.partB && this.localPlaneB) {
+                        const n = this.localPlaneB.normal.clone().transformDirection(this.partB.matrixWorld).normalize();
+                        const p = this.localPlaneB.point.clone().applyMatrix4(this.partB.matrixWorld);
+                        this.clipPlaneB.setFromNormalAndCoplanarPoint(n, p);
+                    }
+                }
+            }
+            reset() { this.init(); }
+        }
+
+        // ---------------- 4. 2D/3D 对比视图 ----------------
+        class ContrastView {
+            constructor({ env, state, contrastState, els, model, onEnter, onExit }) {
+                this.env = env; this.state = state; this.contrastState = contrastState; this.els = els; this.model = model;
+                this.ctx2d = this.els.contrast2dCanvas.getContext('2d');
+                this.ctx3d = this.els.contrast3dOverlay.getContext('2d');
+                this.onEnter = onEnter; this.onExit = onExit;
+                this.init();
+            }
+            init() {
+                this.els.btnContrastView.addEventListener('click', () => this.open());
+                this.els.btnExitContrast.addEventListener('click', () => this.close());
+                this.els.sliderRContrast.addEventListener('input', e => { this.contrastState.r = parseFloat(e.target.value); this.sync(); });
+                this.els.sliderHContrast.addEventListener('input', e => { this.contrastState.h = parseFloat(e.target.value); this.sync(); });
+                this.els.btnToggleContrastData.addEventListener('click', () => { this.contrastState.showData = !this.contrastState.showData; this.draw(); });
+                window.addEventListener('resize', () => { if(this.state.isContrast) this.resize(); });
+                this.env.controls.addEventListener('change', () => { if(this.state.isContrast) this.draw(); });
+            }
+            sync() {
+                this.els.valRContrast.textContent = this.contrastState.r;
+                this.els.valHContrast.textContent = this.contrastState.h;
+                this.model.updateParams(this.contrastState.r, this.contrastState.h);
+                if(this.state.isContrast) this.draw();
+            }
+            open() {
+                if(this.onEnter) this.onEnter();
+                this.state.isContrast = true;
+                this.els.contrastInterface.classList.remove('hidden');
+                this.els.contrast3dContainer.appendChild(this.env.renderer.domElement);
+                this.sync(); this.resize();
+            }
+            close() {
+                this.state.isContrast = false;
+                this.els.contrastInterface.classList.add('hidden');
+                document.getElementById('canvas-container-3d').appendChild(this.env.renderer.domElement);
+                this.model.updateParams(this.state.r, this.state.h);
+                window.dispatchEvent(new Event('resize')); 
+                if(this.onExit) this.onExit();
+            }
+            resize() {
+                const rect3d = this.els.contrast3dContainer.getBoundingClientRect();
+                if(rect3d.width > 0) {
+                    this.env.camera.aspect = rect3d.width / rect3d.height;
+                    this.env.camera.updateProjectionMatrix();
+                    this.env.renderer.setSize(rect3d.width, rect3d.height);
+                    this.els.contrast3dOverlay.width = rect3d.width; this.els.contrast3dOverlay.height = rect3d.height;
+                }
+                const rect2d = this.els.contrast2dCanvas.parentElement.getBoundingClientRect();
+                this.els.contrast2dCanvas.width = rect2d.width; this.els.contrast2dCanvas.height = rect2d.height;
+                this.draw();
+            }
+            draw() {
+                if(!this.state.isContrast) return;
+                const w = this.els.contrast2dCanvas.width, h = this.els.contrast2dCanvas.height;
+                this.ctx2d.clearRect(0, 0, w, h);
+                const { r, h: height } = this.contrastState;
+                const perimeter = 2 * Math.PI * r;
+                
+                const distance = this.env.camera.position.distanceTo(this.env.controls.target);
+                const vFov = THREE.MathUtils.degToRad(this.env.camera.fov);
+                const visibleHeightAtDistance = 2 * Math.tan(vFov / 2) * distance;
+                const pixelsPerUnit = h / visibleHeightAtDistance;
+                const scale = pixelsPerUnit;
+                
+                const drawR = r * scale, drawH = height * scale, drawP = perimeter * scale;
+                const cx = w/2, startY = (h - (drawH + 4*drawR))/2;
+                
+                const scheme = this.model.getColorSchemeData();
+                const toHex = v => `#${v.toString(16).padStart(6,'0')}`;
+                
+                const capColor = scheme.cap.canvasColor || toHex(scheme.cap.color);
+                const sideColor = scheme.side.canvasColor || toHex(scheme.side.color);
+                
+                // 更粗更可爱的绘图线条
+                this.ctx2d.lineWidth = 4; this.ctx2d.strokeStyle = '#2D3748';
+                
+                const topY = startY + drawR;
+                this.ctx2d.fillStyle = capColor;
+                this.ctx2d.beginPath(); this.ctx2d.arc(cx, topY, drawR, 0, Math.PI*2); this.ctx2d.fill(); this.ctx2d.stroke();
+                
+                const rectY = topY + drawR;
+                this.ctx2d.fillStyle = sideColor;
+                this.ctx2d.fillRect(cx - drawP/2, rectY, drawP, drawH); this.ctx2d.strokeRect(cx - drawP/2, rectY, drawP, drawH);
+                
+                const botY = rectY + drawH + drawR;
+                this.ctx2d.fillStyle = capColor;
+                this.ctx2d.beginPath(); this.ctx2d.arc(cx, botY, drawR, 0, Math.PI*2); this.ctx2d.fill(); this.ctx2d.stroke();
+
+                if (this.contrastState.showData) {
+                    this.ctx2d.fillStyle = '#2D3748'; 
+                    // 更换为本地安全卡通字体
+                    this.ctx2d.font = 'bold 26px "Comic Sans MS", "幼圆", "SimHei", sans-serif'; 
+                    this.ctx2d.textAlign = 'center';
+                    this.ctx2d.fillText(`r = ${r}`, cx + drawR/2, topY - 20);
+                    this.ctx2d.fillText(`2πr ≈ ${perimeter.toFixed(2)}`, cx, rectY - 20);
+                    this.ctx2d.textAlign = 'left'; 
+                    this.ctx2d.fillText(`h = ${height}`, cx + drawP/2 + 20, rectY + drawH/2 + 10);
+                }
+            }
+        }
+
+        // ---------------- 5. 主应用逻辑 (观察/切割) ----------------
+        let mainAppEnv;
+        function initMainApp() {
+            mainAppEnv = createSceneEnvironment(document.getElementById('canvas-container-3d'));
+            const model = new CylinderModel(mainAppEnv.scene);
+            const state = { r: 2, h: 4, mode: 'view', cutType: 'horizontal', isContrast: false };
+            
+            const transformControl = new THREE.TransformControls(mainAppEnv.camera, mainAppEnv.renderer.domElement);
+            transformControl.size = 0.8;
+            transformControl.addEventListener('dragging-changed', e => mainAppEnv.controls.enabled = !e.value);
+            mainAppEnv.scene.add(transformControl);
+            
+            transformControl.addEventListener('change', () => {
+                if(model.cuttingPlaneMesh && state.mode === 'cut') {
+                    if (state.cutType === 'horizontal') { model.cuttingPlaneMesh.position.x=0; model.cuttingPlaneMesh.position.z=0; }
+                    if (state.cutType === 'vertical') { model.cuttingPlaneMesh.position.y=0; model.cuttingPlaneMesh.position.z=0; }
+                    model.updateUniversalCut();
+                }
+            });
+
+            const els = {
+                valR: document.getElementById('val-r'), sliderR: document.getElementById('slider-r'),
+                valH: document.getElementById('val-h'), sliderH: document.getElementById('slider-h'),
+                btnView: document.getElementById('btn-view'), btnCut: document.getElementById('btn-cut'),
+                btnCutH: document.getElementById('btn-cut-h'), btnCutV: document.getElementById('btn-cut-v'), btnCutO: document.getElementById('btn-cut-o'),
+                cutControls: document.getElementById('cut-controls'), btnConfirmCut: document.getElementById('btn-confirm-cut'),
+                btnResetCut: document.getElementById('btn-reset-cut'), sliderCutPos: document.getElementById('slider-cut-pos'),
+                valCutSpeed: document.getElementById('val-cut-speed'), sliderCutSpeed: document.getElementById('slider-cut-speed')
+            };
+
+            const cv = new ContrastView({
+                env: mainAppEnv, state, contrastState: { r: 1.2, h: 2, showData: false }, 
+                els: {
+                    btnContrastView: document.getElementById('btn-contrast-view'), contrastInterface: document.getElementById('contrast-interface'),
+                    contrast3dContainer: document.getElementById('contrast-3d-container'), contrast2dCanvas: document.getElementById('canvas-contrast-2d'),
+                    contrast3dOverlay: document.getElementById('canvas-contrast-3d-overlay'), btnToggleContrastData: document.getElementById('btn-toggle-contrast-data'),
+                    btnExitContrast: document.getElementById('btn-exit-contrast'), sliderRContrast: document.getElementById('slider-r-contrast'),
+                    valRContrast: document.getElementById('val-r-contrast'), sliderHContrast: document.getElementById('slider-h-contrast'),
+                    valHContrast: document.getElementById('val-h-contrast')
+                }, model,
+                onEnter: () => { if (state.mode !== 'view') document.getElementById('btn-view').click(); }
+            });
+
+            function updateAppModel() {
+                transformControl.detach();
+                if (state.mode === 'view') {
+                    model.updateParams(state.r, state.h);
+                } else if (state.mode === 'cut') {
+                    model.params.r = state.r; model.params.h = state.h;
+                    setCut(state.cutType);
+                }
+            }
+
+            function setCut(type) {
+                state.cutType = type; model.state.cutType = type;
+                els.btnCutH.classList.toggle('active', type==='horizontal');
+                els.btnCutV.classList.toggle('active', type==='vertical');
+                els.btnCutO.classList.toggle('active', type==='oblique');
+                
+                transformControl.detach();
+                model.activateUniversalCut();
+                
+                if(model.cuttingPlaneMesh) {
+                    if (type === 'oblique') {
+                        // 斜着切：不显示手柄，固定在中心，仅靠滑块调整角度
+                        model.cuttingPlaneMesh.rotation.set(THREE.MathUtils.degToRad(parseFloat(els.sliderCutPos.value)),0,0);
+                        model.cuttingPlaneMesh.position.set(0,0,0);
+                    } else {
+                        // 横切和竖切：恢复拖动手柄
+                        transformControl.attach(model.cuttingPlaneMesh);
+                        transformControl.space = 'local';
+                        transformControl.showX = false;
+                        transformControl.showY = false;
+                        transformControl.showZ = true; // 仅保留垂直于切面的Z轴(蓝色箭头)方便拖动
+                        
+                        if(type==='horizontal') { model.cuttingPlaneMesh.rotation.set(-Math.PI/2,0,0); }
+                        if(type==='vertical') { model.cuttingPlaneMesh.rotation.set(0, Math.PI/2, 0); }
+                    }
+                    
+                    model.updateUniversalCut();
+                }
+            }
+
+            els.sliderR.addEventListener('input', e => { state.r = parseFloat(e.target.value); els.valR.textContent = state.r; updateAppModel(); });
+            els.sliderH.addEventListener('input', e => { state.h = parseFloat(e.target.value); els.valH.textContent = state.h; updateAppModel(); });
+            els.sliderCutSpeed.addEventListener('input', e => els.valCutSpeed.textContent = parseFloat(e.target.value).toFixed(1));
+            
+            document.getElementById('btn-reset-all').addEventListener('click', () => { 
+                TWEEN.clear(); transformControl.detach(); model.reset(); 
+                els.cutControls.classList.add('hidden'); document.getElementById('btn-view').click(); 
+            });
+            
+            els.btnView.addEventListener('click', () => { 
+                state.mode='view'; els.btnView.classList.add('active'); els.btnCut.classList.remove('active'); 
+                els.cutControls.classList.add('hidden'); transformControl.detach(); model.updateParams(state.r, state.h); 
+            });
+            els.btnCut.addEventListener('click', () => { 
+                state.mode='cut'; els.btnCut.classList.add('active'); els.btnView.classList.remove('active'); 
+                els.cutControls.classList.remove('hidden'); setCut('horizontal'); 
+            });
+            
+            els.btnCutH.addEventListener('click', () => setCut('horizontal'));
+            els.btnCutV.addEventListener('click', () => setCut('vertical'));
+            els.btnCutO.addEventListener('click', () => { setCut('oblique'); document.getElementById('cut-angle-container').classList.remove('hidden'); });
+            els.sliderCutPos.addEventListener('input', e => { 
+                document.getElementById('val-cut-angle').textContent = e.target.value; 
+                if(state.cutType==='oblique' && model.cuttingPlaneMesh) { model.cuttingPlaneMesh.rotation.x = THREE.MathUtils.degToRad(e.target.value); model.updateUniversalCut(); }
+            });
+
+            els.btnConfirmCut.addEventListener('click', () => {
+                transformControl.detach();
+                model.confirmCut(); 
+                els.btnResetCut.classList.remove('hidden');
+                
+                const totalDur = Math.max(400, parseFloat(els.sliderCutSpeed.value) * 1000); 
+                const transDur = totalDur * 0.45; 
+                const rotDur = totalDur * 0.55;   
+                
+                let dist = 5;
+                if (state.cutType === 'vertical') dist = model.params.r * 2.5 + 1.0; 
+                else if (state.cutType === 'horizontal') dist = (Math.max(model.params.h * 1.5, model.params.r * 2.2) + 1.0) * 0.62;
+                else dist = Math.max(model.params.r * 3, model.params.h * 1.5);
+
+                const pA = model.partA, pB = model.partB;
+                const nA = model.clipPlaneA.normal.clone().normalize();
+                const nB = model.clipPlaneB.normal.clone().normalize();
+                const posA = pA.position.clone().add(nA.clone().multiplyScalar(dist/2));
+                const posB = pB.position.clone().add(nB.clone().multiplyScalar(dist/2));
+                
+                const targetDir = new THREE.Vector3(0, 0, 1);
+                const qA_target = new THREE.Quaternion().setFromUnitVectors(nA.clone().negate(), targetDir).multiply(pA.quaternion);
+                const qB_target = new THREE.Quaternion().setFromUnitVectors(nB.clone().negate(), targetDir).multiply(pB.quaternion);
+                
+                TWEEN.add(new Tween(pA.position, posA, transDur));
+                TWEEN.add(new Tween(pB.position, posB, transDur));
+                
+                const currentCutId = Symbol();
+                model.state.currentCutId = currentCutId;
+                
+                setTimeout(() => {
+                    if(!model.state.isCutConfirmed || model.state.currentCutId !== currentCutId) return;
+                    const startQA = pA.quaternion.clone();
+                    const startQB = pB.quaternion.clone();
+                    const rotObj = { t: 0 };
+                    TWEEN.add(new Tween(rotObj, { t: 1 }, rotDur, (obj) => {
+                        pA.quaternion.slerpQuaternions(startQA, qA_target, obj.t);
+                        pB.quaternion.slerpQuaternions(startQB, qB_target, obj.t);
+                    }));
+                }, transDur);
+            });
+            
+            els.btnResetCut.addEventListener('click', () => { 
+                model.state.currentCutId = null; 
+                setCut(state.cutType); 
+                els.btnResetCut.classList.add('hidden'); 
+            });
+
+            mainAppEnv.startAnimationLoop(() => { TWEEN.update(); model.update(); });
+        }
+
+        // ---------------- 6. 独立展开应用逻辑 ----------------
+        let unfoldAppEnv;
+        function initUnfoldApp() {
+            unfoldAppEnv = createSceneEnvironment(document.getElementById('unfold-3d-container'));
+            const model = new CylinderModel(unfoldAppEnv.scene);
+            model.state.mode = 'unfold'; model.meshGroup.rotation.y = Math.PI;
+            
+            const state = { r: 1.2, h: 4, cutMode: 'vertical' };
+            const els = {
+                r: document.getElementById('slider-r-unfold'), h: document.getElementById('slider-h-unfold'),
+                valR: document.getElementById('val-r-unfold'), valH: document.getElementById('val-h-unfold'),
+                progSide: document.getElementById('slider-side-progress'), valProgSide: document.getElementById('val-side-progress'),
+                progPerim: document.getElementById('slider-perimeter-progress'), valProgPerim: document.getElementById('val-perimeter-progress'),
+                btnTop: document.getElementById('btn-unfold-top'), btnBot: document.getElementById('btn-unfold-bottom'),
+                btnNoTop: document.getElementById('btn-toggle-no-top'), btnSideOnly: document.getElementById('btn-toggle-side-only'),
+                btnSquareCase: document.getElementById('btn-square-case')
+            };
+
+            model.updateParams(state.r, state.h);
+
+            // 功能控制逻辑：无盖模式 与 侧面模式
+            let isNoTopMode = false;
+            let isSideOnlyMode = false;
+
+            function syncCapVisibility() {
+                els.btnNoTop.classList.toggle('active', isNoTopMode);
+                els.btnSideOnly.classList.toggle('active', isSideOnlyMode);
+                const showTop = !isNoTopMode && !isSideOnlyMode;
+                const showBot = !isSideOnlyMode;
+                model.setCapVisibility(showTop, showBot);
+            }
+
+            els.btnNoTop.addEventListener('click', () => {
+                isNoTopMode = !isNoTopMode;
+                if (isNoTopMode) isSideOnlyMode = false;
+                syncCapVisibility();
+            });
+
+            els.btnSideOnly.addEventListener('click', () => {
+                isSideOnlyMode = !isSideOnlyMode;
+                if (isSideOnlyMode) isNoTopMode = false;
+                syncCapVisibility();
+            });
+
+            els.btnSquareCase.addEventListener('click', () => {
+                state.r = 1;
+                state.h = 6.28;
+                els.r.value = 1;
+                els.valR.textContent = 1;
+                els.h.value = 6.28;
+                els.valH.textContent = 6.28;
+                model.updateParams(state.r, state.h);
+            });
+
+            const createPerimeterLine = () => { 
+                const l = new THREE.Line2(new THREE.LineGeometry(), new THREE.LineMaterial({color: 0xff0000, linewidth: 8, depthTest: false})); 
+                l.visible = false; 
+                unfoldAppEnv.scene.add(l); 
+                return l; 
+            };
+            const perimeterState = {
+                segments: 100, 
+                topLineL: createPerimeterLine(), topLineR: createPerimeterLine(),
+                bottomLineL: createPerimeterLine(), bottomLineR: createPerimeterLine()
+            };
+
+            let unfoldTarget = { top: 0, bottom: 0, sideMesh: 0, perimeterLine: 0 }, unfoldCur = { top: 0, bottom: 0, sideMesh: 0, perimeterLine: 0 };
+            
+            els.r.addEventListener('input', e => { state.r=parseFloat(e.target.value); els.valR.textContent=state.r; model.updateParams(state.r, state.h); });
+            els.h.addEventListener('input', e => { state.h=parseFloat(e.target.value); els.valH.textContent=state.h; model.updateParams(state.r, state.h); });
+            
+            els.progSide.addEventListener('input', e => { 
+                els.valProgSide.textContent = e.target.value; 
+                unfoldTarget.sideMesh = parseInt(e.target.value)/100; 
+            });
+
+            els.progPerim.addEventListener('input', e => { 
+                els.valProgPerim.textContent = e.target.value; 
+                unfoldTarget.perimeterLine = parseInt(e.target.value)/100; 
+                const visible = unfoldTarget.perimeterLine > 0;
+                perimeterState.topLineL.visible = visible; perimeterState.topLineR.visible = visible;
+                perimeterState.bottomLineL.visible = visible; perimeterState.bottomLineR.visible = visible;
+            });
+            
+            const dropupTrigger = document.getElementById('dropup-trigger');
+            const dropupMenu = document.getElementById('dropup-menu');
+            const dropupLabel = document.getElementById('dropup-label');
+            
+            dropupTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropupMenu.classList.toggle('hidden');
+            });
+            document.addEventListener('click', () => dropupMenu.classList.add('hidden'));
+
+            document.querySelectorAll('.dropup-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const val = e.target.getAttribute('data-val');
+                    dropupLabel.textContent = e.target.textContent;
+                    state.cutMode = val;
+                    model.setUnfoldCutType(val);
+                });
+            });
+
+            els.btnTop.addEventListener('click', () => unfoldTarget.top = unfoldTarget.top > 0.5 ? 0 : 1);
+            els.btnBot.addEventListener('click', () => unfoldTarget.bottom = unfoldTarget.bottom > 0.5 ? 0 : 1);
+            document.getElementById('btn-unfold-reset-all').addEventListener('click', () => { 
+                unfoldTarget={top:0, bottom:0, sideMesh:0, perimeterLine:0}; 
+                els.progSide.value=0; els.valProgSide.textContent=0; 
+                els.progPerim.value=0; els.valProgPerim.textContent=0; 
+                perimeterState.topLineL.visible = false; perimeterState.topLineR.visible = false;
+                perimeterState.bottomLineL.visible = false; perimeterState.bottomLineR.visible = false;
+                
+                isNoTopMode = false;
+                isSideOnlyMode = false;
+                syncCapVisibility();
+            });
+
+            unfoldAppEnv.startAnimationLoop(() => {
+                TWEEN.update();
+                unfoldCur.top += (unfoldTarget.top - unfoldCur.top) * 0.1;
+                unfoldCur.bottom += (unfoldTarget.bottom - unfoldCur.bottom) * 0.1;
+                unfoldCur.sideMesh += (unfoldTarget.sideMesh - unfoldCur.sideMesh) * 0.1;
+                unfoldCur.perimeterLine += (unfoldTarget.perimeterLine - unfoldCur.perimeterLine) * 0.1;
+                model.setUnfoldTop(unfoldCur.top); model.setUnfoldBottom(unfoldCur.bottom); model.setUnfoldSide(unfoldCur.sideMesh);
+                
+                if(unfoldCur.perimeterLine > 0.001) {
+                    const showTopLine = !isNoTopMode && !isSideOnlyMode;
+                    const showBotLine = !isSideOnlyMode;
+
+                    perimeterState.topLineL.visible = showTopLine; perimeterState.topLineR.visible = showTopLine;
+                    perimeterState.bottomLineL.visible = showBotLine; perimeterState.bottomLineR.visible = showBotLine;
+                    
+                    const r = state.r, t = unfoldCur.perimeterLine, h = state.h, segs = perimeterState.segments;
+                    const perim = 2*Math.PI*r;
+                    
+                    const visualPerim = perim - 0.08; 
+                    
+                    if (model.parts?.top) model.parts.top.updateMatrixWorld(true);
+                    if (model.parts?.bottom) model.parts.bottom.updateMatrixWorld(true);
+                    if (model.meshGroup) model.meshGroup.updateMatrixWorld(true);
+
+                    const topMatrix = model.parts?.top ? model.parts.top.matrixWorld.clone() : new THREE.Matrix4();
+                    const bottomMatrix = model.parts?.bottom ? model.parts.bottom.matrixWorld.clone() : new THREE.Matrix4();
+                    const baseMatrix = model.meshGroup ? model.meshGroup.matrixWorld.clone() : new THREE.Matrix4();
+
+                    const topPositionsL = [], topPositionsR = [];
+                    const bottomPositionsL = [], bottomPositionsR = [];
+
+                    const shear = Math.tan(state.cutMode === 'oblique' ? -Math.PI/6 : 0);
+
+                    const localFront = new THREE.Vector3(0, 0, 1).transformDirection(baseMatrix).normalize();
+                    const localLeft = new THREE.Vector3(-1, 0, 0).transformDirection(baseMatrix).normalize();
+                    const localRight = new THREE.Vector3(1, 0, 0).transformDirection(baseMatrix).normalize();
+
+                    for(let i=0; i<=segs; i++) {
+                        const ratio = i/segs; 
+                        const delay = 1.0 - ratio; 
+                        let local_t = (t - delay * 0.2) / 0.8; 
+                        local_t = Math.max(0, Math.min(1, local_t));
+                        const eased_t = local_t * local_t * (3 - 2 * local_t); 
+
+                        const uL = 0.5 - 0.5 * ratio;
+                        const uR = 0.5 + 0.5 * ratio;
+
+                        let shiftTop = 0, shiftBot = 0;
+                        if (state.cutMode === 'oblique') {
+                            shiftTop = (h/2) * shear;
+                            shiftBot = (-h/2) * shear;
+                        } else if (state.cutMode === 'irregular') {
+                            const amp = r * 0.4;
+                            const freq = (Math.PI * 3) / h;
+                            shiftTop = amp * Math.sin(freq * (h/2));
+                            shiftBot = amp * Math.sin(freq * (-h/2));
+                        }
+
+                        const angleTopL = (uL + shiftTop/perim) * Math.PI * 2 + Math.PI;
+                        const angleTopR = (uR + shiftTop/perim) * Math.PI * 2 + Math.PI;
+                        const angleBotL = (uL + shiftBot/perim) * Math.PI * 2 + Math.PI;
+                        const angleBotR = (uR + shiftBot/perim) * Math.PI * 2 + Math.PI;
+
+                        const startTopL = new THREE.Vector3(r * Math.sin(angleTopL), 0, r * Math.cos(angleTopL)).applyMatrix4(topMatrix);
+                        const startTopR = new THREE.Vector3(r * Math.sin(angleTopR), 0, r * Math.cos(angleTopR)).applyMatrix4(topMatrix);
+                        const startBotL = new THREE.Vector3(r * Math.sin(angleBotL), 0, r * Math.cos(angleBotL)).applyMatrix4(bottomMatrix);
+                        const startBotR = new THREE.Vector3(r * Math.sin(angleBotR), 0, r * Math.cos(angleBotR)).applyMatrix4(bottomMatrix);
+
+                        const endTopL = new THREE.Vector3((uL - 0.5) * visualPerim + shiftTop, h/2, 0).applyMatrix4(baseMatrix);
+                        const endTopR = new THREE.Vector3((uR - 0.5) * visualPerim + shiftTop, h/2, 0).applyMatrix4(baseMatrix);
+                        const endBotL = new THREE.Vector3((uL - 0.5) * visualPerim + shiftBot, -h/2, 0).applyMatrix4(baseMatrix);
+                        const endBotR = new THREE.Vector3((uR - 0.5) * visualPerim + shiftBot, -h/2, 0).applyMatrix4(baseMatrix);
+
+                        const currTopL = startTopL.clone().lerp(endTopL, eased_t);
+                        const currTopR = startTopR.clone().lerp(endTopR, eased_t);
+                        const currBotL = startBotL.clone().lerp(endBotL, eased_t);
+                        const currBotR = startBotR.clone().lerp(endBotR, eased_t);
+
+                        const bulgeMagnitudeFront = Math.sin(eased_t * Math.PI) * (r * 0.8) * ratio; 
+                        const bulgeMagnitudeSide = Math.sin(eased_t * Math.PI) * (r * 0.4) * ratio;
+
+                        const pushFront = localFront.clone().multiplyScalar(bulgeMagnitudeFront);
+                        const pushLeft = localLeft.clone().multiplyScalar(bulgeMagnitudeSide);
+                        const pushRight = localRight.clone().multiplyScalar(bulgeMagnitudeSide);
+
+                        currTopL.add(pushFront).add(pushLeft);
+                        currBotL.add(pushFront).add(pushLeft);
+
+                        currTopR.add(pushFront).add(pushRight);
+                        currBotR.add(pushFront).add(pushRight);
+
+                        topPositionsL.push(currTopL.x, currTopL.y, currTopL.z);
+                        topPositionsR.push(currTopR.x, currTopR.y, currTopR.z);
+                        bottomPositionsL.push(currBotL.x, currBotL.y, currBotL.z);
+                        bottomPositionsR.push(currBotR.x, currBotR.y, currBotR.z);
+                    }
+                    
+                    perimeterState.topLineL.geometry.setPositions(topPositionsL);
+                    perimeterState.topLineR.geometry.setPositions(topPositionsR);
+                    perimeterState.bottomLineL.geometry.setPositions(bottomPositionsL);
+                    perimeterState.bottomLineR.geometry.setPositions(bottomPositionsR);
+                    
+                    const size = new THREE.Vector2();
+                    unfoldAppEnv.renderer.getSize(size);
+                    perimeterState.topLineL.material.resolution.copy(size);
+                    perimeterState.topLineR.material.resolution.copy(size);
+                    perimeterState.bottomLineL.material.resolution.copy(size);
+                    perimeterState.bottomLineR.material.resolution.copy(size);
+                } else {
+                    perimeterState.topLineL.visible = false; perimeterState.topLineR.visible = false;
+                    perimeterState.bottomLineL.visible = false; perimeterState.bottomLineR.visible = false;
+                }
+            });
+        }
+
+        // ---------------- 7. 全局导航控制 ----------------
+        const appEl = document.getElementById('app');
+        const unfoldEl = document.getElementById('unfold-page');
+        
+        document.getElementById('btn-unfold-nav').addEventListener('click', () => {
+            appEl.classList.add('hidden'); unfoldEl.classList.remove('hidden');
+            if(!window.unfoldInit) { initUnfoldApp(); window.unfoldInit = true; }
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        document.getElementById('btn-back-main').addEventListener('click', () => {
+            unfoldEl.classList.add('hidden'); appEl.classList.remove('hidden');
+            window.dispatchEvent(new Event('resize'));
+        });
+
+        // 防误触保护
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => { if (e.key === 'F12') e.preventDefault(); });
+
+        initMainApp();
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#fff7e8">
+  <title>抓娃娃大赛 · 看图列式</title>
+  <link rel="icon" href="assets/images/plush/plush-bear.webp">
+  <link rel="stylesheet" href="assets/styles/style.css">
+  <script defer src="assets/scripts/gsap.min.js"></script>
+  <script defer src="assets/scripts/questions.js"></script>
+  <script defer src="assets/scripts/mixed-pictures.js"></script>
+  <script defer src="assets/scripts/animation.js"></script>
+  <script defer src="assets/scripts/game.js"></script>
+</head>
+<body>
+<main id="app" aria-label="抓娃娃看图列式课件">
+  <header class="topbar">
+    <div class="brand"><img src="assets/images/plush/plush-bear.webp" alt="" draggable="false"><h1>抓娃娃大赛</h1></div>
+    <div id="clock" class="clock" aria-label="剩余时间"><img src="assets/images/ui/timer.svg" alt=""><span id="timeText">01:40</span></div>
+    <nav class="utilities" aria-label="课件工具">
+      <button id="settingsBtn"><img src="assets/images/ui/settings.svg" alt="">设置</button>
+      <button id="audioBtn"><img src="assets/images/ui/music.svg" alt="">声音</button>
+      <button id="pauseBtn"><img src="assets/images/ui/pause.svg" alt=""><span>暂停</span></button>
+      <span class="tool-separator"></span>
+      <button id="helpBtn"><img src="assets/images/ui/help.svg" alt="">说明</button>
+      <button id="penBtn"><img src="assets/images/ui/pen.svg" alt="">批注</button>
+      <button id="undoBtn"><img src="assets/images/ui/undo.svg" alt="">撤销</button>
+      <button id="resetBtn"><img src="assets/images/ui/reset.svg" alt="">重置</button>
+      <button id="fullscreenBtn"><img src="assets/images/ui/fullscreen.svg" alt=""><span>全屏</span></button>
+    </nav>
+  </header>
+  <section id="showcase" aria-label="游戏展示区">
+    <div id="scoreboard" class="scoreboard"></div>
+    <div id="machine" class="machine">
+      <img class="machine-background" src="assets/images/machine/machine-back.webp" alt="" draggable="false">
+      <img class="rail" src="assets/images/machine/rail.webp" alt="" draggable="false">
+      <div id="toyBack" class="toy-layer back"></div>
+      <div id="toyFront" class="toy-layer front"></div>
+      <div id="rigs"></div>
+      <img class="ball-pile pile-left" src="assets/images/machine/ball-pile.webp" alt="" draggable="false">
+      <img class="ball-pile pile-right" src="assets/images/machine/ball-pile.webp" alt="" draggable="false">
+      <img class="machine-front" src="assets/images/machine/front.webp" alt="" draggable="false">
+      <div id="chutes" class="chutes"></div>
+      <div id="effects" class="effects" aria-hidden="true"></div>
+    </div>
+  </section>
+  <section id="answerArea" class="answer-area" aria-label="学生答题区"></section>
+  <div id="countdown" class="countdown" role="status" aria-live="assertive" hidden><div class="countdown-card"><p id="countdownKicker" class="countdown-kicker">准备好了吗</p><div class="countdown-orbit" aria-hidden="true"></div><span id="countdownValue" class="countdown-value">3</span><p id="countdownHint" class="countdown-hint">看图 · 列式 · 抓娃娃</p></div></div>
+  <canvas id="inkCanvas" width="1600" height="900" aria-label="批注画布"></canvas>
+  <div id="penTools" class="pen-tools" hidden>
+    <button data-ink="#f64263" class="ink-color selected" aria-label="红色笔" style="--ink-color:#f64263"></button>
+    <button data-ink="#00a6dc" class="ink-color" aria-label="蓝色笔" style="--ink-color:#00a6dc"></button>
+    <button data-ink="#ac43e8" class="ink-color" aria-label="紫色笔" style="--ink-color:#ac43e8"></button>
+    <button id="inkUndo">撤销</button><button id="inkClear">清空</button><button id="inkDone">完成</button>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <div id="settingsModal" class="modal show" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <section class="dialog settings-dialog">
+      <div class="dialog-heading"><div class="settings-heading"><img src="assets/images/plush/plush-bear.webp" alt=""><div><h2 id="settingsTitle">准备开赛</h2><p>选好规则，一起抓娃娃！</p></div></div><button class="close-button" data-close="settingsModal" aria-label="关闭设置">×</button></div>
+      <div class="settings-columns">
+        <div class="settings-main">
+          <h3 class="settings-section-title"><span>01</span> 比赛设置</h3>
+          <div class="setting-line"><label>游玩人数</label><div id="playerChoices" class="choices"><button data-count="1">1人</button><button data-count="2">2人</button><button data-count="3">3人</button><button data-count="4" class="selected">4人</button></div></div>
+          <div class="setting-line"><label for="durationInput">比赛时间</label><div class="duration-control"><input id="durationInput" type="number" inputmode="numeric" min="10" max="3600" value="100"><span>秒</span><button data-time="60">60</button><button data-time="100">100</button><button data-time="180">180</button></div></div>
+          <div class="setting-line"><label for="qualitySelect">动画效果</label><select id="qualitySelect"><option value="auto">自动适配</option><option value="low">流畅优先</option><option value="high">精致模式</option></select></div>
+          <div class="setting-line"><label for="scopeSelect">教学范围</label><select id="scopeSelect"></select></div>
+          <div id="customRange" class="setting-line" hidden><label>数字范围</label><div class="range-inputs"><input id="customMin" type="number" min="0" max="19" value="0" aria-label="数字下限"><span>～</span><input id="customMax" type="number" min="2" max="20" value="10" aria-label="数字上限"></div></div>
+          <fieldset class="names-field"><legend>学生名字</legend><div id="nameInputs" class="name-inputs"></div></fieldset>
+        </div>
+        <fieldset class="forms-field"><legend class="settings-section-title"><span>02</span> 图题选择</legend><div id="formChoices" class="form-choices"></div><p id="scopeNote" class="scope-note"></p></fieldset>
+      </div>
+      <p id="settingsError" class="settings-error" role="alert"></p>
+      <div class="dialog-footer"><span id="loadStatus" class="load-status">正在准备素材…</span><button id="startBtn" class="primary start-button" disabled>开始比赛</button></div>
+    </section>
+  </div>
+
+  <div id="pauseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pauseTitle"><section class="dialog small-dialog"><h2 id="pauseTitle">休息一下</h2><p id="pauseText">准备好了，再继续。</p><button id="resumeBtn" class="primary">继续比赛</button></section></div>
+  <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><section class="dialog help-dialog"><div class="dialog-heading"><h2 id="helpTitle">玩法说明</h2><button class="close-button" data-close="helpModal" aria-label="关闭说明">×</button></div><p>1～4人游玩，默认100秒，可在设置中修改。</p><p>先看图，再点空格，填写数字和加减号。填完整后点“确定”。</p><p>答对一题加1分，机械爪抓起一只娃娃；答错可继续修改。</p><p>每人独立换题，单人结束后查看得分；多人得分最多者获胜，平分可并列。</p><p>“退格”修改算式，“撤销”退回最近一次得分。“重置”恢复默认设置。</p><p>批注时比赛暂停；用三种颜色书写，可撤销或清空笔迹。</p></section></div>
+  <div id="audioModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="audioTitle"><section class="dialog audio-dialog"><div class="dialog-heading"><h2 id="audioTitle">声音设置</h2><button class="close-button" data-close="audioModal" aria-label="关闭声音设置">×</button></div><label class="audio-option"><input id="musicToggle" type="checkbox" checked>背景音乐</label><input id="musicVolume" type="range" min="0" max="50" value="14" aria-label="背景音乐音量"><label class="audio-option"><input id="sfxToggle" type="checkbox" checked>游戏音效</label><input id="sfxVolume" type="range" min="0" max="100" value="55" aria-label="音效音量"><p class="audio-caption">轻快伴奏，轻声播放</p></section></div>
+  <div id="resultModal" class="modal result-modal" role="dialog" aria-modal="true" aria-labelledby="resultTitle"><section class="dialog result-dialog"><img class="result-trophy" src="assets/images/effects/trophy.webp" alt="奖杯"><h2 id="resultTitle">比赛结束</h2><p id="winnerText" class="winner-text"></p><div id="resultScores" class="result-scores"></div><div class="result-actions"><button id="againBtn" class="primary">再来一局</button><button id="adjustBtn">调整设置</button><button id="viewBoardBtn">查看赛场</button></div></section></div>
+</main>
+<!-- 素材署名与许可见 THIRD-PARTY-NOTICES.txt，请随发布包一同保留。 -->
+</body>
+</html>

@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>浓度问题交互课件</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Zcool+KuaiLe&display=swap');
+
+        /* 全局设置 */
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #ecfccb;
+            background-image: 
+                radial-gradient(#84cc16 1px, transparent 1px), 
+                radial-gradient(#84cc16 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            background-color: #f7fee7;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            color: #3f6212;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            gap: 0;
+            max-width: 1280px;
+            margin: 0 auto;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 10;
+        }
+
+        header {
+            background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .main-display-area {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 5px;
+            overflow: hidden;
+            z-index: 20;
+        }
+
+        #scalable-content {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform-origin: center center;
+            transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* 缩放控制器 */
+        .zoom-control {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 12px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1001;
+        }
+        .zoom-slider { width: 80px; accent-color: #16a34a; height: 4px; }
+
+        .question-box {
+            background: #fffbeb;
+            border-left: 6px solid #f59e0b;
+            padding: 8px 20px;
+            margin-bottom: 5px;
+            width: 95%;
+            max-width: 900px;
+            border-radius: 8px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            color: #92400e;
+            font-weight: 600;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 20;
+        }
+        .question-box::before {
+            content: '📝 任务';
+            position: absolute;
+            top: -8px;
+            left: 10px;
+            background: #f59e0b;
+            color: white;
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .question-box.empty {
+            border-color: #cbd5e1;
+            background: #f1f5f9;
+            color: #64748b;
+            justify-content: center;
+        }
+        .question-box.empty::before { display: none; }
+
+        .experiment-area {
+            display: flex;
+            width: 100%;
+            justify-content: center;
+            align-items: flex-end; 
+            position: relative;
+            gap: 1.5rem; 
+            padding-bottom: 5px;
+            margin-top: 10px; 
+        }
+
+        .lab-shelf {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 10px;
+        }
+        .shelf-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .draggable-source {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.1s, box-shadow 0.1s;
+            position: relative;
+            touch-action: none; 
+        }
+        .draggable-source:active { transform: scale(0.95); cursor: grabbing; }
+        .icon-svg { width: 40px; height: 40px; margin-bottom: 2px; pointer-events: none; }
+        .draggable-source span { font-size: 0.7rem; font-weight: bold; color: #475569; z-index: 2; margin-top: -3px; pointer-events: none; }
+
+        .drag-ghost {
+            position: fixed;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #22c55e;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 9999;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            opacity: 0.9;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        
+        .shelf-inputs { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+        .input-group { display: flex; align-items: center; gap: 4px; }
+        .add-input { width: 50px; padding: 2px 4px; border: 2px solid #cbd5e1; border-radius: 6px; text-align: center; font-size: 0.85rem; color: #334155; font-weight: bold; }
+        .add-input:focus { outline: none; border-color: #22c55e; }
+        .unit-text { font-size: 0.7rem; color: #64748b; font-weight: bold; width: 10px; }
+
+        .shelf-reset-btn { width: 100%; background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 0; font-size: 0.75rem; font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .shelf-reset-btn:hover { background-color: #e2e8f0; color: #475569; border-color: #94a3b8; }
+        .shelf-reset-btn:active { transform: translateY(1px); }
+
+        .beaker-group { flex: 0 1 300px; display: flex; flex-direction: column; position: relative; }
+        .beaker-wrapper { position: relative; width: 100%; height: 210px; transition: transform 0.2s; }
+        
+        .beaker-wrapper.drag-highlight::after {
+            content: ''; position: absolute; inset: -10px; border: 4px dashed #22c55e; border-radius: 16px; background: rgba(34, 197, 94, 0.15); pointer-events: none; z-index: 50;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        .beaker-label { text-align: center; font-weight: bold; color: #166534; margin-bottom: 0.2rem; background: #dcfce7; padding: 2px 12px; border-radius: 20px; display: inline-block; align-self: center; font-size: 0.9rem; border: 2px solid #bbf7d0; }
+
+        canvas.simulation-canvas { width: 100%; height: 100%; }
+
+        .data-table-container { width: 95%; max-width: 850px; z-index: 10; margin-top: 5px; perspective: 1000px; }
+        .data-table { border-collapse: separate; border-spacing: 0; width: 100%; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); font-size: 0.95rem; border: 1px solid #e2e8f0; }
+        .data-table thead tr { background: linear-gradient(to right, #22c55e, #16a34a); color: white; }
+        .data-table th { padding: 8px 6px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.1); border: none; text-align: center; vertical-align: middle; }
+        .data-table td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; color: #334155; transition: background 0.2s; height: 40px; text-align: center; vertical-align: middle; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background-color: #f0fdf4; }
+
+        .student-input-wrapper { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; }
+        .student-input { width: 60px; background: #fef9c3; border: 2px dashed #facc15; border-radius: 6px; text-align: center; padding: 2px; font-family: 'Noto Sans SC', monospace; font-weight: bold; color: #854d0e; outline: none; transition: all 0.2s; font-size: 0.9rem; }
+        .student-input:focus { background: #fff; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+        .student-input.correct { background-color: #dcfce7 !important; border-color: #16a34a !important; color: #166534 !important; box-shadow: none; border-style: solid; }
+        .student-input.error { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        
+        .watermark { position: absolute; bottom: 15px; right: 25px; font-family: 'Zcool KuaiLe', cursive; font-size: 2.5rem; font-weight: bold; color: rgba(55, 65, 81, 0.4); pointer-events: none; z-index: 5; }
+
+        .control-panel { 
+            background: #ffffff; 
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05); 
+            padding: 8px 24px; 
+            border-top: 1px solid #f1f5f9; 
+            z-index: 1000;
+            position: relative; 
+        }
+        
+        .candy-btn { border: none; border-radius: 12px; font-weight: bold; transition: all 0.1s; position: relative; top: 0; box-shadow: 0 4px 0 rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .candy-btn:active { top: 4px; box-shadow: 0 0 0 rgba(0,0,0,0.2); }
+        .candy-btn.yellow { background: #fcd34d; color: #78350f; box-shadow: 0 4px 0 #d97706; }
+        .candy-btn.blue { background: #60a5fa; color: white; box-shadow: 0 4px 0 #2563eb; }
+        .candy-btn.purple { background: #a78bfa; color: white; box-shadow: 0 4px 0 #7c3aed; }
+        .candy-btn.orange { background: #fb923c; color: white; box-shadow: 0 4px 0 #ea580c; }
+        .candy-btn.green { background: #4ade80; color: #14532d; box-shadow: 0 4px 0 #16a34a; }
+        .candy-btn.white { background: white; color: #475569; border: 2px solid #e2e8f0; box-shadow: 0 4px 0 #cbd5e1; }
+        .candy-btn.gray { background: #94a3b8; color: white; box-shadow: 0 4px 0 #64748b; }
+        .candy-btn.selected { border: 2px solid #16a34a; background: #dcfce7; color: #166534; box-shadow: 0 2px 0 #16a34a; top: 2px; }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 8px 0; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #ffffff; border: 3px solid #22c55e; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: -9px; cursor: pointer; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        
+        #drawing-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 900; 
+            touch-action: none; pointer-events: none; cursor: crosshair; 
+        }
+        #drawing-layer.active { pointer-events: auto; background: rgba(0, 0, 0, 0.02); }
+    </style>
+</head>
+<body>
+
+    <canvas id="drawing-layer"></canvas>
+
+    <div class="layout-grid">
+        <header class="text-white py-2 px-6 shadow-md flex justify-between items-center z-10 h-14 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-1.5 rounded-lg">
+                    <i class="fas fa-flask text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-wide text-shadow">浓度问题交互课件</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex bg-green-800/30 p-1 rounded-lg gap-1">
+                    <button onclick="app.setSoluteType('salt')" id="btn-mode-salt" class="px-2 py-1 text-xs rounded bg-white text-green-800 font-bold shadow-sm transition-all" title="食盐">🧂 盐</button>
+                    <button onclick="app.setSoluteType('glucose')" id="btn-mode-glucose" class="px-2 py-1 text-xs rounded text-white/80 hover:bg-white/10 transition-all" title="葡萄糖">🍬 糖</button>
+                    <button onclick="app.setSoluteType('alcohol')" id="btn-mode-alcohol" class="px-2 py-1 text-xs rounded text-white/80 hover:bg-white/10 transition-all" title="酒精">🍷 酒</button>
+                    <button onclick="app.setSoluteType('medicine')" id="btn-mode-medicine" class="px-2 py-1 text-xs rounded text-white/80 hover:bg-white/10 transition-all" title="药水">💊 药</button>
+                </div>
+                <span class="text-xs bg-green-800/50 px-3 py-1 rounded-full border border-white/20">
+                    六年级 · 数学
+                </span>
+            </div>
+        </header>
+
+        <main class="main-display-area">
+            <div class="zoom-control">
+                <span class="text-xs font-bold text-gray-500">🔍 缩放</span>
+                <input type="range" id="zoom-slider" min="50" max="120" value="85" class="zoom-slider" oninput="app.setZoom(this.value)">
+                <span id="zoom-val" class="text-xs font-mono w-8 text-gray-600">85%</span>
+            </div>
+
+            <div id="scalable-content">
+                <div id="question-text" class="question-box empty">
+                    👇 请点击下方按钮生成题目，开始实验吧！
+                </div>
+
+                <div class="experiment-area">
+                    <div class="lab-shelf">
+                        <button onclick="quizApp.resetExperiment()" class="shelf-reset-btn" title="将实验重置到题目初始状态">
+                            <i class="fas fa-undo-alt text-xs"></i> 重置实验
+                        </button>
+                        
+                        <div class="text-xs font-bold text-gray-500 mb-1 text-center mt-1">👇 拖拽添加</div>
+                        
+                        <!-- 溶质 -->
+                        <div class="shelf-item">
+                            <div class="draggable-source" 
+                                 onmousedown="dragManager.start(event, 'solute')" 
+                                 ontouchstart="dragManager.start(event, 'solute')">
+                                <svg class="icon-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M25 35 H75 V90 C75 95 70 100 65 100 H35 C30 100 25 95 25 90 V35 Z" fill="rgba(255,255,255,0.6)" stroke="#94a3b8" stroke-width="2"/>
+                                    <rect x="20" y="20" width="60" height="15" rx="4" fill="#64748b" stroke="#475569" stroke-width="2"/>
+                                    <path d="M30 90 L50 55 L70 90 Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+                                    <path d="M30 40 V80" stroke="white" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+                                </svg>
+                                <span>溶质</span>
+                            </div>
+                            <div class="shelf-inputs">
+                                <div class="input-group">
+                                    <input type="number" id="input-add-solute" class="add-input" value="10" min="1" max="100"> 
+                                    <span class="unit-text">g</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 溶剂 -->
+                        <div class="shelf-item">
+                            <div class="draggable-source" 
+                                 onmousedown="dragManager.start(event, 'solvent')" 
+                                 ontouchstart="dragManager.start(event, 'solvent')">
+                                 <svg class="icon-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <g transform="translate(10, 10) scale(0.8)">
+                                        <path d="M50 5 Q85 55 85 75 A35 35 0 1 1 15 75 Q15 55 50 5 Z" fill="url(#gradWater)" stroke="#60a5fa" stroke-width="1"/>
+                                        <path d="M50 15 Q75 55 75 75 A25 25 0 1 1 25 75 Q25 55 50 15 Z" fill="url(#gradWaterInner)" stroke="none" opacity="0.3"/>
+                                        <path d="M35 70 Q35 55 45 45" stroke="white" stroke-width="3" fill="none" opacity="0.8" stroke-linecap="round"/>
+                                        <circle cx="65" cy="65" r="3" fill="white" opacity="0.6" />
+                                    </g>
+                                    <defs>
+                                        <linearGradient id="gradWater" x1="50" y1="0" x2="50" y2="100" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="#e0f2fe" /> 
+                                            <stop offset="1" stop-color="#bae6fd" />
+                                        </linearGradient>
+                                        <linearGradient id="gradWaterInner" x1="50" y1="0" x2="50" y2="100" gradientUnits="userSpaceOnUse">
+                                             <stop stop-color="#ffffff" />
+                                             <stop offset="1" stop-color="#e0f2fe" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <span>溶剂</span>
+                            </div>
+                            <div class="shelf-inputs">
+                                <div class="input-group">
+                                    <input type="number" id="input-add-solvent" class="add-input" value="50" min="1" max="200"> 
+                                    <span class="unit-text">g</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 溶液 -->
+                        <div class="shelf-item">
+                            <div class="draggable-source" 
+                                 onmousedown="dragManager.start(event, 'solution')" 
+                                 ontouchstart="dragManager.start(event, 'solution')">
+                                <svg class="icon-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M40 10 H60 V35 L80 90 C82 95 78 100 70 100 H30 C22 100 18 95 20 90 L40 35 V10 Z" fill="rgba(224, 242, 254, 0.3)" stroke="#0ea5e9" stroke-width="2"/>
+                                    <path d="M24 75 L76 75 L80 90 C82 95 78 100 70 100 H30 C22 100 18 95 20 90 L24 75 Z" fill="url(#gradSaltSolution)" stroke="none"/>
+                                    <defs>
+                                        <linearGradient id="gradSaltSolution" x1="50" y1="75" x2="50" y2="100" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="rgba(125, 211, 252, 0.8)" /> <!-- Sky 300 -->
+                                            <stop offset="1" stop-color="rgba(14, 165, 233, 0.9)" /> <!-- Sky 500 -->
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="35" cy="90" r="2" fill="white" opacity="0.6"/>
+                                    <circle cx="50" cy="85" r="2" fill="white" opacity="0.6"/>
+                                    <circle cx="65" cy="92" r="2" fill="white" opacity="0.6"/>
+                                    <circle cx="45" cy="80" r="1.5" fill="white" opacity="0.6"/>
+                                </svg>
+                                <span>溶液</span>
+                            </div>
+                            <div class="shelf-inputs">
+                                <div class="input-group">
+                                    <input type="number" id="input-add-solution" class="add-input" value="50" min="1" max="200"> 
+                                    <span class="unit-text">g</span>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" id="input-add-solution-conc" class="add-input" value="20" min="1" max="36" onchange="if(this.value>36)this.value=36;if(this.value<0)this.value=0"> 
+                                    <span class="unit-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 容器 A -->
+                    <div class="beaker-group">
+                        <div class="beaker-label" id="label-A">初始容器 A</div>
+                        <div class="beaker-wrapper" id="wrapperA">
+                            <canvas id="canvasA" class="simulation-canvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 3. 容器 B -->
+                    <div class="beaker-group">
+                        <div class="beaker-label" id="label-B">目标容器 B</div>
+                        <div class="beaker-wrapper" id="wrapperB">
+                            <canvas id="canvasB" class="simulation-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="w-1/5"><i class="fas fa-tag opacity-70 mr-1"></i>对象</th>
+                                <th class="w-1/5" id="th-salt"><i class="fas fa-cube opacity-70 mr-1"></i>溶质(盐)</th>
+                                <th class="w-1/5" id="th-water"><i class="fas fa-tint opacity-70 mr-1"></i>溶剂(水)</th>
+                                <th class="w-1/5"><i class="fas fa-balance-scale opacity-70 mr-1"></i>溶液(总)</th>
+                                <th class="w-1/5" id="th-conc"><i class="fas fa-percentage opacity-70 mr-1"></i>浓度</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="font-bold text-green-800" id="row-name-A">容器 A</td>
+                                <td id="td-salt-A" class="font-mono font-bold text-lg">0g</td>
+                                <td id="td-water-A" class="font-mono text-lg">0g</td>
+                                <td id="td-total-A" class="font-mono text-lg">0g</td>
+                                <td id="td-conc-A" class="font-bold text-orange-600 text-lg">0%</td>
+                            </tr>
+                            <tr>
+                                <td class="font-bold text-green-800" id="row-name-B">容器 B</td>
+                                <td id="td-salt-B" class="font-mono font-bold text-lg">0g</td>
+                                <td id="td-water-B" class="font-mono text-lg">0g</td>
+                                <td id="td-total-B" class="font-mono text-lg">0g</td>
+                                <td id="td-conc-B" class="font-bold text-orange-600 text-lg">0%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div> <!-- End of Scalable Content -->
+            
+            
+        </main>
+
+        <section class="control-panel flex-shrink-0">
+            <div class="flex flex-row gap-6 h-full max-w-7xl mx-auto items-center">
+                
+                <div class="w-auto flex flex-col gap-2 border-r border-gray-100 pr-6 justify-center min-w-[120px]">
+                    <button id="btn-pen" onclick="drawingApp.toggleMode()" class="candy-btn white w-full py-1.5 text-xs">
+                        <i class="fas fa-pen mr-2 text-green-500"></i> <span>画笔</span>
+                    </button>
+                    <button onclick="drawingApp.clear()" class="candy-btn white w-full py-1.5 text-xs text-red-500 hover:text-red-600">
+                        <i class="fas fa-eraser mr-2"></i> <span>清除</span>
+                    </button>
+                </div>
+
+                <div class="w-auto flex flex-col gap-2 border-r border-gray-100 px-6 justify-center flex-1">
+                    <div class="text-xs font-bold text-gray-500 text-center uppercase tracking-wider">智能出题系统 (浓度≤36%)</div>
+                    <div class="grid grid-cols-4 gap-2"> 
+                        <button onclick="quizApp.generate('add_solute')" class="candy-btn yellow py-1.5 text-xs">加溶质</button>
+                        <button onclick="quizApp.generate('add_solvent')" class="candy-btn blue py-1.5 text-xs">加溶剂</button>
+                        <button onclick="quizApp.generate('add_solution')" class="candy-btn purple py-1.5 text-xs">复杂问题</button>
+                        <button onclick="quizApp.resetExperiment()" class="candy-btn gray py-1.5 text-xs">自由实验</button>
+                    </div>
+                    <div class="mt-1 flex justify-center w-full">
+                         <button onclick="quizApp.showAnswer()" class="candy-btn green w-full py-1.5 text-xs">
+                            <i class="fas fa-key mr-2 opacity-80"></i> 显示答案 / 允许操作
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 pl-2 w-[450px]">
+                    <div class="flex flex-col gap-1 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-700 text-xs"><i class="fas fa-vial mr-1 text-green-600"></i>容器 A</span>
+                            <button onclick="app.toggleState('A')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-0.5 rounded-full font-bold transition-colors">分离/混合</button>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-6 text-gray-500 font-bold" id="lbl-ctrl-salt-A">溶质</span>
+                                <input type="range" min="0" max="150" id="input-salt-A" oninput="app.updateParams('A')" class="flex-1 accent-green-500">
+                                <span class="w-10 text-right font-mono font-bold text-gray-700" id="disp-salt-A">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 text-blue-400 font-bold">水</span>
+                                <input type="range" min="0" max="400" id="input-water-A" oninput="app.updateParams('A')" class="flex-1">
+                                <span class="w-10 text-right font-mono font-bold text-blue-600" id="disp-water-A">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-700 text-xs"><i class="fas fa-vial mr-1 text-green-600"></i>容器 B</span>
+                            <button onclick="app.toggleState('B')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-0.5 rounded-full font-bold transition-colors">分离/混合</button>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-6 text-gray-500 font-bold" id="lbl-ctrl-salt-B">溶质</span>
+                                <input type="range" min="0" max="150" id="input-salt-B" oninput="app.updateParams('B')" class="flex-1">
+                                <span class="w-10 text-right font-mono font-bold text-gray-700" id="disp-salt-B">0</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 text-blue-400 font-bold">水</span>
+                                <input type="range" min="0" max="400" id="input-water-B" oninput="app.updateParams('B')" class="flex-1">
+                                <span class="w-10 text-right font-mono font-bold text-blue-600" id="disp-water-B">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- 安全防护 (Anti-Theft) ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function(e) {
+            if (e.keyCode == 123) return false; 
+            if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0))) return false; 
+            if (e.ctrlKey && (e.keyCode == 'U'.charCodeAt(0) || e.keyCode == 'S'.charCodeAt(0))) return false; 
+        }
+
+        // --- 全能拖拽管理器 (Touch & Mouse) ---
+        const dragManager = {
+            activeDrag: null,
+            
+            start(e, type) {
+                e.preventDefault(); 
+                const touch = e.touches ? e.touches[0] : e;
+                
+                // 创建残影
+                const ghost = document.createElement('div');
+                ghost.className = 'drag-ghost';
+                ghost.innerHTML = e.currentTarget.innerHTML; 
+                document.body.appendChild(ghost);
+                
+                this.activeDrag = {
+                    type: type,
+                    el: ghost,
+                    startX: touch.clientX,
+                    startY: touch.clientY
+                };
+
+                this.updatePos(touch.clientX, touch.clientY);
+
+                const moveHandler = (ev) => this.move(ev);
+                const endHandler = (ev) => this.end(ev, moveHandler, endHandler);
+
+                document.addEventListener('mousemove', moveHandler, {passive: false});
+                document.addEventListener('touchmove', moveHandler, {passive: false});
+                document.addEventListener('mouseup', endHandler);
+                document.addEventListener('touchend', endHandler);
+            },
+
+            move(e) {
+                if (!this.activeDrag) return;
+                e.preventDefault();
+                const touch = e.touches ? e.touches[0] : e;
+                this.updatePos(touch.clientX, touch.clientY);
+                this.checkHover(touch.clientX, touch.clientY);
+            },
+
+            updatePos(x, y) {
+                if(this.activeDrag && this.activeDrag.el) {
+                    this.activeDrag.el.style.left = x + 'px';
+                    this.activeDrag.el.style.top = y + 'px';
+                }
+            },
+
+            checkHover(x, y) {
+                document.querySelectorAll('.beaker-wrapper').forEach(el => el.classList.remove('drag-highlight'));
+                const target = this.getDropTarget(x, y);
+                if (target) {
+                    document.getElementById(`wrapper${target}`).classList.add('drag-highlight');
+                }
+            },
+
+            getDropTarget(x, y) {
+                const targets = ['A', 'B'];
+                for (let id of targets) {
+                    const el = document.getElementById(`wrapper${id}`);
+                    const rect = el.getBoundingClientRect();
+                    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                        return id;
+                    }
+                }
+                return null;
+            },
+
+            end(e, moveFn, endFn) {
+                document.removeEventListener('mousemove', moveFn);
+                document.removeEventListener('touchmove', moveFn);
+                document.removeEventListener('mouseup', endFn);
+                document.removeEventListener('touchend', endFn);
+
+                if (!this.activeDrag) return;
+                
+                const touch = e.changedTouches ? e.changedTouches[0] : e;
+                const targetId = this.getDropTarget(touch.clientX, touch.clientY);
+
+                if (targetId) {
+                    this.triggerDrop(targetId, this.activeDrag.type);
+                }
+
+                this.activeDrag.el.remove();
+                this.activeDrag = null;
+                document.querySelectorAll('.beaker-wrapper').forEach(el => el.classList.remove('drag-highlight'));
+            },
+
+            triggerDrop(targetId, type) {
+                let amount = 0;
+                let concentration = 0; 
+                let saltDelta = 0, waterDelta = 0;
+                
+                if (type === 'solute') {
+                    amount = parseInt(document.getElementById('input-add-solute').value) || 0;
+                    saltDelta = amount;
+                } else if (type === 'solvent') {
+                    amount = parseInt(document.getElementById('input-add-solvent').value) || 0;
+                    waterDelta = amount;
+                } else if (type === 'solution') {
+                    amount = parseInt(document.getElementById('input-add-solution').value) || 0;
+                    let concVal = parseInt(document.getElementById('input-add-solution-conc').value) || 0;
+                    if(concVal > 36) { concVal = 36; document.getElementById('input-add-solution-conc').value = 36; }
+                    if(concVal < 0) { concVal = 0; }
+                    concentration = concVal / 100;
+                    saltDelta = amount * concentration;
+                    waterDelta = amount * (1 - concentration);
+                }
+                
+                const sim = targetId === 'A' ? app.simA : app.simB;
+                sim.triggerPour(type, saltDelta, waterDelta);
+            }
+        };
+
+        // --- 画板 ---
+        const drawingApp = {
+            canvas: null, ctx: null, isActive: false, isDrawing: false, lastX: 0, lastY: 0,
+            init() {
+                this.canvas = document.getElementById('drawing-layer');
+                if(!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.resize(); window.addEventListener('resize', () => this.resize());
+                
+                const h = (e, fn) => { this.canvas.addEventListener(e, fn, {passive: false}); };
+                h('mousedown', (e) => this.start(e)); h('mousemove', (e) => this.draw(e)); h('mouseup', () => this.stop()); h('mouseout', () => this.stop());
+                h('touchstart', (e) => { if(this.isActive) { e.preventDefault(); this.start(e.touches[0]); } });
+                h('touchmove', (e) => { if(this.isActive) { e.preventDefault(); this.draw(e.touches[0]); } });
+                h('touchend', () => this.stop());
+            },
+            resize() { if(this.canvas) {this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }},
+            toggleMode() {
+                if(!this.canvas) return;
+                this.isActive = !this.isActive;
+                const btn = document.getElementById('btn-pen');
+                this.canvas.classList.toggle('active', this.isActive);
+                if (this.isActive) {
+                    btn.classList.remove('white'); btn.classList.add('yellow');
+                    btn.innerHTML = '<i class="fas fa-times mr-2"></i> 关闭画笔';
+                } else {
+                    btn.classList.remove('yellow'); btn.classList.add('white');
+                    btn.innerHTML = '<i class="fas fa-pen mr-2 text-green-500"></i> <span>画笔</span>';
+                }
+            },
+            clear() { if(this.ctx && this.canvas) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); },
+            start(e) { if (!this.isActive) return; this.isDrawing = true; [this.lastX, this.lastY] = [e.clientX, e.clientY]; },
+            draw(e) {
+                if (!this.isDrawing || !this.isActive || !this.ctx) return;
+                this.ctx.beginPath(); this.ctx.moveTo(this.lastX, this.lastY); this.ctx.lineTo(e.clientX, e.clientY);
+                this.ctx.strokeStyle = '#ef4444'; this.ctx.lineWidth = 3; this.ctx.lineCap = 'round'; this.ctx.stroke();
+                [this.lastX, this.lastY] = [e.clientX, e.clientY];
+            },
+            stop() { this.isDrawing = false; }
+        };
+
+        // --- 核心物理引擎 ---
+        class BeakerSim {
+            constructor(canvasId, initialSalt, initialWater, id, alignment = 'left') {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.salt = initialSalt;
+                this.water = initialWater;
+                this.targetSalt = initialSalt;
+                this.targetWater = initialWater;
+                this.id = id; 
+                this.alignment = alignment; 
+                this.isSeparated = false; 
+                this.animationProgress = 0.0; 
+                this.particles = [];
+                this.width = 0;
+                this.height = 0;
+                this.scaleRatio = 0.42; 
+                this.wavePhase = 0; 
+                this.masks = {}; 
+                this.soluteType = 'salt';
+                this.pouringState = { active: false, timer: 0, type: '', sDelta: 0, wDelta: 0 };
+                
+                setTimeout(() => { this.resize(); this.initParticles(); }, 100);
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                const wrapper = this.canvas.parentElement;
+                if (!wrapper) return;
+                this.width = wrapper.clientWidth || 300;
+                this.height = wrapper.clientHeight || 240;
+                const dpr = window.devicePixelRatio || 1;
+                this.canvas.width = this.width * dpr;
+                this.canvas.height = this.height * dpr;
+                this.ctx.scale(dpr, dpr);
+            }
+
+            setSoluteType(type) {
+                this.soluteType = type;
+                this.initParticles();
+            }
+
+            // Compatibility method
+            setHintConfig(config) {}
+
+            initParticles() {
+                const count = Math.min(this.salt * 6, 800); 
+                this.particles = [];
+                for (let i = 0; i < count; i++) {
+                    const p = {
+                        x: Math.random(), y: Math.random(), 
+                        speedX: (Math.random() - 0.5) * 0.5, speedY: (Math.random() - 0.5) * 0.2,
+                        size: Math.random() * 2 + 0.5, 
+                        alpha: Math.random() * 0.5 + 0.5
+                    };
+                    if (this.soluteType === 'alcohol') {
+                        p.size = Math.random() * 3 + 1; 
+                        p.speedY = -Math.abs(p.speedY) - 0.2; 
+                    } else if (this.soluteType === 'glucose') {
+                        p.size = Math.random() * 3 + 1; 
+                    }
+                    this.particles.push(p);
+                }
+            }
+
+            updateData(salt, water, immediate = false) {
+                const MAX_WATER = 400; const MAX_SALT = 150;
+                if (water > MAX_WATER) water = MAX_WATER;
+                if (salt > MAX_SALT) salt = MAX_SALT;
+
+                this.targetSalt = Math.round(parseInt(salt)); 
+                this.targetWater = Math.round(parseInt(water));
+
+                if (immediate) {
+                    this.salt = this.targetSalt;
+                    this.water = this.targetWater;
+                    this.initParticles();
+                    this.pouringState = { active: false, timer: 0, type: '', sDelta: 0, wDelta: 0 };
+                } else {
+                    if (Math.abs(this.salt - this.targetSalt) > 2) this.initParticles();
+                }
+            }
+
+            updateMasks(masks) { this.masks = masks; }
+            toggleState() { this.isSeparated = !this.isSeparated; }
+            
+            triggerPour(type, sDelta, wDelta) {
+                this.pouringState = { active: true, timer: 60, type: type, sDelta: sDelta, wDelta: wDelta };
+                
+                const currentSalt = Number(this.targetSalt);
+                const currentWater = Number(this.targetWater);
+                const deltaS = Number(sDelta);
+                const deltaW = Number(wDelta);
+                
+                const nextS = currentSalt + deltaS;
+                const nextW = currentWater + deltaW;
+                
+                app.addMass(this.id, nextS, nextW);
+            }
+
+            drawGlass(marginX, glassTopY, glassBottomY, width) {
+                if (width <= 0) return;
+                const ctx = this.ctx;
+                const r = 10; 
+                ctx.beginPath();
+                ctx.moveTo(marginX, glassTopY);
+                ctx.lineTo(marginX, glassBottomY - r);
+                ctx.quadraticCurveTo(marginX, glassBottomY, marginX + r, glassBottomY);
+                ctx.lineTo(marginX + width - r, glassBottomY);
+                ctx.quadraticCurveTo(marginX + width, glassBottomY, marginX + width, glassBottomY - r);
+                ctx.lineTo(marginX + width, glassTopY);
+                ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(200, 220, 230, 0.8)'; ctx.stroke();
+                ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath(); ctx.moveTo(marginX + 6, glassTopY + 10); ctx.lineTo(marginX + 6, glassBottomY - 15); ctx.stroke();
+                ctx.beginPath(); ctx.ellipse(marginX + width/2, glassTopY, width/2, 6, 0, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(180, 200, 210, 0.8)'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.fillStyle = 'rgba(240, 250, 255, 0.1)'; ctx.fill();
+            }
+
+            drawLiquid(x, y, w, h) {
+                if (h <= 0 || w <= 0) return;
+                const ctx = this.ctx;
+                ctx.beginPath();
+                ctx.moveTo(x, y); ctx.lineTo(x + w, y);
+                const r = 8;
+                ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); 
+                ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); 
+                ctx.closePath();
+
+                const grad = ctx.createLinearGradient(x, y, x, y + h);
+                let colorTop = 'rgba(186, 230, 253, 0.4)'; 
+                let colorBottom = 'rgba(96, 165, 250, 0.5)'; 
+                
+                if (this.salt > 0) {
+                     if (this.soluteType === 'medicine') {
+                         colorTop = 'rgba(233, 213, 255, 0.4)'; colorBottom = 'rgba(192, 132, 252, 0.6)';
+                     } else if (this.soluteType === 'alcohol') {
+                         colorTop = 'rgba(207, 250, 254, 0.3)'; colorBottom = 'rgba(34, 211, 238, 0.4)';
+                     } else if (this.soluteType === 'glucose') {
+                         colorTop = 'rgba(254, 243, 199, 0.4)'; colorBottom = 'rgba(253, 224, 71, 0.5)';
+                     } else { 
+                         colorTop = 'rgba(125, 211, 252, 0.5)'; 
+                         colorBottom = 'rgba(14, 165, 233, 0.6)'; 
+                     }
+                }
+
+                grad.addColorStop(0, colorTop);
+                grad.addColorStop(1, colorBottom);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 2; ctx.stroke();
+            }
+            
+            drawPouring(glassTopY) {
+                if (!this.pouringState.active) return;
+                
+                const ctx = this.ctx;
+                const centerX = this.width / 2;
+                const topY = 10;
+                const totalFrames = 60;
+                const progress = (totalFrames - this.pouringState.timer) / totalFrames;
+                
+                let angle = 0;
+                if (progress < 0.2) angle = progress * 5 * (Math.PI / 4); 
+                else if (progress > 0.8) angle = Math.PI / 4 - (progress - 0.8) * 5 * (Math.PI / 4);
+                else angle = Math.PI / 4;
+
+                ctx.save();
+                ctx.translate(centerX, topY);
+
+                if (this.pouringState.type === 'solute') {
+                    ctx.rotate(-angle); 
+                    const gradHandle = ctx.createLinearGradient(0, -5, 0, 5);
+                    gradHandle.addColorStop(0, '#e2e8f0'); gradHandle.addColorStop(1, '#94a3b8');
+                    ctx.fillStyle = gradHandle;
+                    ctx.fillRect(10, -3, 80, 6);
+                    const gradBowl = ctx.createRadialGradient(-30, -5, 5, -30, 0, 40);
+                    gradBowl.addColorStop(0, '#f8fafc'); gradBowl.addColorStop(1, '#64748b');
+                    ctx.fillStyle = gradBowl;
+                    ctx.beginPath();
+                    ctx.ellipse(-30, 0, 40, 15, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    if (progress < 0.8) {
+                        ctx.fillStyle = this.soluteType === 'medicine' ? '#fca5a5' : '#ffffff';
+                        ctx.beginPath();
+                        ctx.ellipse(-30, 0, 30 * (1-progress), 10 * (1-progress), 0, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                } else {
+                    ctx.rotate(-angle);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    if(this.pouringState.type === 'solution') {
+                        ctx.moveTo(-10, -50); ctx.lineTo(-25, 40);
+                        ctx.quadraticCurveTo(0, 50, 25, 40); ctx.lineTo(10, -50);
+                    } else {
+                        ctx.rect(-20, -40, 40, 80);
+                    }
+                    ctx.stroke(); ctx.fill();
+                    
+                    if (progress < 0.8) {
+                        if (this.pouringState.type === 'solution') {
+                            ctx.fillStyle = 'rgba(14, 165, 233, 0.8)'; 
+                        } else {
+                            ctx.fillStyle = 'rgba(186, 230, 253, 0.6)'; 
+                        }
+                        ctx.fillRect(-18, 40 - 70*(1-progress), 36, 70*(1-progress));
+                    }
+                }
+                ctx.restore();
+
+                if (progress > 0.2 && progress < 0.8) {
+                    const flowX = centerX - 25; 
+                    const flowStartY = topY + 15;
+                    const flowEndY = glassTopY + 80;
+
+                    if (this.pouringState.type === 'solute') {
+                        ctx.fillStyle = this.soluteType === 'medicine' ? '#ef4444' : '#ffffff';
+                        for(let i=0; i<15; i++) {
+                            const rx = flowX + (Math.random()-0.5)*30 * (progress); 
+                            const ry = flowStartY + Math.random() * (flowEndY - flowStartY);
+                            const size = Math.random() * 2 + 1;
+                            ctx.beginPath(); ctx.arc(rx, ry, size, 0, Math.PI*2); ctx.fill();
+                        }
+                    } else {
+                        if (this.pouringState.type === 'solution') {
+                            ctx.fillStyle = 'rgba(14, 165, 233, 0.7)'; 
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                        } else {
+                            ctx.fillStyle = 'rgba(186, 230, 253, 0.6)'; 
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        }
+
+                        ctx.beginPath();
+                        ctx.moveTo(flowX - 4, flowStartY);
+                        ctx.lineTo(flowX + 4, flowStartY);
+                        ctx.lineTo(flowX + 2, flowEndY);
+                        ctx.lineTo(flowX - 2, flowEndY);
+                        ctx.fill();
+                        
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        const liquidLevelY = this.height - 10 - (this.salt*this.scaleRatio*0.25 + this.water*this.scaleRatio);
+                        const rippleSize = (this.pouringState.timer % 10) * 1.5;
+                        ctx.ellipse(flowX, liquidLevelY, rippleSize*3, rippleSize, 0, 0, Math.PI*2);
+                        ctx.stroke();
+                    }
+                }
+
+                this.pouringState.timer--;
+                if (this.pouringState.timer <= 0) this.pouringState.active = false;
+            }
+
+            draw(deltaTime, currentScale) {
+                if (this.width <= 40 || this.height <= 40) return;
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                
+                const ease = 0.05; 
+                this.salt += (this.targetSalt - this.salt) * ease;
+                this.water += (this.targetWater - this.water) * ease;
+
+                const targetProgress = this.isSeparated ? 1.0 : 0.0;
+                const speed = 3.0 * deltaTime;
+                if (this.animationProgress < targetProgress) this.animationProgress = Math.min(this.animationProgress + speed, 1.0);
+                else if (this.animationProgress > targetProgress) this.animationProgress = Math.max(this.animationProgress - speed, 0.0);
+
+                const marginX = 20;
+                const glassWidth = this.width - marginX * 2;
+                const glassBottomY = this.height - 10;
+                const glassTopY = 20;
+                
+                const waterH = this.water * this.scaleRatio;
+                const saltVolumeH = this.salt * this.scaleRatio * 0.25;
+                const solutionH = waterH + saltVolumeH;
+                
+                const liquidTopY = glassBottomY - solutionH;
+                const liquidWidth = glassWidth - 4; 
+                const liquidX = marginX + 2;
+
+                if (solutionH > 0) this.drawLiquid(liquidX, liquidTopY, liquidWidth, solutionH);
+
+                let currentPileY = glassBottomY;
+                if (this.salt > 0) {
+                    const pileW = Math.max(20, Math.min(this.salt * 2.2, liquidWidth * 0.6));
+                    const pileH = Math.max(5, this.salt * 0.7); 
+                    const startY = glassBottomY - 4; 
+                    const endY = (solutionH > 0 ? liquidTopY : glassBottomY) - 5;
+                    currentPileY = startY - (startY - endY) * this.animationProgress;
+                    if (pileW > 0 && this.animationProgress > 0.01) this.drawSoluteMass(this.width/2, currentPileY, pileW, pileH, this.animationProgress);
+                }
+
+                const particleOpacity = 1.0 - this.animationProgress;
+                if (particleOpacity > 0.01 && this.salt > 0 && solutionH > 0) {
+                    this.drawParticles(liquidX, liquidTopY, liquidWidth, solutionH, particleOpacity);
+                }
+                
+                this.drawPouring(glassTopY);
+                this.drawGlass(marginX, glassTopY, glassBottomY, glassWidth);
+                this.drawBubbleLabels(liquidTopY, glassBottomY, solutionH, currentPileY);
+            }
+
+            drawParticles(x, y, w, h, opacity) {
+                const ctx = this.ctx;
+                
+                if (this.soluteType === 'medicine') ctx.fillStyle = `rgba(239, 68, 68, ${opacity})`; 
+                else if (this.soluteType === 'glucose') ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; 
+                else if (this.soluteType === 'alcohol') ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`; 
+                else ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; 
+
+                this.particles.forEach(p => {
+                    if (this.soluteType === 'alcohol') {
+                        p.y += p.speedY * 0.05;
+                        if (p.y < 0) p.y = 1; 
+                        p.x += Math.sin(p.y * 10) * 0.002; 
+                    } else {
+                        p.x += (Math.random() - 0.5) * 0.01;
+                        p.y += (Math.random() - 0.5) * 0.01;
+                    }
+                    if (p.x < 0) p.x = 0; if (p.x > 1) p.x = 1;
+                    if (p.y < 0) p.y = 0; if (p.y > 1) p.y = 1;
+
+                    const px = x + p.x * w; 
+                    const py = y + p.y * h;
+                    
+                    ctx.globalAlpha = opacity * p.alpha;
+                    
+                    if (this.soluteType === 'medicine') {
+                        const s = p.size * 1.5;
+                        ctx.beginPath();
+                        ctx.fillRect(px - s, py - s/3, s*2, s/1.5);
+                        ctx.fillRect(px - s/3, py - s, s/1.5, s*2);
+                    } else if (this.soluteType === 'glucose') {
+                        const s = p.size * 1.5;
+                        ctx.beginPath();
+                        ctx.rect(px - s, py - s, s*2, s*2);
+                        ctx.fill();
+                    } else if (this.soluteType === 'alcohol') {
+                        ctx.beginPath();
+                        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else {
+                        ctx.beginPath(); 
+                        ctx.arc(px, py, p.size, 0, Math.PI * 2); 
+                        ctx.fill();
+                    }
+                });
+                ctx.globalAlpha = 1.0;
+            }
+
+            drawSoluteMass(cx, cy, w, h, opacity) {
+                if (w <= 0) return;
+                const ctx = this.ctx;
+                ctx.globalAlpha = opacity;
+
+                if (this.soluteType === 'alcohol' || this.soluteType === 'medicine') {
+                    const puddleHeight = h * 0.4; 
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy, w/2, puddleHeight, 0, 0, Math.PI*2);
+                    if (this.soluteType === 'medicine') {
+                        ctx.fillStyle = `rgba(147, 51, 234, 0.8)`; 
+                    } else {
+                        ctx.fillStyle = `rgba(103, 232, 249, 0.6)`; 
+                    }
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(cx - w/4, cy - puddleHeight/3, w/6, puddleHeight/3, 0, 0, Math.PI*2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.fill();
+
+                } else if (this.soluteType === 'glucose') {
+                    const grad = ctx.createLinearGradient(cx - w/2, cy - h, cx + w/2, cy);
+                    grad.addColorStop(0, '#fef3c7'); grad.addColorStop(1, '#fde68a'); 
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - w/2, cy);
+                    ctx.lineTo(cx, cy - h); 
+                    ctx.lineTo(cx + w/2, cy);
+                    ctx.fill();
+                    ctx.fillStyle = `rgba(0,0,0, ${opacity * 0.1})`;
+                    ctx.beginPath(); ctx.ellipse(cx, cy, w/2, 6, 0, 0, Math.PI*2); ctx.fill();
+
+                } else {
+                    ctx.fillStyle = `rgba(0,0,0, ${opacity * 0.2})`;
+                    ctx.beginPath(); ctx.ellipse(cx, cy, w/2, 6, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    const grad = ctx.createLinearGradient(cx - w/2, cy - h, cx + w/2, cy);
+                    grad.addColorStop(0, '#f1f5f9'); grad.addColorStop(0.5, '#ffffff'); grad.addColorStop(1, '#cbd5e1');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath(); ctx.moveTo(cx - w/2, cy);
+                    ctx.quadraticCurveTo(cx, cy - h * 1.5, cx + w/2, cy); 
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1.0;
+            }
+
+            drawBubbleLabels(liquidTopY, glassBottomY, solutionH, pileBaseY) {
+                const labelMap = {
+                    'salt': { water: '水', solid: '盐', solution: '盐水' },
+                    'glucose': { water: '水', solid: '葡萄糖', solution: '糖水' },
+                    'alcohol': { water: '水', solid: '酒精', solution: '酒液' },
+                    'medicine': { water: '溶剂', solid: '药液', solution: '药水' }
+                };
+                const labels = labelMap[this.soluteType] || labelMap['salt'];
+                
+                const textColor = '#1e3a8a';
+                const drawCallout = (x, y, text, alignLeft) => {
+                    const ctx = this.ctx;
+                    ctx.font = 'bold 13px "Noto Sans SC"';
+                    const padding = 6;
+                    const metrics = ctx.measureText(text);
+                    const w = metrics.width + padding * 2;
+                    const h = 24;
+                    const arrowSize = 6;
+                    let boxX = alignLeft ? x - w - arrowSize : x + arrowSize;
+                    const boxY = y - h/2;
+                    ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2;
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(boxX, boxY, w, h, 6); ctx.fill();
+                    ctx.beginPath();
+                    if (alignLeft) { ctx.moveTo(boxX + w, y); ctx.lineTo(boxX + w + arrowSize, y - 4); ctx.lineTo(boxX + w, y + 4); } 
+                    else { ctx.moveTo(boxX, y); ctx.lineTo(boxX - arrowSize, y - 4); ctx.lineTo(boxX, y + 4); }
+                    ctx.fill();
+                    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+                    ctx.fillStyle = textColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(text, boxX + w/2, boxY + h/2 + 1);
+                };
+
+                const isLeftContainer = this.alignment === 'left';
+                const marginX = 20;
+                const anchorX = isLeftContainer ? marginX + 4 : this.width - marginX - 4;
+                const shouldDrawToLeft = !isLeftContainer; 
+                
+                // Mask Logic
+                const maskSalt = this.masks['salt-' + this.id];
+                const maskWater = this.masks['water-' + this.id];
+                const maskTotal = this.masks['total-' + this.id];
+                const maskConc = this.masks['conc-' + this.id];
+
+                if (this.animationProgress > 0.5) { 
+                    // 分离状态：复杂问题求助模式 (强制显示所有)
+                    if (solutionH > 0) {
+                        const wy = liquidTopY + solutionH * 0.5;
+                        drawCallout(anchorX, wy, `${labels.water}: ${Math.round(this.water)}g`, shouldDrawToLeft);
+                    }
+                    if (this.salt > 0) {
+                        const sy = pileBaseY - 10;
+                        drawCallout(anchorX, sy, `${labels.solid}: ${Math.round(this.salt)}g`, shouldDrawToLeft);
+                    }
+                } else {
+                    if (solutionH > 0) {
+                        const total = this.salt + this.water;
+                        const conc = total === 0 ? 0 : (this.salt / total * 100).toFixed(0); 
+                        
+                        const massStr = maskTotal ? `?g` : `${Math.round(total)}g`;
+                        const concStr = maskConc ? `?%` : `${conc}%`;
+                        
+                        const my = liquidTopY + solutionH * 0.3;
+                         drawCallout(anchorX, my, `${labels.solution}: ${massStr} (${concStr})`, shouldDrawToLeft);
+                    }
+                }
+            }
+        }
+
+        // --- 智能出题系统 (Integer Constraints) ---
+        const quizApp = {
+            mode: 'basic',
+            isQuizMode: false,
+            initialState: null,
+            rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; },
+            
+            resetExperiment() {
+                if (this.isQuizMode && this.initialState) {
+                    // 恢复到题目初始状态
+                    app.activeMasks = JSON.parse(JSON.stringify(this.initialState.masks));
+                    app.setValues('A', this.initialState.saltA, this.initialState.waterA, true);
+                    app.setValues('B', this.initialState.saltB, this.initialState.waterB, true);
+                    
+                    // 安全更新输入框
+                    const safeSetVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+                    safeSetVal('input-add-solute', this.initialState.inputs.solute);
+                    safeSetVal('input-add-solvent', this.initialState.inputs.solvent);
+                    safeSetVal('input-add-solution', this.initialState.inputs.solution);
+                    safeSetVal('input-add-solution-conc', this.initialState.inputs.conc);
+                    
+                    app.updateTable();
+                    quizApp.updateLabels();
+                } else {
+                    // 自由模式重置
+                    this.isQuizMode = false;
+                    app.activeMasks = {};
+                    app.disableControls(false);
+                    drawingApp.clear();
+                    const qBox = document.getElementById('question-text');
+                    qBox.classList.add('empty');
+                    qBox.innerText = '👇 请点击下方按钮生成题目，开始实验吧！';
+                    
+                    app.setValues('A', 30, 120, true);
+                    app.setValues('B', 60, 240, true);
+                    app.simA.isSeparated = false;
+                    app.simB.isSeparated = false;
+                    
+                    app.updateTable();
+                    quizApp.updateLabels();
+                    
+                    const safeSetVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+                    safeSetVal('input-add-solute', 10);
+                    safeSetVal('input-add-solvent', 50);
+                    safeSetVal('input-add-solution', 50);
+                }
+            },
+
+            // 保存初始状态以便重置
+            saveState(masks) {
+                const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : 0; };
+                this.initialState = {
+                    saltA: app.simA.targetSalt,
+                    waterA: app.simA.targetWater,
+                    saltB: app.simB.targetSalt,
+                    waterB: app.simB.targetWater,
+                    masks: JSON.parse(JSON.stringify(masks)),
+                    inputs: {
+                        solute: getVal('input-add-solute'),
+                        solvent: getVal('input-add-solvent'),
+                        solution: getVal('input-add-solution'),
+                        conc: getVal('input-add-solution-conc')
+                    }
+                };
+            },
+
+            generate(type) {
+                this.mode = type;
+                this.isQuizMode = true;
+                app.disableControls(true);
+                drawingApp.clear();
+                document.querySelector('.question-box').classList.remove('empty');
+                this.updateLabels();
+
+                app.simA.isSeparated = false;
+                app.simA.animationProgress = 0; 
+                app.simB.isSeparated = false;
+                app.simB.animationProgress = 0; 
+                
+                const MAX_CONC = 36;
+                const MAX_MASS = 400; 
+                const soluteNameMap = {
+                    'salt': '盐', 'glucose': '葡萄糖', 'alcohol': '酒精', 'medicine': '药液'
+                };
+                const sName = soluteNameMap[app.soluteType];
+                const solutionName = app.soluteType === 'medicine' ? '药水' : (app.soluteType === 'alcohol' ? '酒' : sName + '水');
+
+                // 默认初始值
+                let S1=30, M1=150, S2=60, M2=300; 
+                let masks = {};
+                const safeSetVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+
+                if (type === 'add_solute') {
+                    const subType = this.rand(0, 1); 
+                    let C1, C2, M1_val, S_add;
+                    let found = false;
+                    while(!found) {
+                        C2 = this.rand(5, MAX_CONC); 
+                        C1 = this.rand(2, C2 - 1); 
+                        let factor = 100 - C2;
+                        M1_val = this.rand(3, 6) * 50; 
+                        let num = M1_val * (C2 - C1);
+                        if (num % factor === 0) {
+                            S_add = num / factor;
+                            if (S_add > 0 && S_add <= 50 && (M1_val + S_add) <= MAX_MASS) {
+                                found = true;
+                            }
+                        }
+                    }
+                    S1 = M1_val * C1 / 100; M1 = M1_val;
+                    let M2_val = M1 + S_add; let S2_val = S1 + S_add;
+                    S2 = S2_val; M2 = M2_val;
+
+                    safeSetVal('input-add-solute', S_add);
+                    
+                    if (subType === 0) { 
+                        document.getElementById('question-text').innerText = `现有 ${C1}% 的${solutionName} ${M1}克，加入 ${S_add}克 ${sName}后，浓度变为多少？`;
+                        masks = {'conc-B': true, 'salt-B': true, 'water-B': true};
+                    } else { 
+                        document.getElementById('question-text').innerText = `现有 ${C1}% 的${solutionName} ${M1}克，要配制成 ${C2}% 的${solutionName}，需加${sName}多少克？`;
+                        masks = {'total-B': true, 'salt-B': true, 'water-B': true}; 
+                    }
+                }
+                else if (type === 'add_solvent') {
+                    const subType = this.rand(0, 1); 
+                    let C1, C2, M1_val, W_add;
+                    let found = false;
+                    while(!found) {
+                        C1 = this.rand(10, MAX_CONC);
+                        let factors = [];
+                        for(let i=1; i<C1; i++) if(C1 % i === 0) factors.push(i);
+                        if(factors.length === 0) continue;
+                        C2 = factors[this.rand(0, factors.length-1)]; 
+                        M1_val = this.rand(3, 6) * 50; 
+                        if ((M1_val * C1) % 100 === 0) {
+                            let M2_val = M1_val * C1 / C2;
+                            W_add = M2_val - M1_val;
+                            if (W_add > 0 && M2_val <= MAX_MASS) found = true;
+                        }
+                    }
+                    S1 = M1_val * C1 / 100; M1 = M1_val;
+                    S2 = S1; M2 = M1 + W_add;
+
+                    safeSetVal('input-add-solvent', W_add);
+
+                    if (subType === 0) { 
+                        document.getElementById('question-text').innerText = `${M1}克 ${C1}% 的${solutionName}，加入 ${W_add}克 水后，浓度变为多少？`;
+                        masks = {'conc-B': true, 'salt-B': true, 'water-B': true};
+                    } else { 
+                        document.getElementById('question-text').innerText = `${M1}克 ${C1}% 的${solutionName}，稀释成 ${C2}%，需加水多少克？`;
+                        masks = {'total-B': true, 'salt-B': true, 'water-B': true};
+                    }
+                }
+                else if (type === 'add_solution') { // 复杂问题
+                    const subType = this.rand(0, 1);
+                    const condType = this.rand(0, 2); 
+                    
+                    let C1, M_add, C_add, C2, S_add = 0, W_add = 0;
+                    let M1_val;
+                    let found = false;
+                    
+                    while(!found) {
+                        M1_val = this.rand(2, 5) * 50;
+                        C1 = this.rand(1, 6) * 5; 
+                        
+                        let M_add_val, C_add_val;
+                        if (condType === 0) { M_add_val = this.rand(1, 5) * 10; C_add_val = 100; }
+                        else if (condType === 1) { M_add_val = this.rand(1, 5) * 50; C_add_val = 0; }
+                        else { M_add_val = this.rand(1, 4) * 50; C_add_val = this.rand(1, 6) * 5; }
+                        
+                        let totalSalt = (M1_val * C1 + M_add_val * C_add_val) / 100;
+                        let totalMass = M1_val + M_add_val;
+                        
+                        if (totalSalt % 1 === 0 && (totalSalt * 100) % totalMass === 0) {
+                            C2 = (totalSalt * 100) / totalMass;
+                            if (C2 <= MAX_CONC && totalMass <= MAX_MASS && C1 <= MAX_CONC) {
+                                M_add = M_add_val; C_add = C_add_val;
+                                found = true;
+                            }
+                        }
+                    }
+                    
+                    S1 = M1_val * C1 / 100; M1 = M1_val;
+                    let S_total = (M1_val * C1 + M_add * C_add) / 100;
+                    let M_total = M1 + M_add;
+                    S2 = S_total; M2 = M_total;
+
+                    if(condType === 0) safeSetVal('input-add-solute', M_add);
+                    else if(condType === 1) safeSetVal('input-add-solvent', M_add);
+                    else {
+                         safeSetVal('input-add-solution', M_add);
+                         safeSetVal('input-add-solution-conc', C_add);
+                    }
+
+                    let addStr = "";
+                    if(condType === 0) addStr = `加入 ${M_add}克 ${sName}`;
+                    else if(condType === 1) addStr = `加入 ${M_add}克 水`;
+                    else addStr = `加入 ${M_add}克 ${C_add}% 的${solutionName}`;
+
+                    if (subType === 0) { // 求初始质量
+                        document.getElementById('question-text').innerText = `浓度为 ${C1}% 的${solutionName}，${addStr}后，浓度变为 ${C2}%。求初始${solutionName}的质量。`;
+                        masks = {
+                            'total-A': true, 'salt-A': true, 'water-A': true,
+                            'total-B': true, 'salt-B': true, 'water-B': true
+                        };
+                    } else { // 求初始浓度
+                        document.getElementById('question-text').innerText = `${M1}克某浓度的${solutionName}，${addStr}后，浓度变为 ${C2}%。求原浓度。`;
+                        masks = {
+                            'conc-A': true, 'salt-A': true, 'water-A': true,
+                            'total-B': true, 'salt-B': true, 'water-B': true
+                        };
+                    }
+                }
+                
+                app.setValues('A', S1, M1 - S1, true); 
+                app.setValues('B', S2, M2 - S2, true);
+                app.activeMasks = masks;
+                app.updateTable();
+
+                this.saveState(masks);
+            },
+
+            updateLabels() {
+                let sName = '溶质', wName = '溶剂';
+                if (app.soluteType === 'salt') sName = '盐';
+                else if (app.soluteType === 'glucose') sName = '葡萄糖';
+                else if (app.soluteType === 'alcohol') sName = '酒精';
+                else if (app.soluteType === 'medicine') { sName = '药液'; wName = '溶剂'; }
+
+                const map = {
+                    salt: sName,
+                    water: (wName === '溶剂' ? '水' : wName),
+                    conc: '浓度',
+                    rowA: '容器 A',
+                    rowB: '容器 B'
+                };
+                
+                const safeSetHTML = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+                const safeSetText = (id, text) => { const el = document.getElementById(id); if(el) el.innerText = text; };
+
+                safeSetHTML('th-salt', `<i class="fas fa-cube opacity-70 mr-1"></i>${map.salt}`);
+                safeSetHTML('th-water', `<i class="fas fa-tint opacity-70 mr-1"></i>${map.water}`);
+                safeSetHTML('th-conc', `<i class="fas fa-percentage opacity-70 mr-1"></i>${map.conc}`);
+                safeSetText('row-name-A', map.rowA);
+                safeSetText('row-name-B', map.rowB);
+                safeSetText('lbl-ctrl-salt-A', map.salt.substring(0, 2));
+                safeSetText('lbl-ctrl-salt-B', map.salt.substring(0, 2));
+                
+                safeSetText('label-drag-solute', sName);
+                safeSetText('label-drag-solvent', map.water);
+                safeSetText('label-drag-solution', map.salt + "水"); 
+            },
+
+            showAnswer() {
+                this.isQuizMode = false;
+                app.activeMasks = {};
+                app.disableControls(false);
+                app.updateTable();
+            }
+        };
+
+        // --- 主逻辑 ---
+        const app = {
+            simA: null, simB: null, lastTime: 0, soluteType: 'salt', activeMasks: {}, currentScale: 0.85,
+            
+            init() {
+                this.simA = new BeakerSim('canvasA', 30, 120, 'A', 'left');
+                this.simB = new BeakerSim('canvasB', 60, 240, 'B', 'right');
+                drawingApp.init();
+                this.setSoluteType('salt'); 
+                this.setZoom(85); 
+                this.updateTable();
+                requestAnimationFrame((t) => this.loop(t));
+            },
+            
+            setZoom(val) {
+                this.currentScale = val / 100;
+                document.getElementById('scalable-content').style.transform = `scale(${this.currentScale})`;
+                document.getElementById('zoom-val').innerText = `${val}%`;
+            },
+            
+            addMass(targetId, newSalt, newWater) {
+                const sim = targetId === 'A' ? this.simA : this.simB;
+                sim.targetSalt = Math.round(newSalt);
+                sim.targetWater = Math.round(newWater);
+                
+                if (!quizApp.isQuizMode) {
+                    document.getElementById(`input-salt-${targetId}`).value = parseInt(sim.targetSalt);
+                    document.getElementById(`input-water-${targetId}`).value = parseInt(sim.targetWater);
+                    this.updateDisplay(targetId, parseInt(sim.targetSalt), parseInt(sim.targetWater));
+                }
+                
+                this.updateTable();
+            },
+            
+            triggerDropAnimation(targetId, type) {
+                const sim = targetId === 'A' ? this.simA : this.simB;
+                sim.triggerPour(type, 0, 0); 
+            },
+
+            setSoluteType(type) {
+                this.soluteType = type;
+                this.simA.setSoluteType(type);
+                this.simB.setSoluteType(type);
+                
+                document.querySelectorAll('.candy-btn').forEach(btn => btn.classList.remove('selected'));
+                document.querySelectorAll('[id^="btn-mode-"]').forEach(btn => {
+                    btn.classList.remove('bg-white', 'text-green-800', 'font-bold', 'shadow-sm');
+                    btn.classList.add('text-white/80', 'hover:bg-white/10');
+                });
+                const activeBtn = document.getElementById(`btn-mode-${type}`);
+                if(activeBtn) {
+                    activeBtn.classList.remove('text-white/80', 'hover:bg-white/10');
+                    activeBtn.classList.add('bg-white', 'text-green-800', 'font-bold', 'shadow-sm');
+                }
+                
+                quizApp.updateLabels();
+            },
+            setValues(id, salt, water, immediate = false) {
+                document.getElementById(`input-salt-${id}`).value = salt;
+                document.getElementById(`input-water-${id}`).value = water;
+                this.updateDisplay(id, salt, water);
+                if(id === 'A') { this.simA.updateData(salt, water, immediate); }
+                if(id === 'B') { this.simB.updateData(salt, water, immediate); }
+            },
+            updateParams(id) {
+                const salt = parseInt(document.getElementById(`input-salt-${id}`).value) || 0;
+                const water = parseInt(document.getElementById(`input-water-${id}`).value) || 0;
+                this.updateDisplay(id, salt, water);
+                if (id === 'A') this.simA.updateData(salt, water);
+                else this.simB.updateData(salt, water);
+                this.updateTable();
+            },
+            updateDisplay(id, s, w) {
+                const displayS = quizApp.isQuizMode ? '?' : s;
+                const displayW = quizApp.isQuizMode ? '?' : w;
+                
+                document.getElementById(`disp-salt-${id}`).innerText = displayS;
+                document.getElementById(`disp-water-${id}`).innerText = displayW;
+            },
+            disableControls(disable) {
+                ['input-salt-A', 'input-water-A', 'input-salt-B', 'input-water-B'].forEach(id => {
+                    document.getElementById(id).disabled = disable;
+                    document.getElementById(id).parentElement.style.opacity = disable ? '0.6' : '1';
+                });
+                
+                if (!disable) {
+                    const sA = document.getElementById(`input-salt-A`).value;
+                    const wA = document.getElementById(`input-water-A`).value;
+                    this.updateDisplay('A', sA, wA);
+                    const sB = document.getElementById(`input-salt-B`).value;
+                    const wB = document.getElementById(`input-water-B`).value;
+                    this.updateDisplay('B', sB, wB);
+                }
+            },
+            toggleState(id) { (id === 'A' ? this.simA : this.simB).toggleState(); },
+            
+            updateTable() {
+                const masks = this.activeMasks || {};
+                
+                this.simA.updateMasks(masks);
+                this.simB.updateMasks(masks);
+
+                const updateControlDisplay = (sim, id) => {
+                     const s = Math.round(sim.targetSalt);
+                     const w = Math.round(sim.targetWater);
+                     const displayS = quizApp.isQuizMode ? '?' : s;
+                     const displayW = quizApp.isQuizMode ? '?' : w;
+                     document.getElementById(`disp-salt-${id}`).innerText = displayS;
+                     document.getElementById(`disp-water-${id}`).innerText = displayW;
+                };
+                updateControlDisplay(this.simA, 'A');
+                updateControlDisplay(this.simB, 'B');
+
+                const updateRow = (sim, id) => {
+                    const s = Math.round(sim.targetSalt);
+                    const w = Math.round(sim.targetWater);
+                    const t = s + w;
+                    const c = t === 0 ? 0 : (s / t * 100).toFixed(0); 
+                    
+                    const setCell = (type, val, suffix) => {
+                        const el = document.getElementById(`td-${type}-${id}`);
+                        const key = `${type}-${id}`;
+                        if (!el) return; // safety
+                        el.innerHTML = '';
+                        el.classList.remove('cell-hidden'); 
+
+                        if (masks[key]) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'student-input-wrapper';
+                            
+                            const input = document.createElement('input');
+                            input.type = 'text'; 
+                            input.className = 'student-input'; 
+                            input.placeholder = '?'; 
+                            input.autocomplete = 'off';
+                            
+                            input.dataset.correct = val;
+
+                            const validate = () => {
+                                const userVal = input.value.trim();
+                                if (!userVal) return;
+
+                                if (userVal == input.dataset.correct) {
+                                    input.classList.remove('error');
+                                    input.classList.add('correct');
+                                    input.disabled = true; 
+                                    app.activeMasks[key] = false; 
+                                    sim.updateMasks(app.activeMasks);
+                                } else {
+                                    input.classList.add('error');
+                                    input.value = '';
+                                    input.placeholder = '×';
+                                    setTimeout(() => {
+                                        input.classList.remove('error');
+                                        input.placeholder = '?';
+                                    }, 1000);
+                                }
+                            };
+
+                            input.addEventListener('blur', validate);
+                            input.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    validate();
+                                    input.blur();
+                                }
+                            });
+
+                            const unit = document.createElement('span');
+                            unit.className = 'unit-label'; unit.innerText = suffix;
+                            wrapper.appendChild(input); wrapper.appendChild(unit);
+                            el.appendChild(wrapper);
+                        } else {
+                            el.innerText = val + suffix;
+                        }
+                    };
+                    setCell('salt', s, 'g');
+                    setCell('water', w, 'g');
+                    setCell('total', t, 'g');
+                    setCell('conc', c, '%');
+                };
+                updateRow(this.simA, 'A');
+                updateRow(this.simB, 'B');
+            },
+            
+            loop(timestamp) {
+                const dt = (timestamp - this.lastTime) / 1000;
+                this.lastTime = timestamp;
+                this.simA.draw(dt, this.currentScale);
+                this.simB.draw(dt, this.currentScale);
+                requestAnimationFrame((t) => this.loop(t));
+            }
+        };
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>

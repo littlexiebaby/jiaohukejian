@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>六上阴影面积交互课件</title>
+    
+    <!-- 基础防护脚本：禁止右键、F12、另存为 -->
+    <script>
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function (e) {
+            // F12
+            if (e.keyCode == 123) return false;
+            // Ctrl+Shift+I
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+            // Ctrl+S (保存)
+            if (e.ctrlKey && (e.keyCode == 'S'.charCodeAt(0) || e.key === 's')) {
+                e.preventDefault();
+                return false;
+            }
+            // Ctrl+U (查看源码)
+            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+        }
+    </script>
+
+    <!-- 核心依赖库 (更换为更稳定的 cdnjs 源) -->
+    <script src="_site/math/daohang/ku/react.production.min.js"></script>
+    <script src="_site/math/daohang/ku/react-dom.production.min.js"></script>
+    <script src="_site/math/daohang/ku/babel.min.js"></script>
+    <script src="_site/math/daohang/ku/tailwindcss.js"></script>
+    
+    <!-- 配置 -->
+    <script>
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            green: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #F0F9F4; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        svg { touch-action: none; user-select: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #2F855A; margin-top: -5px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useMemo } = React;
+
+        // ================= 常量 =================
+        const PIXELS_PER_METER = 40; 
+        const SNAP_THRESHOLD = 15;
+        const ROTATION_SNAP_STRONG = 5; 
+        const ROTATION_SNAP_WEAK = 4;
+        const CONTROL_HEIGHT = 220; 
+        const GRID_SIZE_PX = 20;
+        
+        const SHAPE_TYPES = { 
+            RECT: 'rect', CIRCLE: 'circle', TRIANGLE: 'triangle', 
+            RIGHT_TRIANGLE: 'right_triangle', SECTOR: 'sector', SPANDREL: 'spandrel', 
+            SEGMENT: 'segment', PARALLELOGRAM: 'parallelogram', TRAPEZOID: 'trapezoid', 
+            RIGHT_TRAPEZOID: 'right_trapezoid', 
+            GENERAL_TRIANGLE: 'general_triangle', GROUP: 'group' 
+        };
+
+        const COLORS = ['#FFFFFF', '#FF5252', '#448AFF', '#00E676', '#FFD740', '#E040FB', '#FF6E40', '#000000', 'transparent'];
+
+        // ================= 预设数据 =================
+        const PRESET_DATA = [
+  {
+    "id": 1768999115793,
+    "name": "例题1",
+    "shapes": [
+      {
+        "id": "s_1768999084699_9znlb",
+        "type": "group",
+        "x": 958.1666870117188,
+        "y": 336.16668701171875,
+        "rotation": 90,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999063893",
+            "type": "rect",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 60,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999065069",
+            "type": "spandrel",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 6,
+              "angle": 60,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "id": "g_1768999082279",
+        "type": "group",
+        "x": 958.1666870117188,
+        "y": 336.16668701171875,
+        "rotation": -90,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999063893",
+            "type": "rect",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 60,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999065069",
+            "type": "spandrel",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 6,
+              "angle": 60,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": -120,
+            "y": 120
+          }
+        }
+      }
+    ]
+  },
+  
+  {
+    "id": 1769063062191,
+    "name": "例题2",
+    "shapes": [
+      {
+        "id": "g_1769063014922",
+        "type": "group",
+        "x": 964.7999877929688,
+        "y": 341.09999084472656,
+        "rotation": 0,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999148476",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 5,
+              "angle": 90,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999154837",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 5,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "id": "s_1769063024124_y4gy7",
+        "type": "group",
+        "x": 764.7999877929686,
+        "y": 141.09999084472656,
+        "rotation": 180,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999148476",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 5,
+              "angle": 90,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999154837",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 5,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": -200,
+            "y": 2.4492935982947064e-14
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": 1769063106721,
+    "name": "例题3",
+    "shapes": [
+      {
+        "id": "g_1769062816148",
+        "type": "group",
+        "x": 768,
+        "y": 327.5,
+        "rotation": 0,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999360417",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 180,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999368265",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          },
+          {
+            "id": "s_1768999381108_9upyg",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 315,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": -120,
+            "y": 7.105427357601002e-15
+          }
+        }
+      },
+      {
+        "id": "s_1769062825335_5rrg7",
+        "type": "group",
+        "x": 648,
+        "y": 207.49999999999997,
+        "rotation": 90,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999360417",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 180,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999368265",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          },
+          {
+            "id": "s_1768999381108_9upyg",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 315,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 120,
+            "y": -3.552713678800501e-14
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": 1769063135430,
+    "name": "例题4",
+    "shapes": [
+      {
+        "id": "g_1769062938756",
+        "type": "group",
+        "x": 768,
+        "y": 327.5,
+        "rotation": 0,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999360417",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 180,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999368265",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          },
+          {
+            "id": "s_1768999381108_9upyg",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 315,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 120,
+            "y": -2.939152317953648e-14
+          }
+        }
+      },
+      {
+        "id": "s_1769062941981_pbvca",
+        "type": "group",
+        "x": 888,
+        "y": 207.49999999999994,
+        "rotation": 270,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999360417",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 180,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999368265",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          },
+          {
+            "id": "s_1768999381108_9upyg",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 315,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "id": "s_1769062947370_x57zv",
+        "type": "group",
+        "x": 648,
+        "y": 207.50000000000006,
+        "rotation": 450,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999360417",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 180,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999368265",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          },
+          {
+            "id": "s_1768999381108_9upyg",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 315,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "id": "s_1769062952965_b097r",
+        "type": "group",
+        "x": 768,
+        "y": 87.5,
+        "rotation": 540,
+        "flipX": 1,
+        "color": "transparent",
+        "showBorder": false,
+        "children": [
+          {
+            "id": "s_1768999360417",
+            "type": "sector",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "color": "transparent",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "width": 6,
+              "height": 6,
+              "radius": 3,
+              "angle": 180,
+              "topWidth": 2,
+              "bottomWidth": 4,
+              "topX": 0
+            }
+          },
+          {
+            "id": "s_1768999368265",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 225,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          },
+          {
+            "id": "s_1768999381108_9upyg",
+            "type": "segment",
+            "x": 0,
+            "y": 0,
+            "rotation": 315,
+            "color": "#448AFF",
+            "flipX": 1,
+            "showBorder": true,
+            "params": {
+              "radius": 3,
+              "angle": 90
+            }
+          }
+        ],
+        "params": {
+          "pivot": {
+            "x": 120,
+            "y": -2.939152317953648e-14
+          }
+        }
+      }
+    ]
+  },
+{
+    "id": 1769003577752,
+    "name": "例题5",
+    "shapes": [
+      {
+        "id": "s_1769003366865",
+        "type": "right_trapezoid",
+        "x": 842.1666259765625,
+        "y": 332.16668701171875,
+        "rotation": 0,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "width": 6,
+          "height": 3,
+          "radius": 3,
+          "angle": 60,
+          "topWidth": 6,
+          "bottomWidth": 10,
+          "topX": 0
+        }
+      },
+      {
+        "id": "s_1769003409109",
+        "type": "circle",
+        "x": 762.1666259765625,
+        "y": 272.16668701171875,
+        "rotation": 0,
+        "color": "#FFFFFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "width": 6,
+          "height": 6,
+          "radius": 3,
+          "angle": 60,
+          "topWidth": 2,
+          "bottomWidth": 4,
+          "topX": 0
+        }
+      },
+      {
+        "id": "s_1769003415017",
+        "type": "segment",
+        "x": 762.1666259765625,
+        "y": 272.16668701171875,
+        "rotation": 315,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "radius": 3,
+          "angle": 90
+        }
+      },
+      {
+        "id": "s_1769003427846_j3xgr",
+        "type": "segment",
+        "x": 762.1666259765625,
+        "y": 272.16668701171875,
+        "rotation": 225,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "radius": 3,
+          "angle": 90
+        }
+      }
+    ]
+  },
+  {
+    "id": 1769043285136,
+    "name": "例题6",
+    "shapes": [
+      {
+        "id": "s_1769043205929",
+        "type": "sector",
+        "x": 685.20606076066,
+        "y": 311.5121123660466,
+        "rotation": 270,
+        "color": "#FFFFFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "width": 6,
+          "height": 6,
+          "radius": 6.1,
+          "angle": 90,
+          "topWidth": 2,
+          "bottomWidth": 4,
+          "topX": 0
+        }
+      },
+      {
+        "id": "s_1769043105019",
+        "type": "right_triangle",
+        "x": 804,
+        "y": 309.09999084472656,
+        "rotation": 135,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "width": 4.2,
+          "height": 4.2,
+          "radius": 3,
+          "angle": 60,
+          "topWidth": 2,
+          "bottomWidth": 4,
+          "topX": 0
+        }
+      },
+      {
+        "id": "s_1769043120975_e62jr",
+        "type": "right_triangle",
+        "x": 685.20606076066,
+        "y": 190.30605160538659,
+        "rotation": 225,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "width": 4.2,
+          "height": 4.2,
+          "radius": 3,
+          "angle": 60,
+          "topWidth": 2,
+          "bottomWidth": 4,
+          "topX": 0
+        }
+      },
+      {
+        "id": "s_1769043173908_2bl58",
+        "type": "segment",
+        "x": 685.20606076066,
+        "y": 189.09999084472662,
+        "rotation": 45,
+        "color": "#FFFFFF",
+        "flipX": 1,
+        "showBorder": false,
+        "params": {
+          "radius": 3,
+          "angle": 90
+        }
+      },
+      {
+        "id": "s_1769043182457_j43c8",
+        "type": "segment",
+        "x": 805.20606076066,
+        "y": 309.09999084472656,
+        "rotation": 225,
+        "color": "#FFFFFF",
+        "flipX": 1,
+        "showBorder": false,
+        "params": {
+          "radius": 3,
+          "angle": 90
+        }
+      },
+      {
+        "id": "s_1769043136569",
+        "type": "segment",
+        "x": 805.20606076066,
+        "y": 311.5121123660466,
+        "rotation": 315,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "radius": 3,
+          "angle": 90
+        }
+      },
+      {
+        "id": "s_1769043167588_z2vrv",
+        "type": "segment",
+        "x": 684,
+        "y": 190.30605160538656,
+        "rotation": 315,
+        "color": "#448AFF",
+        "flipX": 1,
+        "showBorder": true,
+        "params": {
+          "radius": 3,
+          "angle": 90
+        }
+      }
+    ]
+  }
+
+
+        ];
+
+        // ================= 图标 =================
+        const Icon = ({ path, size = 20, className = "", ...props }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{path}</svg>
+        );
+        const ICONS = {
+            Grid: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></>,
+            Magnet: <path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.2 2.2 0 0 0-3.12-3.13L6 15z" />,
+            Trash: <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />,
+            Reset: <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" />,
+            Undo: <path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />,
+            Save: <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8" />,
+            Folder: <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />,
+            Rotate: <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 12" />,
+            Square: <rect x="3" y="3" width="18" height="18" rx="2" />,
+            Circle: <circle cx="12" cy="12" r="10" />,
+            Triangle: <path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z" />,
+            Book: <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />,
+            Help: <circle cx="12" cy="12" r="10" />,
+            Alert: <circle cx="12" cy="12" r="10" />,
+            RightTri: <path d="M4 4v16h16z" />,
+            Para: <path d="M4 18l4-12h12l-4 12z" />,
+            Trap: <path d="M6 18l2-12h8l2 12z" />,
+            RightTrap: <path d="M4 6 L4 18 L16 18 L12 6 Z" />, 
+            Sector: <path d="M20 12a8 8 0 0 0-8-8v8z" />,
+            GenTri: <path d="M12 4L4 20h16z" />,
+            Segment: <path d="M 4 15 Q 12 3 20 15 Z" />,
+            Spandrel: <path d="M 20 4 L 20 20 L 4 20 A 16 16 0 0 0 20 4 Z" />,
+            Quarter: <path d="M 4 20 L 20 20 A 16 16 0 0 0 4 4 Z" />,
+            Half: <path d="M 2 20 L 22 20 A 10 10 0 0 0 2 20 Z" />,
+            Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
+            Upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>,
+            Flip: <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3M12 3v18" />,
+            Layers: <path d="M2 17L12 22L22 17L12 12L2 17ZM2 12L12 17L22 12L12 7L2 12ZM12 2L2 7L12 12L22 7L12 2Z" />,
+            Up: <path d="M12 19V5m-7 7 7-7 7 7" strokeLinecap="round" strokeLinejoin="round"/>,
+            Down: <path d="M12 5v14m-7-7 7 7 7-7" strokeLinecap="round" strokeLinejoin="round"/>,
+            Top: <path d="M12 19V5M5 12l7-7 7 7M5 5h14" strokeLinecap="round" strokeLinejoin="round"/>,
+            Bottom: <path d="M12 5v14M5 12l7 7 7-7M5 19h14" strokeLinecap="round" strokeLinejoin="round"/>,
+            Border: <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4"/>,
+            Check: <polyline points="20 6 9 17 4 12" />,
+            Group: <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />, 
+            Merge: <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>,
+            Split: <><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></>,
+            Copy: <><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>,
+            RotateCw: <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 12" />,
+            Target: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></> 
+        };
+        const IconComp = ({ name, ...props }) => <Icon path={ICONS[name]} {...props} />;
+
+        // ================= 组件 =================
+        const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] fade-in" onClick={onCancel}>
+                    <div className="bg-white rounded-xl shadow-2xl w-80 p-6" onClick={e => e.stopPropagation()}>
+                        <div className="text-center mb-4 text-amber-500"><IconComp name="Alert" size={40} className="mx-auto" /></div>
+                        <h3 className="text-lg font-bold text-center text-gray-800 mb-2">{title}</h3>
+                        <p className="text-sm text-gray-500 text-center mb-6">{message}</p>
+                        <div className="flex gap-3">
+                            <button onClick={onCancel} className="flex-1 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">取消</button>
+                            <button onClick={onConfirm} className="flex-1 py-2 text-white bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium shadow-md">确定</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ControlSlider = ({ label, value, min, max, onChange, step = 0.1, unit = "" }) => (
+            <div className="flex flex-col mb-1.5">
+                <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                    <span>{label}</span>
+                    <span className="font-mono bg-green-50 text-green-700 px-1 rounded">{value}{unit}</span>
+                </div>
+                <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="w-full" />
+            </div>
+        );
+
+        const ShapeButton = ({ label, icon, onClick }) => (
+            <button onClick={onClick} className="flex flex-col items-center justify-center h-14 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-green-400 hover:bg-green-50 hover:-translate-y-0.5 transition-all">
+                <div className="text-green-600 mb-0.5 scale-90">{icon}</div>
+                <span className="text-[9px] text-gray-600 font-medium whitespace-nowrap scale-90 origin-center">{label}</span>
+            </button>
+        );
+
+        // ================= APP =================
+        const App = () => {
+            const [shapes, setShapes] = useState([]);
+            const [selectedIds, setSelectedIds] = useState([]); 
+            const [isMultiSelect, setIsMultiSelect] = useState(false);
+            const [savedList, setSavedList] = useState([]);
+            const [history, setHistory] = useState([[]]);
+            const [historyIndex, setHistoryIndex] = useState(0);
+            
+            const [interactionMode, setInteractionMode] = useState('idle');
+            const [zoomLevel, setZoomLevel] = useState(1);
+            const [showGrid, setShowGrid] = useState(false); 
+            const [snapEnabled, setSnapEnabled] = useState(true);
+            const [snapIndicator, setSnapIndicator] = useState(null);
+
+            const [confirmState, setConfirmState] = useState({ show: false, title: "", msg: "", action: null });
+            const [showSaveModal, setShowSaveModal] = useState(false);
+            const [showHelp, setShowHelp] = useState(false);
+            const [saveName, setSaveName] = useState("");
+
+            const svgRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const dragRef = useRef({ startX: 0, startY: 0, shapeSnapshot: null, handleIndex: -1, pivotSnapshot: null });
+
+            // Derived primary selection for property editing
+            const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
+            const selectedShape = selectedId ? shapes.find(s => s.id === selectedId) : null;
+
+            useEffect(() => {
+                try {
+                    const localSaved = localStorage.getItem('geoLab_v3_saves');
+                    const initialList = localSaved ? JSON.parse(localSaved) : [];
+                    const combined = [...initialList];
+                    PRESET_DATA.forEach(p => { if (!combined.find(c => c.id === p.id)) combined.push(p); });
+                    setSavedList(combined);
+                    if (window.innerWidth < 1000) setZoomLevel(0.8);
+                } catch(e) {}
+            }, []);
+
+            const recordHistory = (newShapes) => {
+                const nextHistory = history.slice(0, historyIndex + 1);
+                nextHistory.push(newShapes);
+                if (nextHistory.length > 30) nextHistory.shift();
+                setHistory(nextHistory);
+                setHistoryIndex(nextHistory.length - 1);
+                setShapes(newShapes);
+            };
+
+            const undo = () => {
+                if (historyIndex > 0) {
+                    setHistoryIndex(historyIndex - 1);
+                    setShapes(history[historyIndex - 1]);
+                    setSelectedIds([]);
+                }
+            };
+
+            const updateSelectedShape = (updates) => {
+                if (selectedIds.length > 0) {
+                    const newShapes = shapes.map(s => selectedIds.includes(s.id) ? { ...s, ...updates } : s);
+                    recordHistory(newShapes);
+                }
+            };
+
+            // ================= 组合、拆分与复制逻辑 =================
+            const handleGroup = () => {
+                if (selectedIds.length < 2) return;
+                
+                const groupMembers = shapes.filter(s => selectedIds.includes(s.id));
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                groupMembers.forEach(s => { minX = Math.min(minX, s.x); maxX = Math.max(maxX, s.x); minY = Math.min(minY, s.y); maxY = Math.max(maxY, s.y); });
+                const cx = (minX + maxX) / 2;
+                const cy = (minY + maxY) / 2;
+
+                const groupShape = {
+                    id: `g_${Date.now()}`,
+                    type: SHAPE_TYPES.GROUP,
+                    x: cx, y: cy, rotation: 0,
+                    flipX: 1, 
+                    color: 'transparent',
+                    showBorder: false, 
+                    children: groupMembers.map(m => ({ ...m, x: m.x - cx, y: m.y - cy })), 
+                    params: { pivot: { x: 0, y: 0 } } 
+                };
+
+                const newShapes = shapes.filter(s => !selectedIds.includes(s.id));
+                newShapes.push(groupShape);
+                recordHistory(newShapes);
+                setSelectedIds([groupShape.id]);
+                setIsMultiSelect(false);
+            };
+
+            const handleUngroup = () => {
+                if (!selectedShape || selectedShape.type !== SHAPE_TYPES.GROUP) return;
+                
+                const group = selectedShape;
+                const rad = group.rotation * Math.PI / 180;
+                const cos = Math.cos(rad), sin = Math.sin(rad);
+                const gFlip = group.flipX || 1;
+
+                const releasedChildren = group.children.map(child => {
+                    const wx = group.x + child.x * cos - child.y * sin;
+                    const wy = group.y + child.x * sin + child.y * cos;
+                    const wr = (child.rotation + group.rotation) % 360;
+                    return { ...child, x: wx, y: wy, rotation: wr, flipX: (child.flipX || 1) * gFlip };
+                });
+
+                const newShapes = shapes.filter(s => s.id !== group.id).concat(releasedChildren);
+                recordHistory(newShapes);
+                setSelectedIds(releasedChildren.map(c => c.id));
+            };
+
+            const handleCopy = () => {
+                if (selectedIds.length === 0) return;
+                
+                const newShapes = selectedIds.map(id => {
+                    const original = shapes.find(s => s.id === id);
+                    if (!original) return null;
+                    const clone = JSON.parse(JSON.stringify(original));
+                    clone.id = `s_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                    clone.x += 40; 
+                    clone.y += 40; 
+                    return clone;
+                }).filter(Boolean);
+
+                if (newShapes.length > 0) {
+                    const updatedShapes = [...shapes, ...newShapes];
+                    setShapes(updatedShapes);
+                    recordHistory(updatedShapes);
+                    setSelectedIds(newShapes.map(s => s.id)); 
+                }
+            };
+
+            // ================= 功能函数 =================
+            const exportData = () => {
+                const dataStr = JSON.stringify(savedList, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `geometry_backup_${new Date().toLocaleDateString().replace(/\//g,'-')}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (Array.isArray(imported)) {
+                            const currentIds = new Set(savedList.map(item => item.id));
+                            const newItems = imported.filter(item => !currentIds.has(item.id));
+                            const combined = [...newItems, ...savedList];
+                            setSavedList(combined);
+                            localStorage.setItem('geoLab_v3_saves', JSON.stringify(combined));
+                            alert(`成功导入 ${newItems.length} 个存档！`);
+                        } else { alert("文件格式错误"); }
+                    } catch (err) { alert("文件解析失败"); }
+                    e.target.value = null;
+                };
+                reader.readAsText(file);
+            };
+
+            const handleDeleteSavedItem = (id, e) => {
+                e.stopPropagation();
+                setConfirmState({
+                    show: true,
+                    title: "删除存档",
+                    msg: "确定要删除这个存档吗？此操作无法撤销。",
+                    action: () => {
+                        const newList = savedList.filter(item => item.id !== id);
+                        setSavedList(newList);
+                        localStorage.setItem('geoLab_v3_saves', JSON.stringify(newList));
+                        setConfirmState({ show: false });
+                    }
+                });
+            };
+
+            const handleLayerChange = (action) => {
+                if (selectedIds.length === 0) return;
+                const newShapes = [...shapes];
+                const idToMove = selectedIds[0];
+                const idx = newShapes.findIndex(s => s.id === idToMove);
+                if (idx === -1) return;
+                
+                const item = newShapes.splice(idx, 1)[0];
+                if (action === 'front') newShapes.push(item);
+                else if (action === 'back') newShapes.unshift(item);
+                else if (action === 'up' && idx < newShapes.length) newShapes.splice(idx + 1, 0, item);
+                else if (action === 'down' && idx > 0) newShapes.splice(idx - 1, 0, item);
+                else newShapes.splice(idx, 0, item);
+                
+                recordHistory(newShapes);
+            };
+
+            // ================= 核心计算 =================
+            const getVertices = (shape) => {
+                const { x, y, rotation, type, params, flipX = 1 } = shape;
+                const rad = (rotation * Math.PI) / 180;
+                const cos = Math.cos(rad), sin = Math.sin(rad);
+                const toWorld = (lx, ly) => ({ x: x + (lx * flipX * cos - ly * sin), y: y + (lx * flipX * sin + ly * cos) });
+                
+                if (type === SHAPE_TYPES.GROUP) {
+                    let allVerts = [{ x, y, type: 'center' }]; 
+                    shape.children.forEach(child => {
+                        const childLocalVerts = getVertices(child); 
+                        childLocalVerts.forEach(v => {
+                            if(v.type === 'center') return; 
+                            allVerts.push(toWorld(v.x, v.y)); 
+                        });
+                    });
+                    return allVerts;
+                }
+
+                const w = (params.width || 0) * PIXELS_PER_METER;
+                const h = (params.height || 0) * PIXELS_PER_METER;
+                const r = (params.radius || 0) * PIXELS_PER_METER;
+                
+                let pts = [{ x, y, type: 'center' }];
+
+                switch (type) {
+                    case SHAPE_TYPES.RECT:
+                        pts.push(toWorld(-w/2, -h/2), toWorld(w/2, -h/2), toWorld(w/2, h/2), toWorld(-w/2, h/2));
+                        break;
+                    case SHAPE_TYPES.TRIANGLE:
+                    case SHAPE_TYPES.RIGHT_TRIANGLE:
+                    case SHAPE_TYPES.GENERAL_TRIANGLE:
+                        const topX = (type === SHAPE_TYPES.GENERAL_TRIANGLE ? (params.topX || 0) * PIXELS_PER_METER : (type === SHAPE_TYPES.RIGHT_TRIANGLE ? -w/2 : 0));
+                        pts.push(toWorld(topX, -h/2), toWorld(-w/2, h/2), toWorld(w/2, h/2));
+                        break;
+                    case SHAPE_TYPES.PARALLELOGRAM:
+                        const angleRad = ((params.angle || 60) * Math.PI) / 180;
+                        const skew = h / Math.tan(angleRad);
+                        pts.push(toWorld(-w/2 + skew/2, -h/2), toWorld(w/2 + skew/2, -h/2), toWorld(w/2 - skew/2, h/2), toWorld(-w/2 - skew/2, h/2));
+                        break;
+                    case SHAPE_TYPES.TRAPEZOID:
+                        const tw = params.topWidth * PIXELS_PER_METER;
+                        const bw = params.bottomWidth * PIXELS_PER_METER;
+                        pts.push(toWorld(-tw/2, -h/2), toWorld(tw/2, -h/2), toWorld(bw/2, h/2), toWorld(-bw/2, h/2));
+                        break;
+                    case SHAPE_TYPES.RIGHT_TRAPEZOID:
+                        const rtw = params.topWidth * PIXELS_PER_METER;
+                        const rbw = params.bottomWidth * PIXELS_PER_METER;
+                        const maxW = Math.max(rtw, rbw);
+                        const xL = -maxW/2;
+                        pts.push(toWorld(xL, -h/2)); // TL
+                        pts.push(toWorld(xL + rtw, -h/2)); // TR
+                        pts.push(toWorld(xL + rbw, h/2)); // BR
+                        pts.push(toWorld(xL, h/2)); // BL
+                        break;
+                    case SHAPE_TYPES.CIRCLE:
+                        pts.push(toWorld(0, 0)); 
+                        pts.push(toWorld(r, 0), toWorld(0, r), toWorld(-r, 0), toWorld(0, -r)); 
+                        break;
+                    case SHAPE_TYPES.SECTOR:
+                        const sang = params.angle * Math.PI / 180;
+                        pts.push(toWorld(0, 0)); 
+                        pts.push(toWorld(r, 0)); 
+                        pts.push(toWorld(r * Math.cos(sang), r * Math.sin(sang))); 
+                        break;
+                    case SHAPE_TYPES.SEGMENT:
+                        const segAng = params.angle * Math.PI / 180;
+                        pts.push(toWorld(r * Math.cos(-segAng/2), r * Math.sin(-segAng/2))); 
+                        pts.push(toWorld(r * Math.cos(segAng/2), r * Math.sin(segAng/2))); 
+                        pts.push(toWorld(0, 0)); 
+                        break;
+                    case SHAPE_TYPES.SPANDREL:
+                        pts.push(toWorld(r/2, -r/2));
+                        pts.push(toWorld(r/2, r/2));
+                        pts.push(toWorld(-r/2, r/2));
+                        pts.push(toWorld(-r/2, -r/2)); 
+                        break;
+                }
+                return pts;
+            };
+
+            const getVisualCenter = (shape) => {
+                const { type, params } = shape;
+                const w = (params.width || 0) * PIXELS_PER_METER;
+                const h = (params.height || 0) * PIXELS_PER_METER;
+                const r = (params.radius || 0) * PIXELS_PER_METER;
+
+                switch (type) {
+                    case SHAPE_TYPES.TRIANGLE: return { x: 0, y: h / 6 };
+                    case SHAPE_TYPES.RIGHT_TRIANGLE: return { x: -w / 6, y: h / 6 };
+                    case SHAPE_TYPES.GENERAL_TRIANGLE: const tx = (params.topX || 0) * PIXELS_PER_METER; return { x: tx / 3, y: h / 6 };
+                    case SHAPE_TYPES.RIGHT_TRAPEZOID: 
+                         const rtw = params.topWidth * PIXELS_PER_METER;
+                         const rbw = params.bottomWidth * PIXELS_PER_METER;
+                         const maxW = Math.max(rtw, rbw);
+                         return { x: -maxW/2 + (rtw+rbw)/4, y: 0 };
+                    case SHAPE_TYPES.SECTOR: 
+                        const ang = (params.angle || 0) * Math.PI / 180; 
+                        const dist = r * 0.6; 
+                        return { x: dist * Math.cos(ang / 2), y: dist * Math.sin(ang / 2) };
+                    case SHAPE_TYPES.SEGMENT: 
+                        const segAng = (params.angle || 0) * Math.PI / 180;
+                        const chordDist = r * Math.cos(segAng / 2);
+                        const sagitta = r - chordDist;
+                        const segDist = chordDist + sagitta * 0.4;
+                        return { x: segDist, y: 0 };
+                    case SHAPE_TYPES.SPANDREL: 
+                        return { x: r * 0.25, y: r * 0.25 }; 
+                    default: return { x: 0, y: 0 };
+                }
+            };
+
+            const getSVGPoint = (e) => {
+                const pt = svgRef.current.createSVGPoint();
+                pt.x = e.clientX; pt.y = e.clientY;
+                return pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
+            };
+
+            const addShape = (type, overrideParams = {}) => {
+                const viewCenterX = (window.innerWidth / 2) / zoomLevel;
+                const viewCenterY = ((window.innerHeight - CONTROL_HEIGHT) / 2) / zoomLevel;
+
+                const newShape = {
+                    id: `s_${Date.now()}`, type, x: viewCenterX, y: viewCenterY, rotation: 0, color: '#FFFFFF', flipX: 1, showBorder: true,
+                    params: { width: 6, height: 6, radius: 3, angle: 60, topWidth: 2, bottomWidth: 4, topX: 0, ...overrideParams } 
+                };
+                
+                if (type === SHAPE_TYPES.TRIANGLE) {
+                    newShape.params.width = 5;
+                    newShape.params.height = 5 * Math.sqrt(3) / 2;
+                }
+                if (type === SHAPE_TYPES.PARALLELOGRAM) newShape.params = { width: 6, height: 4, angle: 60 };
+                if (type === SHAPE_TYPES.SECTOR && !overrideParams.angle) newShape.params = { radius: 3, angle: 60 };
+                if (type === SHAPE_TYPES.SEGMENT) newShape.params = { radius: 3, angle: 90 };
+                if (type === SHAPE_TYPES.RIGHT_TRAPEZOID) { newShape.params.topWidth = 3; newShape.params.bottomWidth = 6; newShape.params.height = 4; }
+                
+                let offset = 0;
+                while(shapes.some(s => Math.hypot(s.x - newShape.x, s.y - newShape.y) < 10)) {
+                    newShape.x += 20; newShape.y += 20; offset++; if(offset > 10) break;
+                }
+                recordHistory([...shapes, newShape]);
+                setSelectedIds([newShape.id]);
+            };
+
+            // ================= 交互 =================
+            const handlePointerDown = (e, shapeId, mode, handleIndex = -1) => {
+                e.stopPropagation(); e.preventDefault();
+                const svgPt = getSVGPoint(e);
+                
+                if (isMultiSelect && mode === 'dragging') { 
+                    if (selectedIds.includes(shapeId)) {
+                        setSelectedIds(prev => prev.filter(id => id !== shapeId));
+                    } else {
+                        setSelectedIds(prev => [...prev, shapeId]);
+                    }
+                } else {
+                    if (!selectedIds.includes(shapeId) && mode !== 'pivot_rotating' && mode !== 'center_rotating' && mode !== 'moving_pivot') {
+                        setSelectedIds([shapeId]);
+                    }
+                }
+                
+                setInteractionMode(mode);
+                const shape = shapes.find(s => s.id === shapeId);
+                
+                let selectedShapesSnapshot = [];
+                if (isMultiSelect) {
+                    const currentSelection = new Set([...selectedIds]);
+                    if (mode === 'dragging' && !selectedIds.includes(shapeId)) {
+                        currentSelection.add(shapeId);
+                    }
+                    selectedShapesSnapshot = shapes
+                        .filter(s => currentSelection.has(s.id))
+                        .map(s => JSON.parse(JSON.stringify(s)));
+                } else {
+                    selectedShapesSnapshot = [JSON.parse(JSON.stringify(shape))];
+                    if (selectedIds.length !== 1 || selectedIds[0] !== shapeId) {
+                        setSelectedIds([shapeId]);
+                    }
+                }
+                
+                let pivotSnapshot = null;
+                if (mode === 'pivot_rotating') {
+                    const pivotIndex = handleIndex === 0 ? 1 : 0;
+                    const { type, params } = shape;
+                    const r = params.radius * PIXELS_PER_METER;
+                    let pivotLocal = { x:0, y:0 };
+                    
+                    if (type === SHAPE_TYPES.SEGMENT) {
+                        const ang = params.angle * Math.PI / 180;
+                        const pts = [{ x: r * Math.cos(-ang/2), y: r * Math.sin(-ang/2) }, { x: r * Math.cos(ang/2), y: r * Math.sin(ang/2) }];
+                        pivotLocal = pts[pivotIndex];
+                    } else if (type === SHAPE_TYPES.SPANDREL) {
+                        const pts = [{ x: r/2, y: -r/2 }, { x: -r/2, y: r/2 }];
+                        pivotLocal = pts[pivotIndex];
+                    } else if (type === SHAPE_TYPES.SECTOR) {
+                        const pts = [{ x: r, y: 0 }, { x: -r, y: 0 }];
+                        pivotLocal = pts[pivotIndex];
+                    }
+                    
+                    const rad = shape.rotation * Math.PI / 180;
+                    const cos = Math.cos(rad), sin = Math.sin(rad);
+                    const px = pivotLocal.x * shape.flipX, py = pivotLocal.y;
+                    
+                    pivotSnapshot = {
+                        x: shape.x + px * cos - py * sin,
+                        y: shape.y + px * sin + py * cos,
+                        localX: pivotLocal.x,
+                        localY: pivotLocal.y
+                    };
+                } else if (mode === 'moving_pivot') {
+                     // Initial state for moving pivot
+                }
+
+                dragRef.current = { 
+                    startX: svgPt.x, startY: svgPt.y, 
+                    shapeSnapshot: JSON.parse(JSON.stringify(shape)), 
+                    allSelectedSnapshots: selectedShapesSnapshot,
+                    handleIndex,
+                    pivotSnapshot 
+                };
+                e.target.setPointerCapture(e.pointerId);
+            };
+
+            const handleCanvasDown = () => {
+                if (!isMultiSelect) setSelectedIds([]);
+            };
+
+            const handlePointerMove = (e) => {
+                if (interactionMode === 'idle') return;
+                e.preventDefault();
+                const currPt = getSVGPoint(e);
+                const { startX, startY, shapeSnapshot, handleIndex, allSelectedSnapshots, pivotSnapshot } = dragRef.current;
+                
+                if (interactionMode === 'dragging') {
+                    const dx = (currPt.x - startX) / zoomLevel;
+                    const dy = (currPt.y - startY) / zoomLevel;
+
+                    let finalDx = dx;
+                    let finalDy = dy;
+                    let snapTo = null;
+
+                    if (snapEnabled) {
+                        // Snapping logic
+                        const predictedPrimary = { ...shapeSnapshot, x: shapeSnapshot.x + dx, y: shapeSnapshot.y + dy };
+                        const myVerts = getVertices(predictedPrimary); 
+                        let minDist = SNAP_THRESHOLD / zoomLevel;
+                        
+                        const draggingIds = new Set(allSelectedSnapshots.map(s => s.id));
+
+                        shapes.forEach(other => {
+                            if (draggingIds.has(other.id)) return; 
+                            
+                            const otherVerts = getVertices(other);
+                            for (let mv of myVerts) {
+                                for (let ov of otherVerts) {
+                                    const dist = Math.hypot(mv.x - ov.x, mv.y - ov.y);
+                                    if (dist < minDist) {
+                                        minDist = dist;
+                                        finalDx = dx + (ov.x - mv.x);
+                                        finalDy = dy + (ov.y - mv.y);
+                                        snapTo = { x: ov.x, y: ov.y };
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    setSnapIndicator(snapTo);
+
+                    const draggingMap = new Map(allSelectedSnapshots.map(s => [s.id, s]));
+
+                    const updatedShapes = shapes.map(s => {
+                        const snap = draggingMap.get(s.id);
+                        if (snap) {
+                            return { ...s, x: snap.x + finalDx, y: snap.y + finalDy };
+                        }
+                        return s;
+                    });
+                    setShapes(updatedShapes);
+
+                } else if (interactionMode === 'rotating') {
+                    let worldPivot = { x: shapeSnapshot.x, y: shapeSnapshot.y };
+                    let px = 0, py = 0;
+
+                    if (shapeSnapshot.type === SHAPE_TYPES.GROUP && shapeSnapshot.params.pivot) {
+                        const gp = shapeSnapshot.params.pivot;
+                        const flip = shapeSnapshot.flipX || 1;
+                        px = gp.x * flip;
+                        py = gp.y;
+                        const rad = shapeSnapshot.rotation * Math.PI / 180;
+                        const cos = Math.cos(rad), sin = Math.sin(rad);
+                        worldPivot = {
+                            x: shapeSnapshot.x + px * cos - py * sin,
+                            y: shapeSnapshot.y + px * sin + py * cos
+                        };
+                    }
+
+                    const startAngle = Math.atan2(startY - worldPivot.y, startX - worldPivot.x);
+                    const currAngle = Math.atan2(currPt.y - worldPivot.y, currPt.x - worldPivot.x);
+                    
+                    let angle = shapeSnapshot.rotation + (currAngle - startAngle) * 180 / Math.PI;
+                    
+                    let normalizedAngle = angle % 360;
+                    if (normalizedAngle < 0) normalizedAngle += 360;
+
+                    let snapped = false;
+                    if (normalizedAngle % 90 < ROTATION_SNAP_STRONG || normalizedAngle % 90 > (90 - ROTATION_SNAP_STRONG)) {
+                        angle = Math.round(angle / 90) * 90;
+                        snapped = true;
+                    }
+                    if (!snapped && (normalizedAngle % 45 < ROTATION_SNAP_WEAK || normalizedAngle % 45 > (45 - ROTATION_SNAP_WEAK))) {
+                        angle = Math.round(angle / 45) * 45;
+                    }
+
+                    const finalRotDeg = Math.round(angle);
+                    let newState = { rotation: finalRotDeg };
+
+                    if (shapeSnapshot.type === SHAPE_TYPES.GROUP && (px !== 0 || py !== 0)) {
+                         const finalRad = finalRotDeg * Math.PI / 180;
+                         const newCos = Math.cos(finalRad), newSin = Math.sin(finalRad);
+                         newState.x = worldPivot.x - (px * newCos - py * newSin);
+                         newState.y = worldPivot.y - (px * newSin + py * newCos);
+                    }
+                    
+                    setShapes(prev => prev.map(s => s.id === shapeSnapshot.id ? { ...s, ...newState } : s));
+
+                } else if (interactionMode === 'resizing') {
+                    let targetX = currPt.x, targetY = currPt.y;
+                    let snapTo = null;
+                    if (snapEnabled) {
+                        let minDist = SNAP_THRESHOLD / zoomLevel;
+                        shapes.forEach(other => {
+                            if (other.id === shapeSnapshot.id) return;
+                            getVertices(other).forEach(ov => {
+                                const dist = Math.hypot(targetX - ov.x, targetY - ov.y);
+                                if (dist < minDist) { minDist = dist; targetX = ov.x; targetY = ov.y; snapTo = { x: ov.x, y: ov.y }; }
+                            });
+                        });
+                    }
+                    setSnapIndicator(snapTo);
+
+                    const rad = (-shapeSnapshot.rotation * Math.PI) / 180;
+                    const dx = targetX - shapeSnapshot.x, dy = targetY - shapeSnapshot.y;
+                    const localX = (dx * Math.cos(rad) - dy * Math.sin(rad)) / shapeSnapshot.flipX;
+                    const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
+                    let newParams = { ...shapeSnapshot.params };
+                    const absX = Math.abs(localX), absY = Math.abs(localY);
+                    const fmt = (val) => parseFloat(val.toFixed(1));
+
+                    if (shapeSnapshot.type === SHAPE_TYPES.RECT) {
+                        newParams.width = fmt(absX * 2 / PIXELS_PER_METER); 
+                        newParams.height = fmt(absY * 2 / PIXELS_PER_METER);
+                    } else if (shapeSnapshot.type === SHAPE_TYPES.TRIANGLE) {
+                        const newSide = fmt(Math.max(absX * 2, absY * 2 / 0.866) / PIXELS_PER_METER);
+                        newParams.width = newSide; newParams.height = fmt(newSide * 0.866);
+                    } else if (shapeSnapshot.type === SHAPE_TYPES.RIGHT_TRIANGLE) {
+                        if(handleIndex === 1) { // TL
+                             newParams.height = fmt(absY * 2 / PIXELS_PER_METER);
+                        } else if(handleIndex === 2) { // BR (was 3)
+                             newParams.width = fmt(absX * 2 / PIXELS_PER_METER);
+                        }
+                    } else if (shapeSnapshot.type === SHAPE_TYPES.GENERAL_TRIANGLE) {
+                        if (handleIndex === 1) { newParams.height = fmt(absY * 2 / PIXELS_PER_METER); newParams.topX = fmt(localX / PIXELS_PER_METER); } 
+                        else newParams.width = fmt(absX * 2 / PIXELS_PER_METER);
+                    } else if (shapeSnapshot.type === SHAPE_TYPES.PARALLELOGRAM) {
+                        newParams.height = fmt(absY * 2 / PIXELS_PER_METER);
+                        const angleRad = (newParams.angle * Math.PI) / 180;
+                        const skewHalf = (newParams.height * PIXELS_PER_METER) / Math.tan(angleRad) / 2;
+                        newParams.width = Math.max(0.5, fmt((absX - Math.abs(skewHalf)) * 2 / PIXELS_PER_METER));
+                    } else if (shapeSnapshot.type === SHAPE_TYPES.TRAPEZOID || shapeSnapshot.type === SHAPE_TYPES.RIGHT_TRAPEZOID) {
+                        newParams.height = fmt(absY * 2 / PIXELS_PER_METER);
+                        if (handleIndex <= 2) newParams.topWidth = fmt(absX * 2 / PIXELS_PER_METER);
+                        else newParams.bottomWidth = fmt(absX * 2 / PIXELS_PER_METER);
+                        
+                        if (shapeSnapshot.type === SHAPE_TYPES.RIGHT_TRAPEZOID) {
+                             const maxW = Math.max(shapeSnapshot.params.topWidth, shapeSnapshot.params.bottomWidth) * PIXELS_PER_METER;
+                             const xL = -maxW/2;
+                             const dist = localX - xL; 
+                             if (handleIndex <= 2) newParams.topWidth = fmt(Math.max(0.5, dist / PIXELS_PER_METER));
+                             else newParams.bottomWidth = fmt(Math.max(0.5, dist / PIXELS_PER_METER));
+                        }
+                    } 
+
+                    if (newParams.width && newParams.width < 0.5) newParams.width = 0.5;
+                    if (newParams.height && newParams.height < 0.5) newParams.height = 0.5;
+                    setShapes(prev => prev.map(s => s.id === shapeSnapshot.id ? { ...s, params: newParams } : s));
+                } else if (interactionMode === 'pivot_rotating' || interactionMode === 'center_rotating') {
+                    
+                    let worldPivot = { x: shapeSnapshot.x, y: shapeSnapshot.y };
+                    let px = 0, py = 0;
+                    
+                    if (interactionMode === 'pivot_rotating') {
+                        worldPivot = { x: pivotSnapshot.x, y: pivotSnapshot.y };
+                        px = pivotSnapshot.localX * shapeSnapshot.flipX;
+                        py = pivotSnapshot.localY;
+                    }
+
+                    const mouseAngle = Math.atan2(currPt.y - worldPivot.y, (currPt.x - worldPivot.x));
+                    
+                    const { handleIndex } = dragRef.current;
+                    let handleLocal = { x: 0, y: 0 };
+                    
+                    if (interactionMode === 'pivot_rotating') {
+                        const getSpecialPoints = (s) => {
+                             const { type, params } = s; const r = params.radius * PIXELS_PER_METER;
+                             if (type === SHAPE_TYPES.SEGMENT) { const ang = params.angle * Math.PI / 180; return [{ x: r * Math.cos(-ang/2), y: r * Math.sin(-ang/2) }, { x: r * Math.cos(ang/2), y: r * Math.sin(ang/2) }]; }
+                             else if (type === SHAPE_TYPES.SPANDREL) return [{ x: r/2, y: -r/2 }, { x: -r/2, y: r/2 }];
+                             else return [{ x: r, y: 0 }, { x: -r, y: 0 }];
+                        };
+                        const pts = getSpecialPoints(shapeSnapshot);
+                        handleLocal = pts[handleIndex];
+                    } else {
+                        const r = shapeSnapshot.params.radius * PIXELS_PER_METER;
+                        const ang = shapeSnapshot.params.angle * Math.PI / 180;
+                        const pts = [{ x: r, y: 0 }, { x: r * Math.cos(ang), y: r * Math.sin(ang) }];
+                        handleLocal = pts[handleIndex];
+                    }
+
+                    const hx = handleLocal.x * shapeSnapshot.flipX;
+                    const hy = handleLocal.y;
+                    const baseAngle = Math.atan2(hy - py, hx - px);
+                    
+                    let newRotRad = mouseAngle - baseAngle;
+                    let newRotDeg = newRotRad * 180 / Math.PI;
+                    
+                    newRotDeg = newRotDeg % 360;
+                    if(newRotDeg < 0) newRotDeg += 360;
+
+                    if (newRotDeg % 90 < ROTATION_SNAP_STRONG || newRotDeg % 90 > (90 - ROTATION_SNAP_STRONG)) newRotDeg = Math.round(newRotDeg / 90) * 90;
+                    else if (newRotDeg % 45 < ROTATION_SNAP_WEAK || newRotDeg % 45 > (45 - ROTATION_SNAP_WEAK)) newRotDeg = Math.round(newRotDeg / 45) * 45;
+
+                    const finalRotDeg = Math.round(newRotDeg); 
+                    const finalRad = finalRotDeg * Math.PI / 180;
+
+                    let newState = { rotation: finalRotDeg };
+
+                    if (interactionMode === 'pivot_rotating') {
+                        const newCos = Math.cos(finalRad), newSin = Math.sin(finalRad);
+                        newState.x = worldPivot.x - (px * newCos - py * newSin);
+                        newState.y = worldPivot.y - (px * newSin + py * newCos);
+                    }
+
+                    setShapes(prev => prev.map(s => s.id === shapeSnapshot.id ? { ...s, ...newState } : s));
+                } else if (interactionMode === 'moving_pivot') {
+                     const flip = shapeSnapshot.flipX || 1;
+                     const rad = (-shapeSnapshot.rotation * Math.PI) / 180;
+                     const dx = (currPt.x - shapeSnapshot.x);
+                     const dy = (currPt.y - shapeSnapshot.y);
+                     let localX = (dx * Math.cos(rad) - dy * Math.sin(rad)) / flip;
+                     let localY = dx * Math.sin(rad) + dy * Math.cos(rad);
+                     
+                     // ---------------- SNAP LOGIC START ----------------
+                     let snapTo = null;
+                     if (snapEnabled) {
+                         let minDist = SNAP_THRESHOLD / zoomLevel;
+                         
+                         const distCenter = Math.hypot(localX, localY);
+                         if (distCenter < minDist) {
+                             minDist = distCenter;
+                             snapTo = { x: 0, y: 0 };
+                         }
+            
+                         shapeSnapshot.children.forEach(child => {
+                             const verts = getVertices(child);
+                             verts.forEach(v => {
+                                 const dist = Math.hypot(localX - v.x, localY - v.y);
+                                 if (dist < minDist) {
+                                     minDist = dist;
+                                     snapTo = { x: v.x, y: v.y };
+                                 }
+                             });
+                         });
+            
+                         if (snapTo) {
+                             localX = snapTo.x;
+                             localY = snapTo.y;
+                             
+                             const groupRad = (shapeSnapshot.rotation * Math.PI) / 180;
+                             const gCos = Math.cos(groupRad);
+                             const gSin = Math.sin(groupRad);
+                             
+                             const lx_flipped = localX * flip;
+                             const ly = localY;
+                             
+                             const worldSnapX = shapeSnapshot.x + (lx_flipped * gCos - ly * gSin);
+                             const worldSnapY = shapeSnapshot.y + (lx_flipped * gSin + ly * gCos);
+                             
+                             setSnapIndicator({ x: worldSnapX, y: worldSnapY });
+                         } else {
+                             setSnapIndicator(null);
+                         }
+                     }
+            
+                     setShapes(prev => prev.map(s => s.id === shapeSnapshot.id ? { ...s, params: { ...s.params, pivot: { x: localX, y: localY } } } : s));
+                }
+            };
+
+            const handlePointerUp = (e) => {
+                if (interactionMode !== 'idle') recordHistory(shapes);
+                setInteractionMode('idle'); setSnapIndicator(null);
+            };
+
+            const getControlHandles = (shape) => {
+                if (shape.type === SHAPE_TYPES.GROUP) return []; 
+                const w = (shape.params.width || 0) * PIXELS_PER_METER;
+                const h = (shape.params.height || 0) * PIXELS_PER_METER;
+                let handles = [];
+
+                if (shape.type === SHAPE_TYPES.RECT) {
+                    handles = [ {x:-w/2, y:-h/2}, {x:w/2, y:-h/2}, {x:w/2, y:h/2}, {x:-w/2, y:h/2} ];
+                } else if (shape.type === SHAPE_TYPES.RIGHT_TRIANGLE) {
+                    handles = [ {x:-w/2, y:-h/2}, {x:w/2, y:h/2}, {x:-w/2, y:h/2} ]; 
+                } else if (shape.type === SHAPE_TYPES.TRIANGLE || shape.type === SHAPE_TYPES.GENERAL_TRIANGLE) {
+                    const tx = shape.type === SHAPE_TYPES.GENERAL_TRIANGLE ? (shape.params.topX * PIXELS_PER_METER) : 0;
+                    handles = [ {x:tx, y:-h/2}, {x:-w/2, y:h/2}, {x:w/2, y:h/2} ];
+                } else if (shape.type === SHAPE_TYPES.PARALLELOGRAM) {
+                    const skew = h / Math.tan(shape.params.angle * Math.PI / 180);
+                    handles = [ {x:-w/2 + skew/2, y:-h/2}, {x:w/2 + skew/2, y:-h/2}, {x:w/2 - skew/2, y:h/2}, {x:-w/2 - skew/2, y:h/2} ];
+                } else if (shape.type === SHAPE_TYPES.TRAPEZOID) {
+                    const tw = shape.params.topWidth * PIXELS_PER_METER;
+                    const bw = shape.params.bottomWidth * PIXELS_PER_METER;
+                    handles = [ {x:-tw/2, y:-h/2}, {x:tw/2, y:-h/2}, {x:bw/2, y:h/2}, {x:-bw/2, y:h/2} ];
+                } else if (shape.type === SHAPE_TYPES.RIGHT_TRAPEZOID) {
+                     const rtw = shape.params.topWidth * PIXELS_PER_METER;
+                     const rbw = shape.params.bottomWidth * PIXELS_PER_METER;
+                     const maxW = Math.max(rtw, rbw);
+                     const xL = -maxW/2;
+                     handles = [ {x:xL, y:-h/2}, {x:xL+rtw, y:-h/2}, {x:xL+rbw, y:h/2}, {x:xL, y:h/2} ];
+                }
+                return handles;
+            };
+
+            const requestLoad = (items) => {
+                const doLoad = () => {
+                    if (items.length > 0) {
+                        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                        
+                        items.forEach(s => {
+                            const verts = getVertices(s);
+                            verts.forEach(v => {
+                                if (v.type === 'center') return;
+                                minX = Math.min(minX, v.x);
+                                maxX = Math.max(maxX, v.x);
+                                minY = Math.min(minY, v.y);
+                                maxY = Math.max(maxY, v.y);
+                            });
+                        });
+                        
+                        if (minX === Infinity) {
+                            items.forEach(s => { 
+                                minX = Math.min(minX, s.x); maxX = Math.max(maxX, s.x); 
+                                minY = Math.min(minY, s.y); maxY = Math.max(maxY, s.y); 
+                            });
+                        }
+
+                        const centerX = (minX + maxX) / 2;
+                        const centerY = (minY + maxY) / 2;
+                        
+                        const viewW = window.innerWidth / zoomLevel;
+                        const viewH = (window.innerHeight - CONTROL_HEIGHT) / zoomLevel;
+                        
+                        const dx = (viewW / 2) - centerX;
+                        const dy = (viewH / 2) - centerY;
+                        
+                        const centeredItems = items.map(s => ({ ...s, x: s.x + dx, y: s.y + dy }));
+                        
+                        setShapes(centeredItems); 
+                        recordHistory(centeredItems);
+                    } else { setShapes([]); }
+                    setSelectedIds([]); setConfirmState({show:false});
+                };
+                if (shapes.length > 0) setConfirmState({ show: true, title: "加载存档", msg: "加载将覆盖当前画布，是否继续？", action: doLoad });
+                else doLoad();
+            };
+
+            const RenderShape = ({ shape, isSelected, isMulti }) => {
+                const handles = isSelected && !isMulti ? getControlHandles(shape) : []; 
+                const { type, params } = shape;
+                const h = params.height*PIXELS_PER_METER;
+                
+                const specialHandles = [];
+                if (isSelected && !isMulti) {
+                    const r = params.radius * PIXELS_PER_METER;
+                    if (type === SHAPE_TYPES.SEGMENT) {
+                        const ang = params.angle * Math.PI / 180;
+                        specialHandles.push({x: r * Math.cos(-ang/2), y: r * Math.sin(-ang/2), mode: 'pivot_rotating'});
+                        specialHandles.push({x: r * Math.cos(ang/2), y: r * Math.sin(ang/2), mode: 'pivot_rotating'});
+                    } else if (type === SHAPE_TYPES.SPANDREL) {
+                        specialHandles.push({x: r/2, y: -r/2, mode: 'pivot_rotating'});
+                        specialHandles.push({x: -r/2, y: r/2, mode: 'pivot_rotating'});
+                    } else if (type === SHAPE_TYPES.SECTOR) {
+                        if (Math.abs(params.angle - 180) < 0.1) {
+                            specialHandles.push({x: r, y: 0, mode: 'pivot_rotating'});
+                            specialHandles.push({x: -r, y: 0, mode: 'pivot_rotating'});
+                        } else {
+                            const ang = params.angle * Math.PI / 180;
+                            specialHandles.push({x: r, y: 0, mode: 'center_rotating'});
+                            specialHandles.push({x: r * Math.cos(ang), y: r * Math.sin(ang), mode: 'center_rotating'});
+                        }
+                    }
+                }
+
+                // Helper to get visual center offset for the checkmark
+                const centerOffset = getVisualCenter(shape);
+
+                if (type === SHAPE_TYPES.GROUP) {
+                    return (
+                        // 修复：添加 scale(flipX, 1) 使渲染响应翻转
+                        <g transform={`translate(${shape.x}, ${shape.y}) rotate(${shape.rotation}) scale(${shape.flipX || 1}, 1)`} onPointerDown={(e) => handlePointerDown(e, shape.id, 'dragging')}>
+                            <circle r="5" fill="transparent" /> 
+                            {shape.children.map(child => (
+                                <g key={child.id} transform={`translate(${child.x}, ${child.y}) rotate(${child.rotation}) scale(${child.flipX}, 1)`}>
+                                    <RenderShapeContent shape={child} />
+                                </g>
+                            ))}
+                            {isSelected && (
+                                <g>
+                                    <line x1="0" y1="0" x2="0" y2={-50} stroke="#22c55e" strokeDasharray="3 3"/>
+                                    <circle cx="0" cy={-50} r="10" fill="white" stroke="#22c55e" strokeWidth="2" cursor="grab" onPointerDown={(e) => handlePointerDown(e, shape.id, 'rotating')} />
+                                    {/* Rotate Icon inside Handle */}
+                                    <IconComp name="RotateCw" size={12} color="#22c55e" x="-6" y="-56" pointerEvents="none"/>
+                                    
+                                    {/* Custom Pivot Handle for Group */}
+                                    {(() => {
+                                        // Displaying pivot: Since group is flipped via scale, and pivot coordinates stored relative to un-flipped group
+                                        // We just draw it at pivot.x, pivot.y. The SVG scale transform handles the flipping visually.
+                                        const px = (shape.params?.pivot?.x || 0);
+                                        const py = (shape.params?.pivot?.y || 0);
+                                        return (
+                                            <g transform={`translate(${px}, ${py})`} cursor="move" onPointerDown={(e) => handlePointerDown(e, shape.id, 'moving_pivot')}>
+                                                <circle r="6" fill="#f97316" stroke="white" strokeWidth="2" />
+                                                <line x1="-4" y1="0" x2="4" y2="0" stroke="white" strokeWidth="1" />
+                                                <line x1="0" y1="-4" x2="0" y2="4" stroke="white" strokeWidth="1" />
+                                            </g>
+                                        );
+                                    })()}
+                                </g>
+                            )}
+                            {isSelected && isMulti && (
+                                <g pointerEvents="none" transform={`translate(${centerOffset.x}, ${centerOffset.y})`}>
+                                    <circle r="12" fill="#3b82f6" stroke="white" strokeWidth="2" />
+                                    <path d="M-6 0 L-2 4 L 6 -4" stroke="white" strokeWidth="2" fill="none" />
+                                </g>
+                            )}
+                        </g>
+                    )
+                }
+
+                const hasNormalRot = !([SHAPE_TYPES.SEGMENT, SHAPE_TYPES.SPANDREL, SHAPE_TYPES.SECTOR].includes(type));
+                let handleH = h;
+                if (type === SHAPE_TYPES.CIRCLE) handleH = params.radius * 2 * PIXELS_PER_METER;
+
+                return (
+                    <g transform={`translate(${shape.x}, ${shape.y}) rotate(${shape.rotation}) scale(${shape.flipX}, 1)`} onPointerDown={(e) => handlePointerDown(e, shape.id, 'dragging')}>
+                        <RenderShapeContent shape={shape} isSelected={isSelected} />
+                        {isSelected && !isMulti && (
+                            <g>
+                                {hasNormalRot && (
+                                    <>
+                                        <line x1="0" y1={-handleH/2} x2="0" y2={-handleH/2 - 45} stroke="#22c55e" strokeDasharray="3 3"/>
+                                        <circle cx="0" cy={-handleH/2 - 45} r="10" fill="white" stroke="#22c55e" strokeWidth="2" cursor="grab" onPointerDown={(e) => handlePointerDown(e, shape.id, 'rotating')} />
+                                        <IconComp name="RotateCw" size={12} color="#22c55e" x="-6" y={-handleH/2 - 51} pointerEvents="none"/>
+                                    </>
+                                )}
+                                {handles.map((h, i) => (
+                                    <circle key={i} cx={h.x} cy={h.y} r="5" fill="white" stroke="#3b82f6" strokeWidth="2" cursor="move" onPointerDown={(e) => handlePointerDown(e, shape.id, 'resizing', i+1)} />
+                                ))}
+                                {specialHandles.map((h, i) => (
+                                    <g key={i} transform={`translate(${h.x}, ${h.y})`} cursor="pointer" onPointerDown={(e) => handlePointerDown(e, shape.id, h.mode, i)}>
+                                        <circle r="8" fill="white" stroke="#22c55e" strokeWidth="2" />
+                                        <IconComp name="RotateCw" size={10} color="#22c55e" x="-5" y="-5" pointerEvents="none"/>
+                                    </g>
+                                ))}
+                            </g>
+                        )}
+                        {isSelected && isMulti && (
+                            <g pointerEvents="none" transform={`translate(${centerOffset.x}, ${centerOffset.y})`}>
+                                <circle r="12" fill="#3b82f6" stroke="white" strokeWidth="2" />
+                                <path d="M-6 0 L-2 4 L 6 -4" stroke="white" strokeWidth="2" fill="none" />
+                            </g>
+                        )}
+                    </g>
+                );
+            };
+
+            const RenderShapeContent = ({ shape, isSelected }) => {
+                const { type, params } = shape;
+                const w = (params.width||0)*PIXELS_PER_METER, h = params.height*PIXELS_PER_METER;
+                let d = "";
+                if (type === SHAPE_TYPES.RECT) d = `M${-w/2},${-h/2} h${w} v${h} h${-w} Z`;
+                else if (type === SHAPE_TYPES.CIRCLE) { const r = params.radius*PIXELS_PER_METER; d = `M${-r},0 a${r},${r} 0 1,0 ${r*2},0 a${r},${r} 0 1,0 ${-r*2},0`; }
+                else if (type === SHAPE_TYPES.TRIANGLE || type === SHAPE_TYPES.GENERAL_TRIANGLE) { const tx = type===SHAPE_TYPES.GENERAL_TRIANGLE ? params.topX*PIXELS_PER_METER : 0; d = `M${tx},${-h/2} L${-w/2},${h/2} L${w/2},${h/2} Z`; } 
+                else if (type === SHAPE_TYPES.PARALLELOGRAM) { const skew = h / Math.tan(params.angle * Math.PI / 180); d = `M${-w/2 + skew/2},${-h/2} h${w} L${w/2 - skew/2},${h/2} h${-w} Z`; } 
+                else if (type === SHAPE_TYPES.TRAPEZOID) { const tw = params.topWidth*PIXELS_PER_METER, bw = params.bottomWidth*PIXELS_PER_METER; d = `M${-tw/2},${-h/2} h${tw} L${bw/2},${h/2} h${-bw} Z`; } 
+                else if (type === SHAPE_TYPES.SECTOR) { const r = params.radius*PIXELS_PER_METER, ang = params.angle * Math.PI/180; d = `M0,0 L${r},0 A${r},${r} 0 ${params.angle>180?1:0},1 ${r*Math.cos(ang)},${r*Math.sin(ang)} Z`; } 
+                else if (type === SHAPE_TYPES.SEGMENT) { const r = params.radius*PIXELS_PER_METER, ang = params.angle*Math.PI/180; const sx = r*Math.cos(-ang/2), sy = r*Math.sin(-ang/2), ex = r*Math.cos(ang/2), ey = r*Math.sin(ang/2); d = `M${sx},${sy} A${r},${r} 0 0,1 ${ex},${ey} Z`; } 
+                else if (type === SHAPE_TYPES.SPANDREL) { const r = params.radius*PIXELS_PER_METER; d = `M${r/2},${-r/2} L${r/2},${r/2} L${-r/2},${r/2} A${r},${r} 0 0,0 ${r/2},${-r/2} Z`; } 
+                else if (type === SHAPE_TYPES.RIGHT_TRIANGLE) d = `M${-w/2},${-h/2} v${h} h${w} Z`;
+                else if (type === SHAPE_TYPES.RIGHT_TRAPEZOID) {
+                     const rtw = params.topWidth * PIXELS_PER_METER;
+                     const rbw = params.bottomWidth * PIXELS_PER_METER;
+                     const maxW = Math.max(rtw, rbw);
+                     const xL = -maxW/2;
+                     d = `M${xL},${-h/2} h${rtw} L${xL+rbw},${h/2} h${-rbw} Z`;
+                }
+
+                let strokeColor = isSelected ? "#22c55e" : shape.color;
+                if (!isSelected) {
+                    if (shape.color === 'transparent') strokeColor = "#000000"; 
+                    else if (shape.color === '#FFFFFF') strokeColor = "#666666"; 
+                }
+                const strokeDash = ""; 
+
+                return <path d={d} fill={shape.color} stroke={strokeColor} strokeWidth={shape.showBorder !== false || isSelected ? 2 : 0} strokeDasharray={strokeDash} vectorEffect="non-scaling-stroke" />;
+            };
+
+            return (
+                <div className="flex flex-col h-screen overflow-hidden select-none">
+                    <div className="flex-1 bg-white relative overflow-hidden" onPointerDown={handleCanvasDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>
+                        {showGrid && (
+                            <div className="absolute inset-0 pointer-events-none z-0 opacity-30" 
+                                style={{ backgroundImage: `linear-gradient(to right, #d1fae5 1px, transparent 1px), linear-gradient(to bottom, #d1fae5 1px, transparent 1px)`, backgroundSize: `${GRID_SIZE_PX}px ${GRID_SIZE_PX}px` }} 
+                            />
+                        )}
+                        
+                        <svg ref={svgRef} className="w-full h-full">
+                            <g transform={`scale(${zoomLevel})`}>
+                                {shapes.map(shape => (
+                                    <RenderShape key={shape.id} shape={shape} isSelected={selectedIds.includes(shape.id)} isMulti={selectedIds.length > 1} />
+                                ))}
+                                {snapIndicator && (
+                                    <g transform={`translate(${snapIndicator.x}, ${snapIndicator.y})`}>
+                                        <circle r="6" fill="none" stroke="#ec4899" strokeWidth="2" className="animate-pulse"/>
+                                        <line x1="-10" y1="0" x2="10" y2="0" stroke="#ec4899" />
+                                        <line x1="0" y1="-10" x2="0" y2="10" stroke="#ec4899" />
+                                    </g>
+                                )}
+                            </g>
+                        </svg>
+                        
+                        <div className="absolute top-4 right-4 flex flex-col gap-2">
+                             <div className="bg-white p-1 rounded-lg shadow border border-gray-100 flex flex-col items-center">
+                                <button onClick={()=>setZoomLevel(z=>Math.min(2, z+0.1))} className="p-2 hover:text-green-600 text-lg">+</button>
+                                <span className="text-xs text-gray-400">{Math.round(zoomLevel*100)}%</span>
+                                <button onClick={()=>setZoomLevel(z=>Math.max(0.4, z-0.1))} className="p-2 hover:text-green-600 text-lg">-</button>
+                             </div>
+                             <button onClick={()=>setSnapEnabled(!snapEnabled)} className={`p-3 bg-white rounded-lg shadow border ${snapEnabled ? 'text-blue-500 border-blue-200' : 'text-gray-400'}`} title="吸附开关"><IconComp name="Magnet" /></button>
+                             <button onClick={()=>setShowGrid(!showGrid)} className="p-3 bg-white rounded-lg shadow border text-gray-500 hover:text-green-600"><IconComp name="Grid" /></button>
+                             <button onClick={() => setConfirmState({ show: true, title: "重置画布", msg: "确定要清空吗？", action: () => { setShapes([]); setConfirmState({show:false}); } })} className="p-3 bg-white rounded-lg shadow border text-red-400 hover:bg-red-50 hover:text-red-500"><IconComp name="Reset" /></button>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border-t border-green-100 flex shadow-xl z-50 relative" style={{ height: CONTROL_HEIGHT }}>
+                        
+                        <div className="w-[280px] bg-green-50/50 border-r border-green-100 flex flex-col shrink-0">
+                            <div className="p-2 border-b border-green-100 flex gap-2">
+                                <button onClick={()=>setShowHelp(true)} className="flex-1 py-1.5 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600 flex items-center justify-center gap-1"><IconComp name="Book" size={14} /> 课件使用说明书</button>
+                                <button onClick={undo} disabled={historyIndex<=0} className={`px-3 rounded border text-xs ${historyIndex>0?'bg-white text-green-700':'bg-gray-50 text-gray-300'}`}><IconComp name="Undo" size={14}/></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-2">
+                                <div className="text-[10px] font-bold text-gray-400 mb-2 flex justify-between">
+                                    <span>图形库 ({savedList.length})</span>
+                                    <div className="flex gap-1">
+                                        <button onClick={()=>fileInputRef.current.click()} className="text-blue-600 hover:bg-blue-100 p-2 rounded" title="导入"><IconComp name="Upload" size={20}/></button>
+                                        <button onClick={exportData} className="text-blue-600 hover:bg-blue-100 p-2 rounded" title="导出"><IconComp name="Download" size={20}/></button>
+                                        <button onClick={()=>{setSaveName(""); setShowSaveModal(true)}} className="text-green-600 hover:bg-green-100 p-2 rounded" title="保存"><IconComp name="Save" size={20}/></button>
+                                        <input type="file" ref={fileInputRef} onChange={importData} className="hidden" accept=".json" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1 mb-2">
+                                    {savedList.map(item => (
+                                        <div key={item.id} onClick={() => requestLoad(item.shapes)} className="group flex items-center gap-2 p-2 bg-white border border-gray-100 rounded cursor-pointer hover:border-green-400 hover:shadow-sm">
+                                            <IconComp name="Folder" size={16} className="text-amber-400" />
+                                            <span className="text-xs text-gray-600 flex-1 truncate">{item.name}</span>
+                                            <button onClick={(e)=>handleDeleteSavedItem(item.id, e)} className="hidden group-hover:block text-red-400 hover:text-red-600"><IconComp name="Trash" size={12}/></button>
+                                        </div>
+                                    ))}
+                                    {savedList.length===0 && <div className="text-center text-xs text-gray-400 py-4">暂无存档</div>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="w-[420px] p-4 border-r border-green-100 bg-white overflow-y-auto shrink-0">
+                            <h3 className="text-xs font-bold text-gray-400 mb-3 uppercase">基础图形</h3>
+                            <div className="grid grid-cols-4 gap-2">
+                                <ShapeButton icon={<IconComp name="Square" size={24}/>} label="长方形" onClick={()=>addShape(SHAPE_TYPES.RECT)} />
+                                <ShapeButton icon={<IconComp name="Segment" size={24}/>} label="减速带" onClick={()=>addShape(SHAPE_TYPES.SEGMENT)} />
+                                <ShapeButton icon={<IconComp name="Spandrel" size={24}/>} label="回旋镖" onClick={()=>addShape(SHAPE_TYPES.SPANDREL)} />
+                                <ShapeButton icon={<IconComp name="Quarter" size={24}/>} label="任意扇形" onClick={()=>addShape(SHAPE_TYPES.SECTOR, { angle: 90 })} />
+                                <ShapeButton icon={<IconComp name="Circle" size={24}/>} label="圆形" onClick={()=>addShape(SHAPE_TYPES.CIRCLE)} />
+                                <ShapeButton icon={<IconComp name="Triangle" size={24}/>} label="正三角形" onClick={()=>addShape(SHAPE_TYPES.TRIANGLE)} />
+                                <ShapeButton icon={<IconComp name="RightTri" size={24}/>} label="直角三角形" onClick={()=>addShape(SHAPE_TYPES.RIGHT_TRIANGLE)} />
+                                <ShapeButton icon={<IconComp name="Half" size={24}/>} label="半圆" onClick={()=>addShape(SHAPE_TYPES.SECTOR, { angle: 180 })} />
+                                <ShapeButton icon={<IconComp name="GenTri" size={24}/>} label="普通三角" onClick={()=>addShape(SHAPE_TYPES.GENERAL_TRIANGLE)} />
+                                <ShapeButton icon={<IconComp name="Para" size={24}/>} label="平行四边形" onClick={()=>addShape(SHAPE_TYPES.PARALLELOGRAM)} />
+                                <ShapeButton icon={<IconComp name="Trap" size={24}/>} label="等腰梯形" onClick={()=>addShape(SHAPE_TYPES.TRAPEZOID)} />
+                                <ShapeButton icon={<IconComp name="RightTrap" size={24}/>} label="直角梯形" onClick={()=>addShape(SHAPE_TYPES.RIGHT_TRAPEZOID)} />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 bg-gray-50 p-3 border-l border-green-100 overflow-y-auto">
+                            {selectedIds.length > 0 ? (
+                                <div className="h-full flex flex-col">
+                                    <div className="flex items-center justify-between mb-4 border-b pb-2">
+                                        <div className="flex gap-2 w-full">
+                                            <button onClick={()=>{setShapes(prev=>prev.filter(s=>!selectedIds.includes(s.id))); setSelectedIds([]);}} className="bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-4 py-2 flex items-center justify-center gap-1 transition-all flex-1 shadow-sm border border-red-200">
+                                                <IconComp name="Trash" size={20}/> <span className="text-sm font-bold">删除</span>
+                                            </button>
+                                            <button onClick={handleCopy} className="bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg px-4 py-2 flex items-center justify-center gap-1 transition-all flex-1 shadow-sm border border-blue-200">
+                                                <IconComp name="Copy" size={20}/> <span className="text-sm font-bold">复制</span>
+                                            </button>
+                                            <button onClick={() => { setIsMultiSelect(!isMultiSelect); if(isMultiSelect) setSelectedIds([]); }} className={`rounded-lg px-4 py-2 flex items-center justify-center gap-1 transition-all flex-1 shadow-sm border ${isMultiSelect ? 'bg-blue-500 text-white border-blue-600 ring-2 ring-blue-200' : 'bg-white text-gray-600 border-gray-300'}`}>
+                                                <IconComp name="Check" size={20} /> <span className="text-sm font-bold">{isMultiSelect ? "多选开启" : "多选"}</span>
+                                            </button>
+                                            
+                                            {(selectedIds.length > 1 || (selectedShape && selectedShape.type === SHAPE_TYPES.GROUP)) && (
+                                                <button 
+                                                    onClick={selectedIds.length > 1 ? handleGroup : handleUngroup} 
+                                                    className={`rounded-lg px-4 py-2 flex items-center justify-center gap-1 transition-all flex-1 shadow-sm border text-white ${selectedIds.length > 1 ? 'bg-indigo-500 hover:bg-indigo-600 border-indigo-600' : 'bg-orange-500 hover:bg-orange-600 border-orange-600'}`}
+                                                >
+                                                    <IconComp name={selectedIds.length > 1 ? "Merge" : "Split"} size={20} /> 
+                                                    <span className="text-sm font-bold">{selectedIds.length > 1 ? "合并" : "拆分"}</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-4 flex-1 h-full min-h-0">
+                                        <div className="flex-1 flex flex-col gap-3 min-w-0">
+                                            <div>
+                                                <div className="text-[10px] text-gray-400 mb-1">填充颜色</div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {COLORS.map(c => (
+                                                        <button key={c} onClick={() => updateSelectedShape({ color: c })} className={`w-6 h-6 rounded-full border ${selectedShape && selectedShape.color===c?'ring-2 ring-green-500 ring-offset-1':''}`} style={{background:c==='transparent'?'white':c}}>{c==='transparent'&&'🚫'}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button onClick={() => updateSelectedShape({ flipX: ((selectedShape && selectedShape.flipX) || 1) * -1 })} className="p-2 rounded bg-white border hover:text-green-600 flex items-center justify-center gap-1 text-xs" title="镜像翻转"><IconComp name="Flip" size={14}/> 翻转</button>
+                                                <button onClick={() => updateSelectedShape({ showBorder: !(selectedShape && selectedShape.showBorder !== false) })} className={`p-2 rounded border flex items-center justify-center gap-1 text-xs ${selectedShape && selectedShape.showBorder!==false ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-400'}`} title="边框开关"><IconComp name="Border" size={14}/> 边框</button>
+                                            </div>
+
+                                            <div>
+                                                <div className="text-[10px] text-gray-400 mb-1">图层调整</div>
+                                                <div className="flex gap-1 bg-white p-1 rounded border">
+                                                    <button onClick={()=>handleLayerChange('front')} className="flex-1 p-1 hover:bg-green-50 rounded text-green-600" title="置顶"><IconComp name="Top" size={16}/></button>
+                                                    <button onClick={()=>handleLayerChange('up')} className="flex-1 p-1 hover:bg-gray-100 rounded text-gray-500" title="上移"><IconComp name="Up" size={16}/></button>
+                                                    <button onClick={()=>handleLayerChange('down')} className="flex-1 p-1 hover:bg-gray-100 rounded text-gray-500" title="下移"><IconComp name="Down" size={16}/></button>
+                                                    <button onClick={()=>handleLayerChange('back')} className="flex-1 p-1 hover:bg-green-50 rounded text-green-600" title="置底"><IconComp name="Bottom" size={16}/></button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 bg-white rounded-xl border border-gray-100 p-3 shadow-sm flex flex-col gap-2 min-w-0 overflow-y-auto">
+                                            {selectedShape && selectedIds.length === 1 && selectedShape.type !== SHAPE_TYPES.GROUP ? (
+                                                <>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-[10px] text-gray-400">旋转</span>
+                                                        <input type="range" min="0" max="360" value={selectedShape.rotation} onChange={(e)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, rotation:parseInt(e.target.value)}:s))} className="flex-1 h-1 bg-gray-100 rounded"/>
+                                                        <span className="text-xs font-mono w-8 text-right">{selectedShape.rotation}°</span>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1">
+                                                        {(selectedShape.type === SHAPE_TYPES.RECT || selectedShape.type === SHAPE_TYPES.RIGHT_TRIANGLE || selectedShape.type === SHAPE_TYPES.GENERAL_TRIANGLE || selectedShape.type === SHAPE_TYPES.PARALLELOGRAM) && (
+                                                            <><ControlSlider label="宽度/底宽" value={selectedShape.params.width} min={0.5} max={15} onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, width:v}}:s))} />
+                                                            <ControlSlider label="高度" value={selectedShape.params.height} min={0.5} max={15} onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, height:v}}:s))} /></>
+                                                        )}
+                                                        {selectedShape.type === SHAPE_TYPES.TRIANGLE && (
+                                                            <ControlSlider label="边长 (正三角形)" value={selectedShape.params.width} min={0.5} max={15} onChange={(v)=>{
+                                                                const h = parseFloat((v * 0.866).toFixed(1));
+                                                                setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, width:v, height:h}}:s));
+                                                            }} />
+                                                        )}
+                                                        {selectedShape.type === SHAPE_TYPES.PARALLELOGRAM && (
+                                                            <ControlSlider label="倾斜角度" value={selectedShape.params.angle || 60} min={30} max={150} step={1} unit="°" onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, angle:v}}:s))} />
+                                                        )}
+                                                        {(selectedShape.type === SHAPE_TYPES.TRAPEZOID || selectedShape.type === SHAPE_TYPES.RIGHT_TRAPEZOID) && (
+                                                            <><ControlSlider label="上底" value={selectedShape.params.topWidth} min={0.5} max={15} onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, topWidth:v}}:s))} />
+                                                            <ControlSlider label="下底" value={selectedShape.params.bottomWidth} min={0.5} max={15} onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, bottomWidth:v}}:s))} />
+                                                            <ControlSlider label="高度" value={selectedShape.params.height} min={0.5} max={15} onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, height:v}}:s))} /></>
+                                                        )}
+                                                        {[SHAPE_TYPES.CIRCLE, SHAPE_TYPES.SECTOR, SHAPE_TYPES.SEGMENT, SHAPE_TYPES.SPANDREL].includes(selectedShape.type) && (
+                                                            <ControlSlider label="半径" value={selectedShape.params.radius} min={0.5} max={10} onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, radius:v}}:s))} />
+                                                        )}
+                                                        {[SHAPE_TYPES.SECTOR, SHAPE_TYPES.SEGMENT].includes(selectedShape.type) && (
+                                                            <ControlSlider label="角度" value={selectedShape.params.angle} min={15} max={360} step={15} unit="°" onChange={(v)=>setShapes(prev=>prev.map(s=>s.id===selectedId?{...s, params:{...s.params, angle:v}}:s))} />
+                                                        )}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full text-gray-400 text-xs">
+                                                    {selectedIds.length > 1 ? "多选模式下仅支持外观调整" : (selectedShape && selectedShape.type === SHAPE_TYPES.GROUP ? "组合图形：请拆分后编辑参数" : "请选择图形")}
+                                                    {selectedShape && selectedShape.type === SHAPE_TYPES.GROUP && (
+                                                         <div className="mt-2 text-orange-500 text-[10px]">提示：可以拖动中间的橙色点改变旋转中心</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-300">
+                                    <IconComp name="Move" size={32} className="mb-2 opacity-30" />
+                                    <p className="text-xs">选择图形以编辑属性</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {showSaveModal && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+                            <div className="bg-white p-6 rounded-xl w-80">
+                                <h3 className="font-bold mb-4">保存到图形库</h3>
+                                <input className="border w-full p-2 rounded mb-4" placeholder="输入名称..." value={saveName} onChange={e=>setSaveName(e.target.value)} autoFocus/>
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={()=>setShowSaveModal(false)} className="text-gray-500 px-3 py-1">取消</button>
+                                    <button onClick={()=>{ if(!saveName) return; const newItem = { id: Date.now(), name: saveName, shapes: JSON.parse(JSON.stringify(shapes)) }; const newList = [...savedList, newItem]; setSavedList(newList); localStorage.setItem('geoLab_v3_saves', JSON.stringify(newList)); setShowSaveModal(false); }} className="bg-green-500 text-white px-4 py-1 rounded">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <ConfirmModal isOpen={confirmState.show} title={confirmState.title} message={confirmState.msg} onConfirm={confirmState.action} onCancel={()=>setConfirmState({...confirmState, show: false})} />
+                    {showHelp && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={()=>setShowHelp(false)}>
+                            <div className="bg-white p-6 rounded-xl max-w-md" onClick={e=>e.stopPropagation()}>
+                                <h2 className="text-2xl font-bold text-green-600 mb-2">课件使用说明书 </h2>
+                                <div className="text-base text-gray-600 space-y-3 max-h-[60vh] overflow-y-auto">
+                                    <p><strong>1. 操作说明：</strong></p>
+                                    <ul className="list-disc pl-5 mt-1">
+                                            <li>因为每道题的图形都不一样，老师们可以在电脑上先拼好自己上课需要用到的图形，然后点击下方保存。如果该图形需要换到另一台电脑上使用，则保存之后，选择下方的下载按钮，会下载一个json文件。把该文件放到上课用到的电脑上，点课件中的导入功能，即可使用之前保存的图形。</li>
+                                            <li><strong>撤销与重置：</strong> 说明书右侧为撤销按钮，展示区上面红色圆圈可以重置画布。</li>
+                                            <li><strong>图形操作：</strong> 点击图标添加图形。点击图形中间拖动，蓝色圆圈作用为拖动改变大小，绿色圆圈作用为拖动旋转。</li>
+                                    </ul>
+                                    <p><strong>2. 组合与拆分：</strong></p>
+                                    <ul className="list-disc pl-5 mt-1">
+                                            <li>点击属性区右上方的“多选”按钮进入多选模式，选中之后可以合并，反之可以拆分。组合图形可以拖动橙色点改变它的旋转中心。</li>
+                                            <li>组合图形中间黄色加号为图形的旋转中心，可以根据自己需要把它放到合适的位置，图形会绕旋转中心旋转。</li>
+                                    </ul>
+                                    <p><strong>3. 其他功能：</strong></p>
+                                    <ul className="list-disc pl-5 mt-1">
+                                            <li>支持颜色填充、图层调整、镜像翻转、图形参数调整。</li>
+                                            <li>支持边框隐藏，颜色填充选择透明就可以不阻挡下一层图形。</li>
+                                    </ul>
+                                </div>
+                                <div className="mt-6 text-center">
+                                    <button onClick={()=>setShowHelp(false)} className="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 shadow-md font-bold">我学会了</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

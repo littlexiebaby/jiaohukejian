@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="renderer" content="webkit">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>数字编码 · 看懂数字里的信息</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div id="app">
+ <header class="topbar">
+  <div class="brand"><div class="brand-icon">#</div><h1 class="sr-only">数字编码课件</h1><nav class="view-switch" role="tablist" aria-label="切换课件版面"><button type="button" id="map-toggle" role="tab" class="active" aria-selected="true" title="切换到数字编码">数字编码</button><svg class="view-switch-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/></svg><button type="button" id="life-toggle" role="tab" aria-selected="false" title="切换到生活编码">生活编码</button></nav></div>
+  <div class="toptools">
+   <button id="help-open" aria-label="课件说明"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16v1"/></svg><span class="tool-label">说明</span></button>
+   <button id="action-undo" aria-label="撤销上一步操作" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5 3 11l6 6M3 11h11a6 6 0 0 1 0 12" transform="translate(0 -3)"/></svg><span class="tool-label">撤销</span></button>
+   <button id="ink-toggle" aria-label="开启批注" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20l4-1 12-12-3-3L5 16l-1 4zM14 7l3 3M4 22h16"/></svg><span class="tool-label">批注</span></button>
+   <button id="reset" aria-label="重置课件"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11a8 8 0 1 1 1 6M4 4v7h7"/></svg><span class="tool-label">重置</span></button>
+   <button id="fullscreen" aria-label="进入全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span class="tool-label" id="fullscreen-label">全屏</span></button>
+  </div>
+ </header>
+ <main class="scene">
+  <section class="map-card" aria-label="中国行政区地图">
+   <div class="map-top"><nav id="breadcrumbs" class="breadcrumbs" aria-label="地图区域"></nav></div>
+   <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" viewBox="720 -655 650 500" role="img" aria-label="中国地图"><g id="map-context"></g><g id="map-depth" transform="translate(0 2.5)"></g><g id="map-shapes"></g><g id="map-outline"></g><g id="map-labels"></g><g id="map-points"></g></svg>
+   <div id="sea-inset"><svg class="inset-svg" viewBox="1040 -257 230 232"><g id="inset-shapes"></g></svg><div class="sea-title">南海诸岛</div></div>
+   <div class="map-footer"><div class="map-zoom"><button id="zoom-in" aria-label="放大地图">+</button><button id="zoom-out" aria-label="缩小地图">−</button><button id="map-home" class="home" aria-label="返回全国地图">全国</button></div></div>
+  </section>
+  <aside class="info-card" id="info-card" aria-live="polite"><div class="info-head"><h2 class="info-title" id="info-title">一起探索</h2><p class="info-range" id="info-range"></p></div><div class="answer"><strong id="info-answer">点选一位数字</strong><small id="info-sub"></small></div><p class="info-text" id="info-text">看看它表示什么。</p><p class="info-detail" id="info-detail"></p><div id="info-choices" class="choice-list"></div><button id="check-open" class="check-open hidden" aria-haspopup="dialog" aria-controls="check-explainer">查看计算过程 →</button></aside>
+ </main>
+ <section class="control-card" aria-label="数字编码操作区">
+  <div class="control-top"><div class="tabs" role="tablist" aria-label="编码类型"><button id="tab-id" class="active" role="tab" aria-selected="true">身份证</button><button id="tab-post" role="tab" aria-selected="false">邮政编码</button></div><form class="input-form" id="input-form"><label class="input-label" id="input-label" for="code-input">试试另一组编码</label><div class="input-wrap"><input id="code-input" aria-label="输入身份证号码" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="24" value="330114201808168828"><button type="button" id="keypad-open" aria-label="打开数字键盘"><span class="keypad-open-short">键盘</span><span class="keypad-open-long">输入号码</span></button></div></form></div>
+  <div id="segments" class="segments" aria-label="点击各段数字查看含义"></div>
+  <div class="control-foot"><span id="input-status" class="status" role="status"></span></div>
+ </section>
+
+ <section id="life-view" aria-label="生活编码拓展">
+  <div class="life-nav"><h2>生活中的编码</h2><div class="life-actions"><nav class="life-topics" id="life-topics" role="tablist" aria-label="选择生活编码"></nav><button type="button" id="life-random" class="life-random">换一组</button></div></div>
+  <section class="life-stage" id="life-stage"><div class="life-heading"><p class="life-caption" id="life-caption"></p><label id="life-express-controls" class="life-express-controls hidden" for="life-express-picker">快递公司<select id="life-express-picker" aria-label="选择国内快递公司"></select></label></div><div class="life-code-area"><div class="life-code" id="life-code" aria-label="点击编码的各个部分"></div></div><div class="life-explanations" id="life-explanations" aria-live="polite"></div><p class="life-note" id="life-note"></p></section>
+ </section>
+ <canvas id="ink-canvas" aria-label="批注画布"></canvas>
+ <div id="ink-tools" role="toolbar" aria-label="批注工具"><span id="ink-pointer" class="ink-pointer" aria-hidden="true"></span><div class="ink-row"><button id="pen-tool" class="active" aria-label="画笔">画笔</button><button id="eraser-tool" aria-label="橡皮擦">橡皮</button><button class="color red active" data-color="#ff3b30" aria-label="亮红色画笔"></button><button class="color blue" data-color="#168bff" aria-label="亮蓝色画笔"></button><button class="color purple" data-color="#e43bd0" aria-label="亮紫色画笔"></button></div><div class="ink-row"><button class="pen-width active" data-width="3" aria-label="细画笔"><span class="width-dot" style="width:4px;height:4px"></span>细</button><button class="pen-width" data-width="6" aria-label="粗画笔"><span class="width-dot" style="width:8px;height:8px"></span>粗</button><button id="ink-undo" aria-label="撤销上一笔">撤销</button><button id="ink-clear" aria-label="清空批注">清空</button><button id="ink-close" aria-label="退出批注">完成</button></div></div>
+ <div id="keypad" class="overlay" role="dialog" aria-modal="true" aria-labelledby="keypad-title"><section class="modal keypad-modal"><div class="modal-top"><h2 id="keypad-title">输入身份证号码</h2><button id="keypad-close" aria-label="关闭数字键盘">×</button></div><div id="keypad-value" class="keypad-input" aria-live="polite"></div><div class="key-grid" id="key-grid"><button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button><button data-key="0">0</button><button data-key="X" id="key-x">X</button><button data-key="delete" class="action" aria-label="删除最后一位">退格</button><button data-key="clear" class="action">清空</button><button data-key="cancel" class="action">取消</button><button data-key="confirm" class="action confirm">确定</button></div><div class="random-tools"><button id="random-id" type="button">随机身份证</button><button id="random-post" type="button">随机邮编</button></div><p class="key-hint" id="key-hint">可随机生成教学号码，也可手动输入</p></section></div>
+ <div id="check-explainer" class="overlay" role="dialog" aria-modal="true" aria-labelledby="check-explainer-title"><section class="modal check-modal"><div class="modal-top"><h2 id="check-explainer-title">校验码是怎样算出来的？</h2><button id="check-explainer-close" aria-label="关闭校验码计算过程">×</button></div><div id="check-steps" class="check-steps" role="tablist" aria-label="校验码计算步骤"><button id="check-step-0" data-check-step="0" role="tab" aria-controls="check-page">① 分别相乘</button><button id="check-step-1" data-check-step="1" role="tab" aria-controls="check-page">② 相加、求余数</button><button id="check-step-2" data-check-step="2" role="tab" aria-controls="check-page">③ 查表、比较</button></div><div id="check-page" class="check-page" role="tabpanel" aria-live="polite"></div></section></div>
+ <div id="help" class="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title"><section class="modal help-modal"><div class="modal-top"><h2 id="help-title">课件说明</h2><button id="help-close" aria-label="关闭课件说明">×</button></div><div class="help-copy"><p>点选数字查看身份证或邮政编码的含义；校验码的计算方法可点“查看计算过程”。地址数字会定位地图。“生活编码”打开独立拓展页，“数字编码”回到地图课件。</p><p>地图可拖动和缩放，也可点选省、市、区县逐级查看边界。“键盘”可输入或随机生成号码。在生活编码页切换类别，点选各段阅读说明和例子。“换一组”可比较不同编码。</p><p>“批注”提供三色画笔、橡皮、笔迹撤销与清空。“撤销”返回上一步，“重置”恢复示例，“全屏”可进入或退出。</p><p>支持鼠标与触屏；手机竖放时自动横屏显示，横放手机即可阅读和操作。</p></div></section></div>
+ <div id="toast" role="status"></div>
+</div>
+<!-- Open-source postcode data notices:
+MIT License
+
+Copyright (c) 2026 tombcato
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+MIT License
+
+Copyright (c) 2020 Haole Zheng
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+Creative Commons Legal Code
+
+CC0 1.0 Universal
+
+    CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
+    LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
+    ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
+    INFORMATION ON AN "AS-IS" BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
+    REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
+    PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
+    THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
+    HEREUNDER.
+
+Statement of Purpose
+
+The laws of most jurisdictions throughout the world automatically confer
+exclusive Copyright and Related Rights (defined below) upon the creator
+and subsequent owner(s) (each and all, an "owner") of an original work of
+authorship and/or a database (each, a "Work").
+
+Certain owners wish to permanently relinquish those rights to a Work for
+the purpose of contributing to a commons of creative, cultural and
+scientific works ("Commons") that the public can reliably and without fear
+of later claims of infringement build upon, modify, incorporate in other
+works, reuse and redistribute as freely as possible in any form whatsoever
+and for any purposes, including without limitation commercial purposes.
+These owners may contribute to the Commons to promote the ideal of a free
+culture and the further production of creative, cultural and scientific
+works, or to gain reputation or greater distribution for their Work in
+part through the use and efforts of others.
+
+For these and/or other purposes and motivations, and without any
+expectation of additional consideration or compensation, the person
+associating CC0 with a Work (the "Affirmer"), to the extent that he or she
+is an owner of Copyright and Related Rights in the Work, voluntarily
+elects to apply CC0 to the Work and publicly distribute the Work under its
+terms, with knowledge of his or her Copyright and Related Rights in the
+Work and the meaning and intended legal effect of CC0 on those rights.
+
+1. Copyright and Related Rights. A Work made available under CC0 may be
+protected by copyright and related or neighboring rights ("Copyright and
+Related Rights"). Copyright and Related Rights include, but are not
+limited to, the following:
+
+  i. the right to reproduce, adapt, distribute, perform, display,
+     communicate, and translate a Work;
+ ii. moral rights retained by the original author(s) and/or performer(s);
+iii. publicity and privacy rights pertaining to a person's image or
+     likeness depicted in a Work;
+ iv. rights protecting against unfair competition in regards to a Work,
+     subject to the limitations in paragraph 4(a), below;
+  v. rights protecting the extraction, dissemination, use and reuse of data
+     in a Work;
+ vi. database rights (such as those arising under Directive 96/9/EC of the
+     European Parliament and of the Council of 11 March 1996 on the legal
+     protection of databases, and under any national implementation
+     thereof, including any amended or successor version of such
+     directive); and
+vii. other similar, equivalent or corresponding rights throughout the
+     world based on applicable law or treaty, and any national
+     implementations thereof.
+
+2. Waiver. To the greatest extent permitted by, but not in contravention
+of, applicable law, Affirmer hereby overtly, fully, permanently,
+irrevocably and unconditionally waives, abandons, and surrenders all of
+Affirmer's Copyright and Related Rights and associated claims and causes
+of action, whether now known or unknown (including existing as well as
+future claims and causes of action), in the Work (i) in all territories
+worldwide, (ii) for the maximum duration provided by applicable law or
+treaty (including future time extensions), (iii) in any current or future
+medium and for any number of copies, and (iv) for any purpose whatsoever,
+including without limitation commercial, advertising or promotional
+purposes (the "Waiver"). Affirmer makes the Waiver for the benefit of each
+member of the public at large and to the detriment of Affirmer's heirs and
+successors, fully intending that such Waiver shall not be subject to
+revocation, rescission, cancellation, termination, or any other legal or
+equitable action to disrupt the quiet enjoyment of the Work by the public
+as contemplated by Affirmer's express Statement of Purpose.
+
+3. Public License Fallback. Should any part of the Waiver for any reason
+be judged legally invalid or ineffective under applicable law, then the
+Waiver shall be preserved to the maximum extent permitted taking into
+account Affirmer's express Statement of Purpose. In addition, to the
+extent the Waiver is so judged Affirmer hereby grants to each affected
+person a royalty-free, non transferable, non sublicensable, non exclusive,
+irrevocable and unconditional license to exercise Affirmer's Copyright and
+Related Rights in the Work (i) in all territories worldwide, (ii) for the
+maximum duration provided by applicable law or treaty (including future
+time extensions), (iii) in any current or future medium and for any number
+of copies, and (iv) for any purpose whatsoever, including without
+limitation commercial, advertising or promotional purposes (the
+"License"). The License shall be deemed effective as of the date CC0 was
+applied by Affirmer to the Work. Should any part of the License for any
+reason be judged legally invalid or ineffective under applicable law, such
+partial invalidity or ineffectiveness shall not invalidate the remainder
+of the License, and in such case Affirmer hereby affirms that he or she
+will not (i) exercise any of his or her remaining Copyright and Related
+Rights in the Work or (ii) assert any associated claims and causes of
+action with respect to the Work, in either case contrary to Affirmer's
+express Statement of Purpose.
+
+4. Limitations and Disclaimers.
+
+ a. No trademark or patent rights held by Affirmer are waived, abandoned,
+    surrendered, licensed or otherwise affected by this document.
+ b. Affirmer offers the Work as-is and makes no representations or
+    warranties of any kind concerning the Work, express, implied,
+    statutory or otherwise, including without limitation warranties of
+    title, merchantability, fitness for a particular purpose, non
+    infringement, or the absence of latent or other defects, accuracy, or
+    the present or absence of errors, whether or not discoverable, all to
+    the greatest extent permissible under applicable law.
+ c. Affirmer disclaims responsibility for clearing rights of other persons
+    that may apply to the Work or any use thereof, including without
+    limitation any person's Copyright and Related Rights in the Work.
+    Further, Affirmer disclaims responsibility for obtaining any necessary
+    consents, permissions or other rights required for any use of the
+    Work.
+ d. Affirmer understands and acknowledges that Creative Commons is not a
+    party to this document and has no duty or obligation with respect to
+    this CC0 or use of the Work.
+
+-->
+<script src="data/lesson-data.js"></script>
+<script src="data/regions.js"></script>
+<script src="data/addresses.js"></script>
+<script src="data/postcodes.js"></script>
+<script src="data/examples.js"></script>
+<script src="data/map-labels.js"></script>
+<script src="data/map-index.js"></script>
+<script src="data/maps/100000.js"></script>
+<script src="data/express.js"></script>
+<script src="assets/js/app.js"></script>
+
+<!-- Default postcode 310018: Qiantang District Xiasha-area example; not a claim of one postcode for the entire district.
+Primary source: https://zhejiang.chinatax.gov.cn/module/xxgk/xxgkGuide.jsp?area=11330100MB1642101J
+School source: https://zjjcmspublic.oss-cn-hangzhou-zwynet-d01-a.internet.cloud.zj.gov.cn/jcms_files/jcms1/web3176/site/attach/0/e639144da30f40dcbd39e838f4e24bdf.pdf
+ISBN random pool: verified published editions; not randomly invented ISBN registrations.
+Publisher source: https://www.plph-hp.com/Index/show/catid/6/id/1.html
+Publisher source: https://www.crown.com.tw/view.aspx?bc=375331
+Bank prefix references: https://www.icbc.com.cn/page/721854532333371421.html
+https://www.boc.cn/bcservice/bc2/201112/t20111221_1648445.html
+Six/eight digit BINs: https://developer.visa.com/docs/visa-bin-attribute-sharing-service/faq
+Phone, bank, product and train generators demonstrate structure; do not establish a real account, subscriber, registered product or operating train.
+Life-code references, verified 2026-10-31:
+Phone structure: https://gdca.miit.gov.cn/bsfw/bszn/mhsq/art/2017/art_b97f629600434f1eb3d55fb04eb952f1.html
+Number portability: https://app.www.gov.cn/govdata/gov/201912/02/451526/article.html
+8-digit IIN: https://www.aba.com/about-us/our-story/issuer-identification-numbers
+ISBN five elements: https://www.isbn-international.org/content/what-isbn/10
+Book example and publisher: https://item.xhsd.com/items/1010000102704104
+GTIN structure: https://ref.gs1.org/standards/genspecs/
+EAN-13 example manufacturer prefix: https://www.njis.cn/art/2013/5/8/art_106_1968.html
+Prefix is not origin: https://support.gs1.org/support/solutions/articles/43000734188-does-the-gs1-prefix-first-3-or-4-digits-of-the-ean-13-barcode-number-show-the-country-of-origin-
+G-type example: https://jtgc.cbpt.cnki.net/portal/journal/portal//client/paper/preview?cache=false&filePath=history/Editor/2021/0520/jtgc/d83c820b-e940-473b-b823-6fce563498d6.pdf
+No railway speed, route, departure time or current timetable is inferred from the digits.
+Phone and bank examples explain structure only and do not identify a real person/account.
+-->
+</body>
+</html>

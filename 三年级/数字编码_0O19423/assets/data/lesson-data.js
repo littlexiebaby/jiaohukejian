@@ -1,0 +1,2 @@
+/* 课件公共配置；其余数据由独立文件补入。 */
+var LESSON_DATA = {"generic":["100000","200000","300000","400000","410000","430000","510000","518000","610000","710000"],"palette":["#b8dbcc","#e7d2ab","#b9d4e4","#d2c6e4","#efc5b2","#c9d6ac","#b4dadd","#e4c8d6"],"mapSources":{"boundary":"https://geo.datav.aliyun.com/areas_v3/bound/","taiwan":"https://geojson.cn/api/china/710000.json","downloaded":"2026-10-31","provinceMaps":34,"cityMaps":329},"maps":{}};

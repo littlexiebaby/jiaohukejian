@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拉窗帘模型交互课件</title>
+    <style>
+        :root {
+            --bg-color: #E0F7FA;
+            --primary-color: #FF7043;
+            --secondary-color: #42A5F5;
+            --accent-color: #66BB6A;
+            --text-dark: #37474F;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --font-family: "Comic Sans MS", "YouYuan", "Microsoft YaHei", sans-serif;
+            
+            /* 新标题栏配色 */
+            --title-bg: #E8F5E9; /* 弱绿色背景 */
+            --title-text: #2E7D32; /* 深绿色文字 */
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: var(--font-family);
+            user-select: none;
+            -webkit-user-select: none;
+            /* 禁用 iOS 上的长按选中文本/菜单 */
+            -webkit-touch-callout: none;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- 标题栏样式优化 (Flex布局) --- */
+        #app-title {
+            background: var(--title-bg);
+            padding: 8px 20px;
+            border-bottom: 2px solid #C8E6C9;
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* 两端对齐 */
+        }
+        
+        .title-text {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--title-text);
+            font-family: "KaiTi", "楷体", serif;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
+        .title-text::before {
+            content: '📐';
+            margin-right: 8px;
+            font-size: 20px;
+        }
+
+        /* 顶部工具栏区域 */
+        .top-toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background-color: #fff;
+            background-size: 40px 40px;
+            cursor: crosshair;
+            overflow: hidden;
+            border-bottom: 6px solid #B2EBF2;
+        }
+        
+        #canvas-container.show-grid {
+            background-image: 
+                linear-gradient(rgba(0, 150, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 150, 255, 0.1) 1px, transparent 1px);
+        }
+
+        /* 画笔模式下的光标 */
+        #canvas-container.mode-draw {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ff0000"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>') 0 24, auto;
+        }
+        
+        /* 画高模式光标 */
+        #canvas-container.mode-altitude {
+            cursor: crosshair;
+        }
+
+        #grid-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: 3px solid #B0BEC5;
+            border-radius: 12px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #78909C;
+            box-shadow: 0 4px 0 #CFD8DC;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #grid-toggle.active {
+            border-color: var(--secondary-color);
+            color: var(--secondary-color);
+            background: #E3F2FD;
+            box-shadow: 0 4px 0 #BBDEFB;
+        }
+        
+        /* 顶部提示条 (用于画高模式提示) */
+        #top-toast {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 200;
+            display: none;
+            pointer-events: none;
+        }
+        #top-toast.show { display: block; }
+
+        /* 底部控制面板 */
+        #control-panel {
+            background: #fff;
+            padding: 8px 10px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* 改为左对齐 */
+            gap: 8px;
+            z-index: 200;
+            position: relative;
+            flex-wrap: nowrap; /* 不换行 */
+            overflow-x: auto; /* 小屏幕允许横向滚动 */
+        }
+
+        .panel-group {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #F1F8E9;
+            border-radius: 16px;
+            border: 2px dashed #C5E1A5;
+            align-items: center;
+            position: relative;
+            flex-shrink: 0; /* 防止压缩 */
+        }
+        .panel-group::before {
+            content: attr(data-label);
+            position: absolute;
+            top: -9px;
+            left: 10px;
+            font-size: 10px;
+            background: #fff;
+            padding: 0 5px;
+            color: #888;
+            font-weight: bold;
+            border-radius: 4px;
+            line-height: 1;
+        }
+
+        .group-core { background: #FFF3E0; border-color: #FFE082; }
+        
+        /* 存档组占据剩余空间 */
+        .group-file { 
+            background: #E1F5FE; 
+            border-color: #81D4FA; 
+            flex: 1; /* 占据剩余空间 */
+            min-width: 320px; /* 增加最小宽度 */
+            padding-right: 5px;
+            display: flex;
+            justify-content: flex-start; /* 左对齐 */
+            gap: 10px;
+        }
+
+        /* 通用工具按钮样式 */
+        .btn-tool {
+            width: 50px;
+            height: 50px;
+            border: none;
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #546E7A;
+            font-family: inherit;
+            box-shadow: 0 2px 0 #CFD8DC;
+            border: 1px solid #ECEFF1;
+            transition: all 0.1s;
+            position: relative;
+            padding: 2px;
+            flex-shrink: 0;
+        }
+        .btn-tool svg {
+            width: 20px;
+            height: 20px;
+            margin-bottom: 2px;
+            fill: #78909C;
+        }
+        /* 顶部栏按钮稍小 */
+        .top-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.6);
+            border-color: transparent;
+            box-shadow: none;
+        }
+        .top-btn:hover { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .btn-tool:hover { transform: translateY(-2px); color: var(--secondary-color); border-color: var(--secondary-color); }
+        .btn-tool:hover svg { fill: var(--secondary-color); }
+        .btn-tool:active, .btn-tool.active {
+            background: #E1F5FE;
+            color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+            transform: translateY(2px);
+        }
+        .btn-tool.active svg { fill: var(--secondary-color); }
+
+        /* 功能长按钮 - 紧凑版 */
+        .btn-func {
+            width: auto;
+            min-width: 90px;
+            height: 24px;
+            border: 1px solid #ECEFF1;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            font-size: 10px; /* 减小字号 */
+            color: #546E7A;
+            font-weight: bold;
+            padding: 0 6px;
+            transition: all 0.1s;
+            box-shadow: 0 2px 0 #CFD8DC;
+            white-space: nowrap;
+        }
+        .btn-func:hover { color: var(--secondary-color); border-color: var(--secondary-color); transform: translateY(-1px); }
+        .btn-func:active { transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+        .btn-func svg { width: 12px; height: 12px; fill: currentColor; margin: 0; }
+
+        .btn-small-rect {
+            width: 40px;
+            height: 24px;
+            flex-direction: row;
+            gap: 4px;
+            font-size: 10px;
+            padding: 0 4px;
+        }
+        .btn-small-rect svg { width: 14px; height: 14px; margin: 0; }
+
+        .btn-core { background: #FFEBEE; border-color: #FFCDD2; color: #D84315; }
+        .btn-core svg { fill: #FF7043; }
+        .btn-core.active {
+            background: #FF5722;
+            color: #fff;
+            border-color: #D84315;
+            box-shadow: inset 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .btn-core.active svg { fill: #fff; }
+
+        .toggle-btn { width: 50px; }
+        .toggle-btn.on { background: #C8E6C9; color: #2E7D32; border-color: #81C784; }
+        .toggle-btn.on svg { fill: #2E7D32; }
+
+        /* --- 存档列表横向滚动条优化 --- */
+        #saved-list-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px;
+            margin-left: 8px;
+            border-left: 1px dashed #B3E5FC;
+            scrollbar-width: thin; 
+            scrollbar-color: #B3E5FC transparent;
+            height: 52px;
+            align-items: center;
+            flex: 1;
+        }
+        #saved-list-container::-webkit-scrollbar { height: 4px; }
+        #saved-list-container::-webkit-scrollbar-thumb { background: #B3E5FC; border-radius: 2px; }
+
+        .saved-chip {
+            width: 80px; height: 48px;
+            background: #fff; border: 1px solid #B3E5FC; border-radius: 6px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; position: relative; flex-shrink: 0;
+            transition: all 0.2s; box-shadow: 0 1px 0 #E1F5FE; overflow: hidden;
+        }
+        .saved-chip:hover { transform: translateY(-2px); border-color: var(--secondary-color); box-shadow: 0 3px 0 #E1F5FE; }
+        .saved-chip img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        .saved-chip-name {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(255,255,255,0.85); font-size: 9px; color: #37474F;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+        }
+        .saved-chip-del {
+            position: absolute; top: 1px; right: 1px; width: 14px; height: 14px;
+            background: rgba(255, 82, 82, 0.9); color: white; border-radius: 50%;
+            font-size: 10px; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s; z-index: 2;
+        }
+        .saved-chip:hover .saved-chip-del { opacity: 1; }
+
+        /* 属性面板 - 左下角 */
+        #props-popup {
+            position: absolute;
+            bottom: 85px; left: 10px;
+            background: #fff;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            display: flex;
+            gap: 8px;
+            z-index: 150;
+            visibility: hidden; opacity: 0;
+            transition: all 0.2s;
+            align-items: center;
+            border: 2px solid #81D4FA;
+        }
+        #props-popup.show { visibility: visible; opacity: 1; bottom: 95px; }
+        
+        .prop-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: #546E7A; font-weight: bold; }
+        .prop-input {
+            width: 40px; padding: 2px; border: 1px solid #B0BEC5; border-radius: 4px;
+            text-align: center; font-family: inherit; font-weight: bold; color: #37474F; font-size: 12px;
+        }
+        
+        /* 颜色选择器：3x2 网格 */
+        .color-group { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 4px; 
+            padding: 0 4px;
+        }
+        .color-btn {
+            width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.15);
+            cursor: pointer; transition: transform 0.2s; position: relative;
+        }
+        .color-btn:hover { transform: scale(1.2); z-index: 2; }
+        .color-btn.transparent {
+            background: #fff;
+            background-image: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), 
+                              linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
+            background-size: 6px 6px;
+        }
+
+        .watermark {
+            position: absolute; bottom: 20px; right: 30px;
+            font-family: "KaiTi", "楷体", serif; font-size: 36px;
+            color: rgba(0,0,0,0.3); font-weight: 900; pointer-events: none; z-index: 5;
+        }
+
+        #file-input { display: none; }
+
+        /* 自定义模态框 */
+        #modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 999;
+            display: none; align-items: center; justify-content: center;
+        }
+        #modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #fff; padding: 25px; border-radius: 20px;
+            width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center; max-height: 80vh; overflow-y: auto;
+        }
+        #modal-input {
+            width: 100%; padding: 10px; border: 2px solid #B0BEC5; border-radius: 8px;
+            margin: 15px 0; font-size: 16px; box-sizing: border-box;
+        }
+        .modal-btns { display: flex; justify-content: space-around; gap: 10px; margin-top: 20px; }
+        .btn-modal {
+            flex: 1; padding: 10px; border: none; border-radius: 10px;
+            cursor: pointer; font-weight: bold; font-size: 14px;
+        }
+        .btn-cancel { background: #ECEFF1; color: #546E7A; }
+        .btn-confirm { background: var(--primary-color); color: #fff; }
+
+        @media (max-width: 768px) {
+            .btn-tool, .top-btn { width: 44px; height: 44px; font-size: 10px; }
+            #app-title { font-size: 18px; padding: 5px 10px; flex-direction: column; gap: 5px; height: auto; }
+            .top-toolbar { width: 100%; justify-content: space-between; overflow-x: auto; padding-bottom: 5px; }
+            .group-file { min-width: 150px; } 
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- 标题栏 + 辅助工具 -->
+    <div id="app-title">
+        <div class="title-text">等积变形拉窗帘模型</div>
+        <div class="top-toolbar">
+            <button class="btn-tool top-btn" id="btn-pen" onclick="app.togglePenMode()" title="画笔">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                画笔
+            </button>
+            <button class="btn-tool top-btn" id="btn-rotate" onclick="app.toggleRotateMode()" title="旋转">
+                <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.84-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.85.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
+                旋转
+            </button>
+            <button class="btn-tool top-btn" id="btn-altitude" onclick="app.toggleAltitudeMode()" title="画高">
+                <svg viewBox="0 0 24 24"><path d="M4 20h16v2H4v-2zm6-9.66L6.66 13.7 5.25 12.28 10 7.53 14.75 12.28 13.34 13.7 10 10.34V20H8V6.5h2V10.34z"/><path d="M7 2v18h2V2H7zm8 4h2v14h-2V6z" fill="none"/><rect x="13" y="16" width="1" height="4"/><rect x="13" y="20" width="4" height="1" style="transform:translate(0,-1px)"/></svg>
+                画高
+            </button>
+            <button class="btn-tool top-btn toggle-btn on" id="btn-snap" onclick="app.toggleSnap()" title="吸附">
+                <svg viewBox="0 0 24 24"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+                吸附
+            </button>
+            <button class="btn-tool top-btn" onclick="app.undo()" title="撤销">
+                <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+                撤销
+            </button>
+            <button class="btn-tool top-btn" onclick="app.confirmReset()" title="重置">
+                <svg viewBox="0 0 24 24"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-2.59 13L12 12.59 7.59 17 6 15.41 10.41 11 6 6.59 7.59 5 12 9.41 16.41 5 18 6.59 13.59 11 18 15.41 16.41 17z"/></svg>
+                重置
+            </button>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="modal-overlay">
+        <div id="modal-content-wrapper" class="modal-box"></div>
+    </div>
+
+    <div id="canvas-container" class="show-grid">
+        <canvas id="mainCanvas"></canvas>
+        <div id="top-toast">请点击图形的一个顶点以画高</div>
+        <div id="grid-toggle" class="active" onclick="app.toggleGrid()">
+            <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z"/></svg>
+            网格
+        </div>
+        
+    </div>
+
+    <!-- 浮动属性面板 -->
+    <div id="props-popup"></div>
+
+    <div id="control-panel">
+        <div class="panel-group" data-label="课件说明书">
+            <button class="btn-tool" onclick="app.showHelp()">
+                <svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
+                说明书
+            </button>
+        </div>
+
+        <div class="panel-group" data-label="图形库">
+            <button class="btn-tool" onclick="app.addShape('segment')"><svg viewBox="0 0 24 24"><path d="M3 12h18v2H3z"/></svg>线段</button>
+            <button class="btn-tool" onclick="app.addShape('triangle')"><svg viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>三角形</button>
+            <button class="btn-tool" onclick="app.addShape('rect')"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/></svg>矩形</button>
+            <button class="btn-tool" onclick="app.addShape('parallelogram')"><svg viewBox="0 0 24 24"><path d="M5 20l4-16h12l-4 16z"/></svg>平行<br>四边形</button>
+            <button class="btn-tool" onclick="app.addShape('trapezoid')"><svg viewBox="0 0 24 24"><path d="M4 18h16l-3-12H7z"/></svg>梯形</button>
+        </div>
+
+        <div class="panel-group group-core" data-label="等积变形">
+            <button class="btn-tool btn-core" id="btn-core" onclick="app.toggleCoreMode()">
+                <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                等积<br>变形
+            </button>
+            <button class="btn-tool toggle-btn" id="btn-keep-fill" onclick="app.toggleKeepFill()">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                保留<br>填充
+            </button>
+        </div>
+
+        <div class="panel-group group-file" data-label="存档管理">
+            <div style="display:flex; flex-direction:column; gap:3px; margin-right:5px; padding-right:5px; border-right:1px solid #B3E5FC; min-width: 100px;">
+                <button class="btn-func" style="width:100%" onclick="app.promptSave()" title="保存到浏览器缓存">
+                    <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                    保存图形
+                </button>
+                <div style="display:flex; gap:3px; width:100%">
+                    <button class="btn-func" style="flex:1; justify-content:center" onclick="app.exportJSON()" title="下载到本地电脑">
+                        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                        下载
+                    </button>
+                    <button class="btn-func" style="flex:1; justify-content:center" onclick="document.getElementById('file-input').click()" title="从本地电脑导入">
+                        <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                        导入
+                    </button>
+                </div>
+            </div>
+            <div id="saved-list-container"></div>
+            <input type="file" id="file-input" accept=".json" onchange="app.importJSON(this)">
+        </div>
+    </div>
+</div>
+
+<script>
+// =======================================================
+// [默认存档区域] DEFAULT_PRESETS
+// 说明：您可以在这里配置默认自带的组合图形课件。
+// 请将导出的 .json 文件内容中的 "state" 部分或整个对象结构复制到下方的数组中。
+// =======================================================
+const DEFAULT_PRESETS = [
+    // 示例: { name: "示例1", timestamp: 1700000000000, state: { ... } }
+    {"name":"例题1","timestamp":1769409610956,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGgABAQEBAAMAAAAAAAAAAAAAAAMEAgEFB//EACYQAAICAQQCAQQDAAAAAAAAAAABAgMRBBIhMUFRcSJhgbGR0fH/xAAXAQEBAQEAAAAAAAAAAAAAAAAAAQID/8QAGREBAQADAQAAAAAAAAAAAAAAAAECEUEh/9oADAMBAAIRAxEAPwD6AAAAAAAAAAAAAAAAACUNTTZOUYzTcXtfrPz5/wBKgAAAAAAAAAAAAAAAAAAAAAAwanUu6UqaJOME8WWRfP3jF/t+Olz01Opd0nTRJqCeLLE+c+Yxfv2/HS56nGKjFRikopYSS4RvHHftYyy15HKUYYisRikkkuEkWr1LhxuTXpslF7rJRgnOSXMY+O3z668miOkk9ynNRXS28v55/Ps3bOsSXiteqqnhOSi3xhsuThTXW04wWVnl8vl5fJQ5XXHWb6AAigAAAAAAAAAAAAAev1WpdsnTTPbBPbOxPlvrbF+88N+Olz1svrd1Mq1ZOvcsboPEl8HirT00qKrrjHamo4XS9fHX8FiVkq083FRhWoRjhJP6VjOHhfbH6NFeljFqU25tJfZZ+Pz5yaAW5WpMZGaqMYa62MUoxVNaSSwkszNJwq0rpW5e6UVF+sJv+2dmWgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//Z","state":{"shapes":[{"type":"rect","points":[{"x":718.0000000000002,"y":140},{"x":1017.9999999999998,"y":140},{"x":1017.9999999999998,"y":440},{"x":718.0000000000002,"y":440}],"color":"#ffffff","id":"gz5j7j4h9","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":300,"h":300,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":1017.9999999999998,"y":240},{"x":1217.9999999999998,"y":240},{"x":1217.9999999999998,"y":440},{"x":1017.9999999999998,"y":440}],"color":"#ffffff","id":"py8h8bicq","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":200,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":1017.9999999999998,"y":140},{"x":1217.9999999999998,"y":240},{"x":718.0000000000002,"y":440}],"color":"rgba(187, 222, 251, 0.9)","id":"mbwubfdxb","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":539,"h":300,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}},{"name":"例题2","timestamp":1769409620221,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAQDAgEH/8QAKhAAAgIBAwIGAAcAAAAAAAAAAAECAxEEITESQRQiUWFxkUJVYpKh0vD/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/xAAYEQEBAQEBAAAAAAAAAAAAAAAAARICMf/aAAwDAQACEQMRAD8A+gAAAAAAAAkv1sqtSqIaS+6Th15g4JYzj8UlnG2ccZXqc+N1H5Zq/wB1X9ym5Poc4Q6pwWYpYy/bf14FFjtpjNpRk1uk8pP5Azo1Fts3GejvoWM9Vjg0/byybKAAAAAAAAAAAAAAAAAAAAAAAAR2KVOsVu/Q12k933yuPTD55472Gd0HZVKEWlJrZtZSfbYsqWParI21xsg24yWVlNP6fB2Q1221SSkvLjeD5T+fv/c6+L/R/JcVNxSCSWtjCLlKKjFLLblhJGkL7JtpUSWHht7Y2z35XwLzYTqVuDmDk4+dJPL2Tz8HRloAAAAAAAAAAAAAAAAAAEuo09k7VOtrDSUlJ4xvytt3jP0vk9WkjmLc5PDy0uH7FILq+Jmes66oVRShHGEll7tr3fLNACKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//Z","state":{"shapes":[{"type":"rect","points":[{"x":521.5000000000002,"y":56.20000076293945},{"x":705.5000000000002,"y":56.20000076293945},{"x":705.5000000000002,"y":440},{"x":521.5000000000002,"y":440}],"color":"#ffffff","id":"gz5j7j4h9","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":184,"h":384,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":705.5000000000002,"y":286.20000076293945},{"x":1014.4999999999998,"y":286.20000076293945},{"x":1014.4999999999998,"y":440},{"x":705.5000000000002,"y":440}],"color":"#ffffff","id":"py8h8bicq","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":309,"h":154,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":705.5000000000002,"y":286.20000076293945},{"x":705.5000000000002,"y":379.20000076293945},{"x":1014.4999999999998,"y":286.20000076293945}],"color":"rgba(187, 222, 251, 0.9)","id":"bldl5vrdu","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":323,"h":93,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":705.5000000000002,"y":286.20000076293945},{"x":705.5000000000002,"y":379.20000076293945},{"x":521.5000000000002,"y":56.20000076293945}],"color":"rgba(187, 222, 251, 0.9)","id":"cpwt8rgyq","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":372,"h":323,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}},{"name":"例题3","timestamp":1769409626640,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAMEBQf/xAAtEAACAgECBAIKAwAAAAAAAAAAAQIDEQQhBRIxQSJhExQ0UVJ0gZGhszJCcf/EABUBAQEAAAAAAAAAAAAAAAAAAAAC/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwD0AAAAAAAAAAlpr46nTVaiCahbBTipdcNZ3AqARovjepuMXHllhZafMuzWG9mBYAhbqY1X0VOEn6eTgpLGE1Fy33z0T+wFwAAAAAAAAAAAAAAAAAAORwriNEOE6KDhqW40QTxpbWv4ruo7nXMXCHy8E0TecLTVvZZ/qgM+r4zp4qNcXqYWSktvVrE8bvbMe/K/z7iVXEa42waWpS5t16tZ4u3w+Z14xbh40uaW8lnKT8iNdEdO5SnKdvNZmLcU3BPbCwunn7nuVLkxNm3UFxOqeG69bXyyeYvSWeJbr4Xt39/TzRKzVU26vh1VNd0FG54UtPOuKSqnsspL6HVMWu9q4d8w/wBVhKm0AAAAAAAAAAAAAAAAAADBwfx8J0G7ShRDKw1l8i+638/wbydFFemohTTBQrrSjGK7ICgAAm04KcoKU23nlcvptnpsunTP+tmbXe1cO+Yf6rDaSnp6p3QtlWnZB5jLv0a+u0pfcCoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/9k=","state":{"shapes":[{"type":"rect","points":[{"x":578,"y":130.70000076293945},{"x":758,"y":130.70000076293945},{"x":758,"y":230.70000076293945},{"x":578,"y":230.70000076293945}],"color":"#ffffff","id":"ry9hy5kas","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":180,"h":100,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":758,"y":130.70000076293945},{"x":958,"y":130.70000076293945},{"x":958,"y":230.70000076293945},{"x":758,"y":230.70000076293945}],"color":"#ffffff","id":"orxybrqvk","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":100,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":578,"y":230.70000076293945},{"x":758,"y":230.70000076293945},{"x":758,"y":430.70000076293945},{"x":578,"y":430.70000076293945}],"color":"#ffffff","id":"tynjw1qi6","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":180,"h":200,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":758,"y":230.70000076293945},{"x":958,"y":230.70000076293945},{"x":958,"y":430.70000076293945},{"x":758,"y":430.70000076293945}],"color":"#ffffff","id":"5f0c9lqrb","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":200,"top":0,"bottom":0},"angle":0},{"type":"segment","points":[{"x":578,"y":430.70000076293945},{"x":758,"y":130.70000076293945}],"color":"#ffffff","id":"22l67cana","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":350,"h":300,"top":0,"bottom":0},"angle":0},{"type":"segment","points":[{"x":698.2205882352941,"y":230.33235370411595},{"x":958,"y":430.70000076293945}],"color":"#ffffff","id":"ezqbu6q47","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":328,"h":200,"top":0,"bottom":0},"angle":0},{"type":"segment","points":[{"x":758,"y":275.20000076293945},{"x":958,"y":130.70000076293945}],"color":"#ffffff","id":"natjfskih","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":247,"h":145,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":758,"y":130.70000076293945},{"x":758,"y":230.70000076293945},{"x":698.2205882352941,"y":230.33235370411595}],"color":"rgba(187, 222, 251, 0.9)","id":"riic7pc14","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":60,"h":100,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":758,"y":130.70000076293945},{"x":818.4908816898748,"y":231.49533874200492},{"x":758,"y":230.70000076293945}],"color":"rgba(187, 222, 251, 0.9)","id":"uj5xbsw2o","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":60,"h":101,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":758,"y":230.70000076293945},{"x":758,"y":275.20000076293945},{"x":698.2205882352941,"y":230.33235370411595}],"color":"rgba(187, 222, 251, 0.9)","id":"aau4ly70z","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":75,"h":45,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":758,"y":230.70000076293945},{"x":818.4908816898748,"y":231.49533874200492},{"x":758,"y":275.20000076293945}],"color":"rgba(187, 222, 251, 0.9)","id":"ofaqy74lt","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":75,"h":45,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}},{"name":"例题4","timestamp":1769409844766,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGgABAQEBAQEBAAAAAAAAAAAAAAQDAgEFB//EAC0QAAICAQMCBAUEAwAAAAAAAAABAgMRBCExEkETUWFxMjNUkdIiI2KUcrHx/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAECA//EABgRAQEBAQEAAAAAAAAAAAAAAAABEQIh/9oADAMBAAIRAxEAPwD9AAAAAAAAAAMrpXx6fArrn59djjj7Jgagl8TXfTab+xL8B4mu+m039iX4AVAit1GrprdllGmjFcvx5fhuzrT63qqjLUwVE2stdXVFc9/Ze3uXE1WACKAAAAAAAAAAAAAAAAAAAZ3XV0VSttl0wjy+fZJd36C66uiqVtsumEeXz7JLu/Q+clbrL1bZHeGHCrK/bT26n5y537LKWd27JqW4SnO+fjXroUd4Vt/AvN/y/wBcLu3pKLi8STT9SunTqtqTfVNZ34X2O7K1ZHD57PyNzqTyMXm32oISnV8qXT6NZXft7vO2Cyi/xW4uLjJb85XP/PuSTg4S6ZLc10nzX/iXqSzU5tlxYADk6gAAAAAAAAAAAAAZ331aamd101CuCzKT7GhxKqErIWSWZQz077LPfHn6+r82BHCi7VXxv1MfDjCX6KnvhY52fxb89t0ucu2EFXBQjxFYWXk6BdTAAEVxZWrI4fPZ+Rhp4OF8oyW+Co8ws57osvmJZ7r0AEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//9k=","state":{"shapes":[{"type":"rect","points":[{"x":618,"y":127.5},{"x":918,"y":127.5},{"x":918,"y":427.5},{"x":618,"y":427.5}],"color":"#ffffff","id":"c4nw8ud0d","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":300,"h":300,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":918,"y":227.5},{"x":1118,"y":227.5},{"x":1118,"y":427.5},{"x":918,"y":427.5}],"color":"#ffffff","id":"1egtvpdqh","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":200,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":918,"y":127.5},{"x":918,"y":227.5},{"x":616,"y":427.5}],"color":"rgba(187, 222, 251, 0.9)","id":"gpmufgqpm","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":362,"h":300,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":918,"y":127.5},{"x":918,"y":227.5},{"x":1118,"y":227.5}],"color":"rgba(187, 222, 251, 0.9)","id":"2t583se3m","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":100,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":918,"y":227.5},{"x":1118,"y":427.5},{"x":1118,"y":227.5}],"color":"rgba(187, 222, 251, 0.9)","id":"b21ruvdhx","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":200,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}},{"name":"例题5","timestamp":1769410303737,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAQDBQIH/8QAKxAAAgECBAQFBQEAAAAAAAAAAAECAxEEEiExBUFhoTRRdJGzExRCUnGB/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAID/8QAGREBAQEBAQEAAAAAAAAAAAAAAAECESEx/9oADAMBAAIRAxEAPwD6AAAAAAAAAAS8Qqzo4eE6cssnWpQbtfSVSKfZsCoAAAY4qcoUHkbUpaJrl12fcn+4q/t2RUzam6kXAzoOUqalN3b6GhNVAAAAAAAAAAAAAAAAAi4t4Sn6mh8sC0i4t4Sn6mh8sALQABzuIrFOtFUqlGFPLpmg5SbvrzWmxLkxf5V6WXnkotSt0vK1/wCnUxl/oXUVJqSsm7c9e1yQ1x8Zb8roQUVBKCSiloltY9GOFbdBXk5atXdvPbTy2/w2Mq1gAAAAAAAAAAAAAAAAR8ThKeFgoRcmq9F2SvoqsW37IsAAAATYnNJqMYyaW+hNKlWatCEsz0TcdF1eq0W+50gXNcnEXPb15hFQhGEb2irK7u/c9AELAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//9k=","state":{"shapes":[{"type":"parallelogram","points":[{"x":888,"y":300},{"x":1008,"y":300},{"x":960,"y":400},{"x":840,"y":400}],"color":"rgba(187, 222, 251, 0.9)","id":"hq858gfu4","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":120,"h":100,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":640,"y":100},{"x":760,"y":100},{"x":760,"y":400},{"x":640,"y":400}],"color":"#fff","id":"6oj8gmncj","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":120,"h":300,"top":0,"bottom":0},"angle":0},{"type":"parallelogram","points":[{"x":852,"y":200.20000076293945},{"x":972,"y":200.20000076293945},{"x":1008,"y":300},{"x":888,"y":300}],"color":"rgba(187, 222, 251, 0.9)","id":"yik8c26eo","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":120,"h":100,"top":0,"bottom":0},"angle":0},{"type":"parallelogram","points":[{"x":900,"y":100.20000076293945},{"x":1020,"y":100.20000076293945},{"x":972,"y":200.20000076293945},{"x":852,"y":200.20000076293945}],"color":"rgba(187, 222, 251, 0.9)","id":"lql9lf3rn","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":120,"h":100,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}},{"name":"例题6","timestamp":1769410368651,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGQABAAMBAQAAAAAAAAAAAAAAAAIDBAEH/8QALxAAAgECAwQJBAMAAAAAAAAAAAECAxEEEiEFE0FRIjFUYYGRlKHTMjVSc7Ph8P/EABcBAQEBAQAAAAAAAAAAAAAAAAABAgP/xAAZEQEBAQADAAAAAAAAAAAAAAAAAQIREjH/2gAMAwEAAhEDEQA/APQAAAAAAAAAAAAAAAjKUYK8pKK6rt2AkDPVxUIRk4xlUaTdopvq9/JMnFVXNOUoqH4pa8OPnw5eN4TlaACKAAAAAAAAAAAAABk2niKuGwTqUcm8c6cE5ptLNNRvZNc+ZrMG2vt6/fR/liIVRvtp9ownppfIN9tPtGE9NL5Cw6oTl9EHLVLTgduuXHtp2niMTu0qtSm5p6unDKn4Ns7RpSrbupFqVOSXTcrtxs7W5/3c0UsNGnJycnJ2Vk0rLvX+4F5i6k8bmbfVdKjClmyX6Tu7tvhbwLADDYAAAAAAAAAAAAAAAAYNsxlLZ/QhObVWlJqEXJ2VSLei7kbwBkp4WWdOclls7xS1vpbXz9jTCEaccsIqKu3ZK2rd2SBbbUkkAARQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z","state":{"shapes":[{"type":"rect","points":[{"x":640,"y":200},{"x":840,"y":200},{"x":840,"y":400},{"x":640,"y":400}],"color":"#ffffff","id":"wp2m44uz8","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":200,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":840,"y":100},{"x":1140,"y":100},{"x":1140,"y":400},{"x":840,"y":400}],"color":"#ffffff","id":"lo8p5jyp5","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":300,"h":300,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":640,"y":200},{"x":840,"y":200},{"x":640,"y":400}],"color":"rgba(187, 222, 251, 0.9)","id":"ugonvuhri","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":283,"h":200,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":840,"y":200},{"x":1140,"y":100},{"x":640,"y":400}],"color":"rgba(187, 222, 251, 0.9)","id":"6eqc951d2","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":583,"h":300,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}},{"name":"例题7","timestamp":1769410468185,"thumbnail":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAA0AJYDASIAAhEBAxEB/8QAGgABAQADAQEAAAAAAAAAAAAAAAMBAgQFB//EAC8QAAIBAgQEAwcFAAAAAAAAAAABAgMRBBIhMUFRUpETInEzU5OhwdHwQmGx4fH/xAAXAQEBAQEAAAAAAAAAAAAAAAAAAgMB/8QAGREBAAMBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwD6AAAAAAAAAAaTVR28OUY880b/AFQG4JZa/vKfw39xlr+8p/Df3AqDkxNephqWedSDbeWMY03mm+S83+at6IphZ1Z4eEq+TxHe+S9lrtr/ADx5IC4AAAAAAAAAAAAAAAAAAAAARxOIhhqeed227RjHeT5L8/d6GcRXhh6eed227Rit5Pkjz0p1KjrVmnUasktoLkvq+PZKq11NrYxFTnVdeu06rVkltBdK+r4+lkuyliIQpqLUrrkc8PPUcIaySTaXBO9r9n2KwwtScYym/DvrKNru1tr7J39djSecxnHW6pLF0oxcpXikrtuysisKjm/ZzS11en9inRp05OUY6vi3fl9ihlOeNY30ABx0AAAAAAAAAAAAACOJxNPC0ZVasrRXzLGrhGUlJxTaVk2tvywHDGjXrV1Uqw8zT1/TBXXlXHXnbW3DRF4YSOW1WWd5r3jeOzuuPpfn8i+SPSuwyR6V2K6lPMMpJJJKyWyRk1yR6V2GSPSuxKmwNckeldjKilskgMgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//Z","state":{"shapes":[{"type":"rect","points":[{"x":618,"y":116.5},{"x":918,"y":116.5},{"x":918,"y":416.5},{"x":618,"y":416.5}],"color":"#ffffff","id":"1z9npe96k","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":300,"h":300,"top":0,"bottom":0},"angle":0},{"type":"rect","points":[{"x":918,"y":216.5},{"x":1118,"y":216.5},{"x":1118,"y":416.5},{"x":918,"y":416.5}],"color":"#ffffff","id":"6uunw4q7s","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":200,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":918,"y":116.5},{"x":1118,"y":216.5},{"x":618,"y":417.5}],"color":"rgba(187, 222, 251, 0.9)","id":"szvj7tsmt","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":539,"h":301,"top":0,"bottom":0},"angle":0},{"type":"triangle","points":[{"x":918,"y":116.5},{"x":1118,"y":216.5},{"x":918,"y":216.5}],"color":"#ffffff","id":"a1emm0g3c","isGhost":false,"isPastResult":false,"keepFill":false,"params":{"w":200,"h":100,"top":0,"bottom":0},"angle":0}],"ghosts":[],"results":[],"strokes":[]}}
+ 
+];
+// =======================================================
+
+// --- 防护代码开始 ---
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+document.addEventListener('keydown', event => {
+    // F12
+    if (event.key === 'F12' || event.keyCode === 123) {
+        event.preventDefault();
+        return false;
+    }
+    // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+    if (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'i' || event.key === 'J' || event.key === 'j' || event.key === 'C' || event.key === 'c')) {
+        event.preventDefault();
+        return false;
+    }
+    // Ctrl+S
+    if (event.ctrlKey && (event.key === 'S' || event.key === 's')) {
+        event.preventDefault();
+        return false;
+    }
+    // Ctrl+U
+    if (event.ctrlKey && (event.key === 'U' || event.key === 'u')) {
+        event.preventDefault();
+        return false;
+    }
+});
+// --- 防护代码结束 ---
+
+const Geo = {
+    dist: (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y),
+    closestPointOnSegment: (p, a, b) => {
+        const atob = { x: b.x - a.x, y: b.y - a.y };
+        const atop = { x: p.x - a.x, y: p.y - a.y };
+        const lenSq = atob.x * atob.x + atob.y * atob.y;
+        let t = 0;
+        if (lenSq > 0) t = (atop.x * atob.x + atop.y * atob.y) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        return { x: a.x + t * atob.x, y: a.y + t * atob.y };
+    },
+    isInside: (p, points) => {
+        if (points.length < 2) return false;
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const xi = points[i].x, yi = points[i].y;
+            const xj = points[j].x, yj = points[j].y;
+            const intersect = ((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    },
+    projectToParallel: (p, anchor, lineP1, lineP2) => {
+        const dx = lineP2.x - lineP1.x;
+        const dy = lineP2.y - lineP1.y;
+        const ax = p.x - anchor.x;
+        const ay = p.y - anchor.y;
+        const lenSq = dx*dx + dy*dy;
+        if(lenSq === 0) return {x: anchor.x, y: anchor.y};
+        const dot = ax * dx + ay * dy;
+        const t = dot / lenSq;
+        return {
+            x: anchor.x + t * dx,
+            y: anchor.y + t * dy
+        };
+    },
+    distToLine: (p, anchor, dirVec) => {
+        // Distance from point p to line defined by anchor and direction vector dirVec
+        const lenSq = dirVec.x*dirVec.x + dirVec.y*dirVec.y;
+        if (lenSq === 0) return Geo.dist(p, anchor);
+        const t = ((p.x - anchor.x) * dirVec.x + (p.y - anchor.y) * dirVec.y) / lenSq;
+        const proj = { x: anchor.x + t * dirVec.x, y: anchor.y + t * dirVec.y };
+        return Geo.dist(p, proj);
+    },
+    isParallelogram: (pts) => {
+        if(pts.length !== 4) return false;
+        const slope = (p1, p2) => Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const diff = (a, b) => {
+            let d = Math.abs(a - b);
+            if (d > Math.PI) d = 2*Math.PI - d;
+            return d;
+        };
+        const s1 = slope(pts[0], pts[1]);
+        const s2 = slope(pts[3], pts[2]);
+        const s3 = slope(pts[1], pts[2]);
+        const s4 = slope(pts[0], pts[3]);
+        const TOL = 0.15; 
+        return diff(s1, s2) < TOL && diff(s3, s4) < TOL;
+    },
+    distToSegment: (p, a, b) => {
+        const proj = Geo.closestPointOnSegment(p, a, b);
+        return Geo.dist(p, proj);
+    },
+    getPerpendicularFoot: (p, a, b) => {
+        const atob = { x: b.x - a.x, y: b.y - a.y };
+        const atop = { x: p.x - a.x, y: p.y - a.y };
+        const lenSq = atob.x * atob.x + atob.y * atob.y;
+        if(lenSq === 0) return a;
+        const t = (atop.x * atob.x + atop.y * atob.y) / lenSq;
+        return { x: a.x + t * atob.x, y: a.y + t * atob.y };
+    }
+};
+
+class Shape {
+    constructor(type, points, color = '#ffffff') {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.type = type;
+        this.points = points.map(p => ({...p}));
+        this.color = color;
+        this.selected = false;
+        this.isGhost = false; 
+        this.isPastResult = false; 
+        this.keepFill = false;
+        this.isLast = false; // New flag for last created result
+        this.params = { w: 0, h: 0, top: 0, bottom: 0 };
+        this.angle = 0; // Rotation angle in radians
+        this.altitudes = []; // Array of vertex indices that have altitude
+        this.calcParams();
+    }
+
+    serialize() {
+        return {
+            type: this.type,
+            points: this.points.map(p => ({...p})),
+            color: this.color,
+            id: this.id,
+            isGhost: this.isGhost,
+            isPastResult: this.isPastResult,
+            keepFill: this.keepFill,
+            params: {...this.params},
+            angle: this.angle,
+            altitudes: this.altitudes
+        };
+    }
+
+    static deserialize(data) {
+        const s = new Shape(data.type, data.points, data.color);
+        s.id = data.id;
+        s.isGhost = data.isGhost;
+        s.isPastResult = data.isPastResult;
+        s.keepFill = data.keepFill;
+        s.params = data.params;
+        s.angle = data.angle || 0;
+        s.altitudes = data.altitudes || [];
+        return s;
+    }
+
+    getBounds() {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        this.points.forEach(p => {
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+        });
+        return { minX, maxX, minY, maxY, cx: (minX+maxX)/2, cy: (minY+maxY)/2, w: maxX-minX, h: maxY-minY };
+    }
+
+    getCentroid() {
+        let x = 0, y = 0;
+        this.points.forEach(p => { x += p.x; y += p.y; });
+        return { x: x / this.points.length, y: y / this.points.length };
+    }
+
+    rotate(dAngle) {
+        const c = this.getCentroid();
+        const cos = Math.cos(dAngle);
+        const sin = Math.sin(dAngle);
+        this.points.forEach(p => {
+            const dx = p.x - c.x;
+            const dy = p.y - c.y;
+            p.x = c.x + dx * cos - dy * sin;
+            p.y = c.y + dx * sin + dy * cos;
+        });
+        this.angle += dAngle;
+        this.calcParams();
+    }
+
+    draw(ctx, showData, showRotateHandle) {
+        if (this.points.length < 2) return;
+        
+        ctx.lineJoin = 'round';
+        ctx.lineCap = this.type === 'segment' ? 'butt' : 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+        for (let i = 1; i < this.points.length; i++) ctx.lineTo(this.points[i].x, this.points[i].y);
+        
+        if (this.isGhost) {
+            ctx.closePath();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        } else {
+            if (this.type !== 'segment') ctx.closePath();
+            
+            if (this.type !== 'segment') {
+                if (this.isPastResult) {
+                    // Logic Update: Fill if keepFill is on OR if it's the last created result
+                    if (this.keepFill || this.isLast) {
+                        ctx.fillStyle = 'rgba(255, 152, 0, 0.6)';
+                        ctx.fill();
+                    }
+                } else if (this.id.startsWith('core')) {
+                    ctx.fillStyle = 'rgba(255, 152, 0, 0.6)'; 
+                    ctx.fill();
+                } else if (this.color !== 'transparent') {
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                }
+            }
+
+            if (this.isPastResult) {
+                ctx.strokeStyle = '#FF9800'; 
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+            } else {
+                ctx.strokeStyle = this.selected ? '#FF7043' : '#333';
+                ctx.lineWidth = this.selected ? 3 : 2; 
+                ctx.setLineDash([]);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]); 
+
+            if (this.selected || this.id.startsWith('core_active')) {
+                this.points.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+                    ctx.fillStyle = '#fff';
+                    ctx.strokeStyle = this.selected ? '#FF7043' : '#FF9800';
+                    ctx.lineWidth = 2;
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+        }
+        
+        // Draw Altitudes
+        if (this.altitudes && this.altitudes.length > 0) {
+            ctx.strokeStyle = '#2979FF';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            
+            this.altitudes.forEach(vIdx => {
+                const p1 = this.points[vIdx];
+                let bestSeg = null;
+                let bestDist = Infinity;
+                
+                // Find target segment
+                for(let j=0; j<this.points.length; j++) {
+                     if (j === vIdx || (j+1)%this.points.length === vIdx) continue;
+                     const a = this.points[j];
+                     const b = this.points[(j+1)%this.points.length];
+                     const d = Geo.distToLine(p1, a, {x: b.x-a.x, y: b.y-a.y});
+                     if (d < bestDist) { bestDist = d; bestSeg = [a, b]; }
+                }
+
+                if (bestSeg) {
+                    const p2 = Geo.getPerpendicularFoot(p1, bestSeg[0], bestSeg[1]);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+
+                    // Right angle symbol
+                    ctx.save();
+                    const size = 10;
+                    const angle = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+                    const dx = Math.cos(angle); const dy = Math.sin(angle);
+                    const nx = -dy; const ny = dx;
+                    ctx.beginPath();
+                    const c1 = { x: p2.x + size * dx, y: p2.y + size * dy };
+                    const c2 = { x: c1.x + size * nx, y: c1.y + size * ny };
+                    const c3 = { x: p2.x + size * nx, y: p2.y + size * ny };
+                    ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y); ctx.lineTo(c3.x, c3.y);
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([]);
+                    ctx.stroke();
+                    
+                    // 'h' label
+                    const mid = { x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2 };
+                    ctx.fillStyle = '#2979FF';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText('h', mid.x + 10, mid.y);
+                    ctx.restore();
+                }
+            });
+            ctx.setLineDash([]);
+        }
+
+        if (this.selected && !this.isGhost && this.type !== 'segment' && showRotateHandle) {
+            const c = this.getCentroid();
+            const hx = c.x; const hy = c.y;
+            ctx.beginPath();
+            ctx.arc(hx, hy, 12, 0, Math.PI * 2); 
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.strokeStyle = '#2979FF';
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#2979FF';
+            ctx.font = '16px sans-serif'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('↻', hx, hy + 1); 
+        }
+
+        if (showData && this.selected && !this.isGhost && !this.isPastResult) {
+            this.calcParams(); 
+            const b = this.getBounds();
+            ctx.fillStyle = '#37474F';
+            ctx.font = 'bold 14px "Microsoft YaHei", sans-serif';
+            
+            if (this.type === 'segment') {
+                ctx.textAlign = 'center';
+                ctx.fillText(`长: ${Math.round(this.params.w)}`, b.cx, b.minY - 10);
+            } else if (this.type === 'rect') {
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                ctx.fillText(`长 ${this.params.w}`, b.cx, b.maxY + 8);
+                ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+                ctx.fillText(`宽 ${this.params.h}`, b.minX - 8, b.cy);
+            } else if (this.type === 'trapezoid') {
+                ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.fillText(`上底 ${this.params.top}`, b.cx, b.minY - 8);
+                ctx.textBaseline = 'top';
+                ctx.fillText(`下底 ${this.params.bottom}`, b.cx, b.maxY + 8);
+                ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+                ctx.fillText(`高 ${this.params.h}`, b.minX - 8, b.cy);
+                ctx.beginPath(); ctx.moveTo(b.minX, b.minY); ctx.lineTo(b.minX, b.maxY);
+                ctx.strokeStyle = '#90A4AE'; ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+            } else {
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                ctx.fillText(`底 ${this.params.w}`, b.cx, b.maxY + 8);
+                ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+                ctx.fillText(`高 ${this.params.h}`, b.minX - 8, b.cy);
+                ctx.beginPath(); ctx.moveTo(b.minX, b.minY); ctx.lineTo(b.minX, b.maxY);
+                ctx.strokeStyle = '#90A4AE'; ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+            }
+        }
+    }
+
+    move(dx, dy) {
+        this.points.forEach(p => { p.x += dx; p.y += dy; });
+    }
+
+    calcParams() {
+        if (this.points.length < 2) return;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        this.points.forEach(p => {
+            minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+        });
+        this.params.h = Math.round(maxY - minY);
+        this.params.w = Math.round(maxX - minX);
+        if (this.type === 'segment') {
+            this.params.w = Math.round(Geo.dist(this.points[0], this.points[1]));
+        }
+        else if (this.type === 'triangle') {
+             // 假设 1-2 是底边
+             this.params.w = Math.round(Geo.dist(this.points[1], this.points[2]));
+        }
+        else if (this.type === 'trapezoid') {
+            this.params.top = Math.round(Geo.dist(this.points[0], this.points[1]));
+            this.params.bottom = Math.round(Geo.dist(this.points[3], this.points[2]));
+        }
+        else if (this.type === 'parallelogram') {
+            this.params.w = Math.round(Geo.dist(this.points[3], this.points[2]));
+        }
+    }
+    
+    resizeParallelogram(idx, newPos) {
+        const oppIdx = (idx + 2) % 4;
+        this.points[idx] = { ...newPos };
+        if (idx === 0 || idx === 1) {
+            const baseVec = { x: this.points[2].x - this.points[3].x, y: this.points[2].y - this.points[3].y };
+            if (idx === 0) {
+                this.points[1] = { x: this.points[0].x + baseVec.x, y: this.points[0].y + baseVec.y };
+            } else {
+                this.points[0] = { x: this.points[1].x - baseVec.x, y: this.points[1].y - baseVec.y };
+            }
+        } else {
+            const baseVec = { x: this.points[1].x - this.points[0].x, y: this.points[1].y - this.points[0].y };
+            if (idx === 3) {
+                this.points[2] = { x: this.points[3].x + baseVec.x, y: this.points[3].y + baseVec.y };
+            } else {
+                this.points[3] = { x: this.points[2].x - baseVec.x, y: this.points[2].y - baseVec.y };
+            }
+        }
+        this.calcParams();
+    }
+    
+    resizeArbitraryParallelogram(idx, newPos, baseEdgeIndices, dragOffset) {
+        this.points[idx] = { ...newPos };
+        const allIndices = [0,1,2,3];
+        const movingIndices = allIndices.filter(i => !baseEdgeIndices.includes(i));
+        const partnerIdx = movingIndices.find(i => i !== idx);
+        
+        if (partnerIdx !== undefined && dragOffset) {
+             this.points[partnerIdx] = {
+                x: this.points[idx].x + dragOffset.x,
+                y: this.points[idx].y + dragOffset.y
+            };
+        }
+        this.calcParams();
+    }
+    
+    resizeTrapezoid(top, bottom, height) {
+        const b = this.getBounds();
+        const cy = b.cy; const cx = b.cx;
+        const halfH = height/2; const halfT = top/2; const halfB = bottom/2;
+        this.points = [
+            {x: cx - halfT, y: cy - halfH}, {x: cx + halfT, y: cy - halfH}, 
+            {x: cx + halfB, y: cy + halfH}, {x: cx - halfB, y: cy + halfH} 
+        ];
+        this.calcParams();
+    }
+
+    resize(w, h) {
+        const b = this.getBounds();
+        const center = {x: b.cx, y: b.cy};
+        const hw = w/2, hh = h/2;
+        if (this.type === 'rect') {
+            this.points = [{x:center.x-hw,y:center.y-hh},{x:center.x+hw,y:center.y-hh},{x:center.x+hw,y:center.y+hh},{x:center.x-hw,y:center.y+hh}];
+        } else if (this.type === 'triangle') {
+            this.points = [{x:center.x,y:center.y-hh},{x:center.x+hw,y:center.y+hh},{x:center.x-hw,y:center.y+hh}];
+        } else if (this.type === 'parallelogram') {
+            const skew = w * 0.2;
+            this.points = [{x:center.x-hw+skew,y:center.y-hh},{x:center.x+hw+skew,y:center.y-hh},{x:center.x+hw-skew,y:center.y+hh},{x:center.x-hw-skew,y:center.y+hh}];
+        } else if (this.type === 'trapezoid') {
+             this.points = [{x:center.x-hw*0.6,y:center.y-hh},{x:center.x+hw*0.6,y:center.y-hh},{x:center.x+hw,y:center.y+hh},{x:center.x-hw,y:center.y+hh}];
+        }
+        this.calcParams();
+    }
+}
+
+class App {
+    constructor() {
+        this.canvas = document.getElementById('mainCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.shapes = []; 
+        this.ghosts = []; 
+        this.results = []; 
+        this.strokes = []; 
+        this.history = []; 
+        this.mode = 'edit'; 
+        this.showData = false;
+        this.keepPastFill = false; 
+        this.snapEnabled = true; 
+        this.selection = null;
+        this.dragState = null;
+        this.tracePoints = []; 
+        this.activeCore = null; 
+        this.snapTarget = null; 
+        this.rotateEnabled = false; 
+        this.altitudeEnabled = false;
+
+        let loaded = JSON.parse(localStorage.getItem('xu_teacher_gallery') || '[]');
+        if (typeof DEFAULT_PRESETS !== 'undefined' && DEFAULT_PRESETS.length > 0) {
+            const existingNames = new Set(loaded.map(i => i.name));
+            DEFAULT_PRESETS.forEach(p => {
+                if(!existingNames.has(p.name)) loaded.push(p);
+            });
+        }
+        this.savedStates = loaded;
+
+        this.drawMode = false; 
+        this.isDrawingStroke = false; 
+
+        this.ui = {
+            popup: document.getElementById('props-popup'),
+            btnCore: document.getElementById('btn-core'),
+            btnKeepFill: document.getElementById('btn-keep-fill'),
+            btnSnap: document.getElementById('btn-snap'),
+            btnPen: document.getElementById('btn-pen'), 
+            btnRotate: document.getElementById('btn-rotate'), 
+            btnAltitude: document.getElementById('btn-altitude'), 
+            gridToggle: document.getElementById('grid-toggle'),
+            canvasContainer: document.getElementById('canvas-container'),
+            topToast: document.getElementById('top-toast'), 
+            overlay: document.getElementById('modal-overlay'),
+            modalWrapper: document.getElementById('modal-content-wrapper'),
+            savedListContainer: document.getElementById('saved-list-container')
+        };
+
+        this.onStart = this.onStart.bind(this);
+        this.onMove = this.onMove.bind(this);
+        this.onEnd = this.onEnd.bind(this);
+        this.toggleGrid = this.toggleGrid.bind(this);
+        this.toggleKeepFill = this.toggleKeepFill.bind(this);
+        this.toggleSnap = this.toggleSnap.bind(this);
+        this.toggleData = this.toggleData.bind(this);
+        this.togglePenMode = this.togglePenMode.bind(this); 
+        this.toggleRotateMode = this.toggleRotateMode.bind(this); 
+        this.toggleAltitudeMode = this.toggleAltitudeMode.bind(this); 
+        this.copyShape = this.copyShape.bind(this); 
+        this.showHelp = this.showHelp.bind(this); 
+        this.undo = this.undo.bind(this);
+        this.reset = this.reset.bind(this);
+        this.confirmReset = this.confirmReset.bind(this);
+        this.promptSave = this.promptSave.bind(this);
+        this.loadFromGallery = this.loadFromGallery.bind(this);
+        this.deleteGalleryItem = this.deleteGalleryItem.bind(this);
+        this.exportJSON = this.exportJSON.bind(this);
+        this.importJSON = this.importJSON.bind(this);
+        this.addShape = this.addShape.bind(this);
+        this.toggleCoreMode = this.toggleCoreMode.bind(this);
+        this.updateParam = this.updateParam.bind(this);
+        this.updateTrapezoid = this.updateTrapezoid.bind(this);
+        this.setColor = this.setColor.bind(this);
+        this.deleteShape = this.deleteShape.bind(this);
+        this.finishTrace = this.finishTrace.bind(this);
+        this.renderSavedList = this.renderSavedList.bind(this);
+        this.changeLayer = this.changeLayer.bind(this);
+
+        this.init();
+    }
+
+    init() {
+        const resize = () => {
+            this.canvas.width = this.canvas.parentElement.offsetWidth;
+            this.canvas.height = this.canvas.parentElement.offsetHeight;
+            this.draw();
+        };
+        window.addEventListener('resize', resize);
+        resize();
+
+        const opts = { passive: false };
+        this.canvas.addEventListener('mousedown', this.onStart);
+        this.canvas.addEventListener('mousemove', this.onMove);
+        window.addEventListener('mouseup', this.onEnd);
+        
+        this.canvas.addEventListener('touchstart', this.onStart, opts);
+        window.addEventListener('touchmove', this.onMove, opts);
+        window.addEventListener('touchend', this.onEnd, opts);
+        this.canvas.addEventListener('dblclick', this.finishTrace);
+        
+        this.renderSavedList();
+        this.loop();
+    }
+    
+    toggleAltitudeMode() {
+        this.altitudeEnabled = !this.altitudeEnabled;
+        if (this.altitudeEnabled) {
+            this.drawMode = false;
+            this.rotateEnabled = false;
+            this.exitCoreMode();
+            this.select(null);
+            this.ui.canvasContainer.classList.add('mode-altitude');
+            this.ui.topToast.classList.add('show');
+            this.ui.btnAltitude.classList.add('active');
+        } else {
+            this.ui.canvasContainer.classList.remove('mode-altitude');
+            this.ui.topToast.classList.remove('show');
+            this.ui.btnAltitude.classList.remove('active');
+        }
+        this.updateUI();
+    }
+    
+    copyShape() {
+        if (!this.selection) return;
+        this.saveState();
+        const json = this.selection.serialize();
+        const copy = Shape.deserialize(json);
+        copy.move(20, 20);
+        copy.id = Math.random().toString(36).substr(2, 9); 
+        this.shapes.push(copy);
+        this.select(copy);
+    }
+
+    showHelp() {
+        const html = `
+            <div style="text-align: left; padding: 0 10px; line-height: 1.6; color: #546E7A;">
+                <h4 style="color: #FF7043; margin: 10px 0 5px;">1. 图形库</h4>
+                <p>点击下方图标，快速添加线段、三角形、矩形、平行四边形或梯形。</p>
+                
+                <h4 style="color: #FF7043; margin: 15px 0 5px;">2. 核心功能：等积变形</h4>
+                <p>① 点击“<b>等积变形</b>”按钮开启模式（按钮变橙色）。</p>
+                <p>② 在画布上依次点击图形的顶点，围成一个闭合区域（视为切割部分）。</p>
+                <p>③ 切割完成后，拖动新生成的图形顶点，体验“同底等高”的拉窗帘效果。</p>
+                <p>④ 再次点击按钮可退出该模式。</p>
+                
+                <h4 style="color: #FF7043; margin: 15px 0 5px;">3. 存档与分享</h4>
+                <p><b>保存当前图形：</b>点击“保存当前图形”，输入名称，系统会自动生成缩略图存入下方列表。</p>
+                <p><b>下载图形存档：</b>点击“下载”生成文件备份，或发送给其他老师。</p>
+                <p><b>导入图形存档：</b>点击“导入”可恢复备份。</p>
+                <p><b>自动居中：</b>加载存档时会自动将内容居中显示。</p>
+
+                <h4 style="color: #FF7043; margin: 15px 0 5px;">4. 辅助工具</h4>
+                <p><b>画高：</b>点击顶部“画高”，再点击任意图形顶点，自动生成动态高线。高线会始终跟随图形移动。</p>
+                <p><b>旋转：</b>开启顶部“旋转”，拖动图形中心的蓝色手柄。</p>
+                <p><b>复制：</b>选中图形后，点击左下角控制面板的“❐”按钮。</p>
+            </div>
+        `;
+        this.showModal('📘 课件使用说明书', html, () => {}, false);
+        const cancelBtn = document.getElementById('modal-cancel');
+        if(cancelBtn) cancelBtn.style.display = 'none';
+        const confirmBtn = document.getElementById('modal-confirm');
+        if(confirmBtn) confirmBtn.textContent = '知道了';
+    }
+
+    renderSavedList() {
+        const container = this.ui.savedListContainer;
+        container.innerHTML = '';
+        if (this.savedStates.length === 0) {
+            container.innerHTML = '<span style="font-size:10px; color:#aaa; padding:10px;">暂无存档</span>';
+            return;
+        }
+        
+        this.savedStates.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'saved-chip';
+            div.title = `${item.name} (${new Date(item.timestamp).toLocaleDateString()})`;
+            div.onclick = () => this.loadFromGallery(index);
+            let innerHTML = item.thumbnail ? `<img src="${item.thumbnail}" alt="缩略图">` : `<div class="saved-chip-icon">📄</div>`;
+            innerHTML += `<div class="saved-chip-name">${item.name}</div><div class="saved-chip-del" title="删除" onclick="event.stopPropagation(); app.deleteGalleryItem(${index})">×</div>`;
+            div.innerHTML = innerHTML;
+            container.appendChild(div);
+        });
+    }
+
+    showModal(title, contentHTML, onConfirm, showCancel=true) {
+        this.ui.modalWrapper.innerHTML = `
+            <h3 style="margin-top:0;color:#37474F;">${title}</h3>
+            <div>${contentHTML}</div>
+            <div class="modal-btns">
+                ${showCancel ? '<button class="btn-modal btn-cancel" id="modal-cancel">取消</button>' : ''}
+                <button class="btn-modal btn-confirm" id="modal-confirm">确定</button>
+            </div>
+        `;
+        const confirmBtn = document.getElementById('modal-confirm');
+        if(confirmBtn) confirmBtn.onclick = () => { if(onConfirm) onConfirm(); this.closeModal(); };
+        if(showCancel) document.getElementById('modal-cancel').onclick = () => this.closeModal();
+        if(!onConfirm) confirmBtn.style.display = 'none';
+        this.ui.overlay.classList.add('show');
+    }
+
+    closeModal() { this.ui.overlay.classList.remove('show'); }
+
+    generateThumbnail() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const thumbW = 150; 
+        const thumbH = thumbW * (h / w);
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = thumbW;
+        offCanvas.height = thumbH;
+        const ctx = offCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, thumbW, thumbH);
+        ctx.drawImage(this.canvas, 0, 0, w, h, 0, 0, thumbW, thumbH);
+        return offCanvas.toDataURL('image/jpeg', 0.5); 
+    }
+
+    promptSave() {
+        const defaultName = "练习 " + (this.savedStates.length + 1);
+        const thumbnail = this.generateThumbnail();
+        this.showModal('保存课件', 
+            `<input type="text" id="modal-input" value="${defaultName}" placeholder="输入名称..." maxlength="8">`,
+            () => {
+                const name = document.getElementById('modal-input').value || defaultName;
+                const data = {
+                    name: name.substring(0, 8),
+                    timestamp: Date.now(),
+                    thumbnail: thumbnail, 
+                    state: {
+                        shapes: this.shapes.map(s => s.serialize()),
+                        ghosts: this.ghosts.map(s => s.serialize()),
+                        results: this.results.map(s => s.serialize()),
+                        strokes: this.strokes 
+                    }
+                };
+                this.savedStates.push(data);
+                localStorage.setItem('xu_teacher_gallery', JSON.stringify(this.savedStates));
+                this.renderSavedList();
+                setTimeout(() => { this.ui.savedListContainer.scrollLeft = this.ui.savedListContainer.scrollWidth; }, 100);
+            }
+        );
+    }
+    
+    loadFromGallery(index) {
+        const item = this.savedStates[index];
+        if (item) {
+            this.saveState();
+            this.restoreState(item.state, true);
+        }
+    }
+
+    deleteGalleryItem(index) {
+        if(confirm('确定删除这个课件吗？')) {
+            this.savedStates.splice(index, 1);
+            localStorage.setItem('xu_teacher_gallery', JSON.stringify(this.savedStates));
+            this.renderSavedList();
+        }
+    }
+
+    confirmReset() {
+        this.showModal('确认重置', '<p>确定要清空画布吗？所有未保存的操作将丢失。</p>', () => {
+            this.shapes = []; 
+            this.tracePoints = []; 
+            this.ghosts = []; 
+            this.results = [];
+            this.strokes = []; 
+            this.history = []; 
+            this.exitCoreMode();
+            this.drawMode = false;
+            this.rotateEnabled = false;
+            this.altitudeEnabled = false;
+            this.updateUI();
+            this.select(null);
+            this.draw();
+        }, true);
+    }
+
+    reset() { this.confirmReset(); }
+
+    toggleGrid() {
+        this.ui.canvasContainer.classList.toggle('show-grid');
+        this.ui.gridToggle.classList.toggle('active');
+    }
+
+    toggleKeepFill() {
+        this.keepPastFill = !this.keepPastFill;
+        this.ui.btnKeepFill.classList.toggle('on', this.keepPastFill);
+        this.results.forEach(r => r.keepFill = this.keepPastFill);
+        this.draw();
+    }
+
+    toggleSnap() {
+        this.snapEnabled = !this.snapEnabled;
+        this.ui.btnSnap.classList.toggle('on', this.snapEnabled);
+    }
+
+    togglePenMode() {
+        this.drawMode = !this.drawMode;
+        if (this.drawMode) {
+            this.exitCoreMode(); 
+            this.rotateEnabled = false;
+            this.altitudeEnabled = false;
+            this.select(null);
+        } 
+        this.updateUI();
+    }
+
+    toggleRotateMode() {
+        this.rotateEnabled = !this.rotateEnabled;
+        this.ui.btnRotate.classList.toggle('active', this.rotateEnabled);
+        if (this.rotateEnabled) {
+            this.altitudeEnabled = false;
+            this.drawMode = false;
+            this.ui.btnAltitude.classList.remove('active');
+            this.ui.canvasContainer.classList.remove('mode-altitude');
+            this.ui.topToast.classList.remove('show');
+        }
+        this.updateUI();
+        this.draw();
+    }
+
+    saveState() {
+        const state = {
+            shapes: this.shapes.map(s => s.serialize()),
+            ghosts: this.ghosts.map(s => s.serialize()),
+            results: this.results.map(s => s.serialize()),
+            strokes: JSON.parse(JSON.stringify(this.strokes)) 
+        };
+        this.history.push(state);
+        if (this.history.length > 20) this.history.shift();
+    }
+
+    undo() {
+        if (this.history.length === 0) return;
+        const state = this.history.pop();
+        this.restoreState(state);
+    }
+
+    restoreState(state, autoCenter = false) {
+        this.shapes = state.shapes.map(d => Shape.deserialize(d));
+        this.ghosts = state.ghosts.map(d => Shape.deserialize(d));
+        this.results = state.results.map(d => Shape.deserialize(d));
+        this.strokes = state.strokes || []; 
+        
+        if (autoCenter) {
+            this.centerContentX();
+        }
+
+        this.select(null); 
+        this.activeCore = null;
+        this.tracePoints = [];
+        this.draw();
+    }
+
+    centerContentX() {
+        let minX = Infinity, maxX = -Infinity;
+        const allObjs = [...this.shapes, ...this.ghosts, ...this.results];
+        allObjs.forEach(s => s.points.forEach(p => {
+            if(p.x < minX) minX = p.x;
+            if(p.x > maxX) maxX = p.x;
+        }));
+        if(this.strokes) {
+            this.strokes.forEach(s => s.points.forEach(p => {
+                if(p.x < minX) minX = p.x;
+                if(p.x > maxX) maxX = p.x;
+            }));
+        }
+        if (minX === Infinity) return; 
+        const contentCx = (minX + maxX) / 2;
+        const screenCx = this.canvas.width / 2;
+        const dx = screenCx - contentCx;
+        allObjs.forEach(s => s.move(dx, 0));
+        if(this.strokes) {
+            this.strokes.forEach(s => s.points.forEach(p => {
+                p.x += dx;
+            }));
+        }
+    }
+
+    exportJSON() {
+        const data = { gallery: this.savedStates };
+        const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = '课件数据.json'; a.click();
+    }
+    
+    importJSON(input) {
+        const file = input.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if(data.gallery) {
+                    this.savedStates = [...this.savedStates, ...data.gallery];
+                    localStorage.setItem('xu_teacher_gallery', JSON.stringify(this.savedStates));
+                    this.renderSavedList();
+                    alert('导入成功');
+                }
+            } catch(e){alert('格式错误');}
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    setStatus(text, isCore) {}
+
+    changeLayer(direction) {
+        if (!this.selection) return;
+        this.saveState();
+        let arr = null;
+        if (this.shapes.includes(this.selection)) arr = this.shapes;
+        else if (this.results.includes(this.selection)) arr = this.results;
+        if (!arr) return;
+        const idx = arr.indexOf(this.selection);
+        if (idx === -1) return;
+        if (direction === 'top') arr.push(arr.splice(idx, 1)[0]);
+        else if (direction === 'bottom') arr.unshift(arr.splice(idx, 1)[0]);
+        else if (direction === 'up') { if (idx < arr.length - 1) [arr[idx], arr[idx+1]] = [arr[idx+1], arr[idx]]; }
+        else if (direction === 'down') { if (idx > 0) [arr[idx], arr[idx-1]] = [arr[idx-1], arr[idx]]; }
+        this.draw();
+    }
+
+    updateUI() {
+        if (this.selection && this.mode === 'edit' && !this.drawMode && !this.altitudeEnabled) {
+            this.ui.popup.classList.add('show');
+            const s = this.selection;
+            s.calcParams();
+            let html = '';
+             if (s.type === 'trapezoid') {
+                html += `
+                    <div class="prop-col"><span class="prop-label">上底</span><input class="prop-input" type="number" value="${s.params.top}" onchange="app.updateTrapezoid('top', this.value)"></div>
+                    <div class="prop-col"><span class="prop-label">下底</span><input class="prop-input" type="number" value="${s.params.bottom}" onchange="app.updateTrapezoid('bottom', this.value)"></div>
+                    <div class="prop-col"><span class="prop-label">高</span><input class="prop-input" type="number" value="${s.params.h}" onchange="app.updateTrapezoid('h', this.value)"></div>
+                `;
+            } else if (s.type === 'rect') {
+                html += `
+                    <div class="prop-col"><span class="prop-label">长</span><input class="prop-input" type="number" value="${s.params.w}" onchange="app.updateParam('w', this.value)"></div>
+                    <div class="prop-col"><span class="prop-label">宽</span><input class="prop-input" type="number" value="${s.params.h}" onchange="app.updateParam('h', this.value)"></div>
+                `;
+            } else if (s.type === 'segment') {
+                html += `<div class="prop-col"><span class="prop-label">长度</span><input class="prop-input" type="number" value="${s.params.w}" onchange="app.updateParam('w', this.value)"></div>`;
+            } else {
+                html += `
+                    <div class="prop-col"><span class="prop-label">底</span><input class="prop-input" type="number" value="${s.params.w}" onchange="app.updateParam('w', this.value)"></div>
+                    <div class="prop-col"><span class="prop-label">高</span><input class="prop-input" type="number" value="${s.params.h}" onchange="app.updateParam('h', this.value)"></div>
+                `;
+            }
+
+            html += `
+                <div style="width:1px; height:30px; background:#eee; margin:0 5px;"></div>
+                <div class="color-group">
+                    <div class="color-btn" style="background:#fff" onclick="app.setColor('#fff')" title="白色"></div>
+                    <div class="color-btn" style="background:#FFCDD2" onclick="app.setColor('rgba(255, 205, 210, 0.9)')" title="粉红"></div>
+                    <div class="color-btn" style="background:#BBDEFB" onclick="app.setColor('rgba(187, 222, 251, 0.9)')" title="浅蓝"></div>
+                    <div class="color-btn" style="background:#C8E6C9" onclick="app.setColor('rgba(200, 230, 201, 0.9)')" title="浅绿"></div>
+                    <div class="color-btn" style="background:#FFF9C4" onclick="app.setColor('rgba(255, 249, 196, 0.9)')" title="浅黄"></div>
+                    <div class="color-btn transparent" onclick="app.setColor('transparent')" title="透明"></div>
+                </div>
+                <div style="width:1px; height:30px; background:#eee; margin:0 5px;"></div>
+                <div style="display:flex; flex-direction:column; gap:2px">
+                    <div style="display:flex; gap:2px">
+                         <button class="btn-tool btn-small-rect" style="width:28px" onclick="app.changeLayer('top')" title="置顶">↑↑</button>
+                         <button class="btn-tool btn-small-rect" style="width:28px" onclick="app.changeLayer('up')" title="上移">↑</button>
+                    </div>
+                    <div style="display:flex; gap:2px">
+                         <button class="btn-tool btn-small-rect" style="width:28px" onclick="app.changeLayer('down')" title="下移">↓</button>
+                         <button class="btn-tool btn-small-rect" style="width:28px" onclick="app.changeLayer('bottom')" title="置底">↓↓</button>
+                    </div>
+                </div>
+                <button class="btn-tool" style="width:30px;height:30px;color:#333;background:#f5f5f5;border:1px solid #ccc;font-size:16px;margin-left:4px;" onclick="app.copyShape()" title="复制">❐</button>
+                <button class="btn-tool" style="width:30px;height:30px;color:#ff4757;background:#ffebee;border:1px solid #ffcdd2" onclick="app.deleteShape()">
+                    <svg style="width:16px;height:16px;fill:currentColor;margin:0" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </button>
+            `;
+            this.ui.popup.innerHTML = html;
+        } else {
+            this.ui.popup.classList.remove('show');
+        }
+        this.ui.btnCore.classList.toggle('active', this.mode.startsWith('core'));
+        this.ui.btnPen.classList.toggle('active', this.drawMode); 
+        this.ui.gridToggle.classList.toggle('active', this.ui.canvasContainer.classList.contains('show-grid'));
+        this.ui.btnSnap.classList.toggle('on', this.snapEnabled);
+        
+        if (this.drawMode) this.ui.canvasContainer.classList.add('mode-draw');
+        else this.ui.canvasContainer.classList.remove('mode-draw');
+    }
+
+    toggleCoreMode() {
+        if(this.mode === 'edit') {
+            this.mode = 'core_select';
+            this.drawMode = false; 
+            this.rotateEnabled = false;
+            this.altitudeEnabled = false;
+            this.select(null);
+        } else {
+            this.exitCoreMode();
+        }
+        this.updateUI();
+        this.draw();
+    }
+
+    exitCoreMode() {
+        this.mode = 'edit';
+        this.tracePoints = [];
+        this.activeCore = null;
+    }
+    
+    toggleData() { this.showData = !this.showData; this.updateUI(); this.draw(); }
+
+    addShape(type) {
+        if (this.drawMode) this.togglePenMode(); 
+        if (this.altitudeEnabled) this.toggleAltitudeMode();
+        if(this.mode !== 'edit') {
+             this.exitCoreMode();
+        }
+        this.saveState(); 
+        const cx = this.canvas.width/2, cy = this.canvas.height/2;
+        let pts = [];
+        if(type==='segment') pts=[{x:cx-150,y:cy},{x:cx+150,y:cy}];
+        else if(type==='triangle') pts=[{x:cx,y:cy-150},{x:cx+150,y:cy+150},{x:cx-150,y:cy+150}];
+        else if(type==='rect') pts=[{x:cx-150,y:cy-100},{x:cx+150,y:cy-100},{x:cx+150,y:cy+100},{x:cx-150,y:cy+100}];
+        else if(type==='parallelogram') pts=[{x:cx-100,y:cy-100},{x:cx+200,y:cy-100},{x:cx+100,y:cy+100},{x:cx-200,y:cy+100}];
+        else if(type==='trapezoid') pts=[{x:cx-75,y:cy-100},{x:cx+75,y:cy-100},{x:cx+150,y:cy+100},{x:cx-150,y:cy+100}];
+        
+        const s = new Shape(type, pts);
+        this.shapes.push(s);
+        this.select(s);
+    }
+
+    select(s) {
+        this.shapes.forEach(x => x.selected = false);
+        this.results.forEach(x => x.selected = false);
+        this.selection = s;
+        if(s) s.selected = true;
+        this.updateUI();
+        this.draw();
+    }
+
+    deleteShape() {
+        if(this.selection) {
+            this.saveState();
+            this.shapes = this.shapes.filter(x => x !== this.selection);
+            this.results = this.results.filter(x => x !== this.selection);
+            this.select(null);
+        }
+    }
+
+    updateParam(k, v) {
+        if(!this.selection) return;
+        this.saveState();
+        if(k==='w') this.selection.resize(parseInt(v), this.selection.params.h);
+        if(k==='h') this.selection.resize(this.selection.params.w, parseInt(v));
+        this.draw();
+    }
+
+    updateTrapezoid(k, v) {
+        if(!this.selection) return;
+        this.saveState();
+        const p = this.selection.params;
+        let top = p.top, bottom = p.bottom, h = p.h;
+        if(k==='top') top = parseInt(v);
+        if(k==='bottom') bottom = parseInt(v);
+        if(k==='h') h = parseInt(v);
+        this.selection.resizeTrapezoid(top, bottom, h);
+        this.draw();
+    }
+
+    setColor(c) {
+        if(this.selection) {
+            this.selection.color = c;
+            this.draw();
+        }
+    }
+
+    getSnap(pos, excludeShape) {
+        if (!this.snapEnabled) return null; 
+        let best = { pt: {x:pos.x, y:pos.y}, d: Infinity, type: null };
+        const T = 20;
+        if(this.mode === 'core_select' && this.tracePoints.length > 0) {
+            const start = this.tracePoints[0];
+            const d = Geo.dist(pos, start);
+            if(d < T) return { pt: start, d, type: 'start' };
+        }
+        const sources = [...this.shapes, ...this.results];
+        sources.forEach(s => {
+            if (s === excludeShape) return;
+            s.points.forEach((p, idx) => {
+                const d = Geo.dist(pos, p);
+                if(d < T && d < best.d) best = { pt: p, d, type: 'vertex' };
+            });
+        });
+        if (best.type === 'vertex') return best;
+        sources.forEach(s => {
+            if (s === excludeShape) return;
+             for(let i=0; i<s.points.length; i++) {
+                const j = (i+1)%s.points.length;
+                if(s.type === 'segment' && i===1) continue; 
+                const proj = Geo.closestPointOnSegment(pos, s.points[i], s.points[j]);
+                const d = Geo.dist(pos, proj);
+                if(d < T && d < best.d) best = { pt: proj, d, type: 'edge' };
+            }
+        });
+        if(best.d < T) return best;
+        return null;
+    }
+
+    getPos(e) {
+        const r = this.canvas.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+    }
+
+    onStart(e) {
+        e.preventDefault();
+        const pos = this.getPos(e);
+        
+        if (this.drawMode) {
+            this.isDrawingStroke = true;
+            this.saveState();
+            this.strokes.push({ points: [{x: pos.x, y: pos.y}], color: '#ff4757', width: 3 });
+            this.draw();
+            return;
+        }
+
+        if (this.altitudeEnabled) {
+            let clickedVertex = null;
+            let targetShape = null;
+            let vertexIndex = -1;
+            
+            const allShapes = [...this.results, ...this.shapes];
+            for (let s of allShapes) {
+                for (let i=0; i<s.points.length; i++) {
+                    if (Geo.dist(pos, s.points[i]) < 20) {
+                        clickedVertex = s.points[i];
+                        targetShape = s;
+                        vertexIndex = i;
+                        break;
+                    }
+                }
+                if (clickedVertex) break;
+            }
+            
+            if (targetShape && vertexIndex !== -1) {
+                this.saveState();
+                // Toggle altitude index
+                const idx = targetShape.altitudes.indexOf(vertexIndex);
+                if (idx > -1) {
+                    targetShape.altitudes.splice(idx, 1); // remove
+                } else {
+                    targetShape.altitudes.push(vertexIndex); // add
+                }
+                this.toggleAltitudeMode(); 
+                this.draw();
+                return;
+            }
+        }
+        
+        // ... (其余 onStart 逻辑保持不变) ...
+        if (this.selection && !this.isDrawingStroke && this.rotateEnabled) {
+             const s = this.selection;
+             const c = s.getCentroid();
+             const hx = c.x; const hy = c.y;
+             if (Geo.dist(pos, {x: hx, y: hy}) < 20) {
+                this.saveState();
+                this.dragState = { target: s, type: 'rotate_shape', startAngle: Math.atan2(pos.y - c.y, pos.x - c.x), baseShapeAngle: s.angle };
+                return;
+             }
+        }
+
+        if(this.mode === 'edit') {
+            if(this.selection) {
+                for(let i=0; i<this.selection.points.length; i++) {
+                    if(Geo.dist(pos, this.selection.points[i]) < 20) {
+                        this.saveState(); 
+                        const s = this.selection;
+                        if (s.type === 'rect') {
+                            this.dragState = { target: s, type: 'resize_rect', idx: i, anchor: s.points[(i+2)%4] };
+                        } else if (s.type === 'trapezoid') {
+                            let pairIdx = (i === 0) ? 1 : (i === 1) ? 0 : (i === 2) ? 3 : 2;
+                            this.dragState = { target: s, type: 'resize_trapezoid', idx: i, pairIdx: pairIdx };
+                        } else if (s.type === 'parallelogram') {
+                            this.dragState = { target: s, type: 'resize_parallelogram', idx: i };
+                        } else {
+                            this.dragState = { target: s, type: 'free_vertex', idx: i };
+                        }
+                        return;
+                    }
+                }
+            }
+            
+            const allShapes = [...this.results, ...this.shapes]; 
+            for(let i=allShapes.length-1; i>=0; i--) {
+                const s = allShapes[i];
+                let hit = false;
+                if (s.type === 'segment') {
+                    const d = Geo.distToSegment(pos, s.points[0], s.points[1]);
+                    if (d < 10) hit = true;
+                } else {
+                    if(Geo.isInside(pos, s.points)) hit = true;
+                }
+                
+                if(hit) {
+                    this.select(s);
+                    this.saveState();
+                    this.dragState = { target: s, type: 'body', lastPos: pos };
+                    this.draw();
+                    return;
+                }
+            }
+            this.select(null);
+        }
+        else if (this.mode.startsWith('core')) {
+             if (this.activeCore && this.mode === 'core_manipulate') {
+                for(let i=0; i<this.activeCore.points.length; i++) {
+                    if(Geo.dist(pos, this.activeCore.points[i]) < 20) {
+                        this.saveState(); 
+                        let isPara = Geo.isParallelogram(this.activeCore.points);
+                        if (isPara) {
+                            const pts = this.activeCore.points;
+                            const idx = i;
+                            const opp = (idx + 2) % 4;
+                            const base1 = [opp, (opp + 1) % 4];
+                            const base2 = [(opp - 1 + 4) % 4, opp];
+                            this.dragState = { 
+                                target: this.activeCore, type: 'smart_para', idx: idx, 
+                                candidates: [base1, base2], initialPoints: this.activeCore.points.map(p => ({...p})), 
+                                startVertexPos: { ...pts[idx] } 
+                            };
+                            return;
+                        }
+                        const len = this.activeCore.points.length;
+                        const prev = this.activeCore.points[(i - 1 + len) % len];
+                        const next = this.activeCore.points[(i + 1) % len];
+                        const constraint = { anchor: {...this.activeCore.points[i]}, p1: prev, p2: next };
+                        this.dragState = { target: this.activeCore, type: 'core_vertex', idx: i, constraint };
+                        return;
+                    }
+                }
+                for(let i=0; i<this.activeCore.points.length; i++) {
+                    const p1 = this.activeCore.points[i];
+                    const p2 = this.activeCore.points[(i+1)%this.activeCore.points.length];
+                    const proj = Geo.closestPointOnSegment(pos, p1, p2);
+                    if (Geo.dist(pos, proj) < 10) {
+                        this.saveState();
+                        this.dragState = { target: this.activeCore, type: 'core_edge', p1Idx: i, p2Idx: (i+1)%this.activeCore.points.length, lastPos: pos, dir: {x: p2.x-p1.x, y: p2.y-p1.y} };
+                        return;
+                    }
+                }
+                this.commitCore();
+            }
+            
+            this.mode = 'core_select';
+            this.setStatus('★ 等积变形：连接顶点框选切割区域', true);
+            const snap = this.getSnap(pos);
+            const p = snap ? snap.pt : pos;
+            let isClosing = false;
+            if (this.tracePoints.length > 2) {
+                const start = this.tracePoints[0];
+                if ((snap && snap.type === 'start') || Geo.dist(p, start) < 25) { isClosing = true; }
+            }
+            if (isClosing) { this.finishTrace(); } else { this.tracePoints.push({ x: p.x, y: p.y }); this.draw(); }
+        }
+    }
+    
+    // ... (onMove, onEnd, finishTrace, commitCore, draw, loop 保持不变) ...
+    onMove(e) {
+        e.preventDefault();
+        const pos = this.getPos(e);
+        this.snapTarget = null; 
+
+        if (this.drawMode && this.isDrawingStroke) {
+            const currentStroke = this.strokes[this.strokes.length - 1];
+            currentStroke.points.push({x: pos.x, y: pos.y});
+            this.draw();
+            return;
+        }
+
+        if(!this.dragState) {
+            const snap = this.getSnap(pos, null);
+            if (snap) this.snapTarget = { ...snap.pt, type: snap.type };
+            if(this.tracePoints.length > 0) this.draw(pos); 
+            else if (this.snapTarget) this.draw(); 
+            return;
+        }
+
+        const { target, type } = this.dragState;
+
+        if (type === 'rotate_shape') {
+            const c = target.getCentroid();
+            const currentAngle = Math.atan2(pos.y - c.y, pos.x - c.x);
+            let dAngle = currentAngle - this.dragState.startAngle;
+            target.rotate(dAngle);
+            if (this.snapEnabled) {
+                 const PI_2 = Math.PI / 2;
+                 const threshold = 0.1;
+                 const closestMultiple = Math.round(target.angle / PI_2) * PI_2;
+                 if (Math.abs(target.angle - closestMultiple) < threshold) {
+                     const correction = closestMultiple - target.angle;
+                     target.rotate(correction);
+                 }
+            }
+            this.dragState.startAngle = currentAngle; 
+        }
+        else if(type === 'body') {
+            const dx = pos.x - this.dragState.lastPos.x;
+            const dy = pos.y - this.dragState.lastPos.y;
+            target.move(dx, dy);
+            
+            let bestShift = null;
+            let minD = 20; 
+            if (this.snapEnabled) {
+                for (let i = 0; i < target.points.length; i++) {
+                    const p = target.points[i];
+                    const snap = this.getSnap(p, target); 
+                    if (snap && snap.d < minD) {
+                        const shiftX = snap.pt.x - p.x;
+                        const shiftY = snap.pt.y - p.y;
+                        if (!bestShift || snap.d < bestShift.d) {
+                            bestShift = { x: shiftX, y: shiftY, d: snap.d, pt: snap.pt };
+                        }
+                    }
+                }
+                if (!bestShift && this.mode === 'edit') {
+                    const GRID = 40; const SNAP_DIST = 5; 
+                    for(let p of target.points) {
+                        const gx = Math.round(p.x / GRID) * GRID;
+                        const gy = Math.round(p.y / GRID) * GRID;
+                        if (Math.abs(gx - p.x) < SNAP_DIST && Math.abs(gy - p.y) < SNAP_DIST) {
+                            bestShift = { x: gx - p.x, y: gy - p.y };
+                            this.snapTarget = {x: gx, y: gy, type: 'grid'}; break; 
+                        }
+                    }
+                }
+            }
+            if (bestShift) { target.move(bestShift.x, bestShift.y); if (bestShift.pt) this.snapTarget = bestShift.pt; }
+            this.dragState.lastPos = pos;
+        } 
+        else if (type.startsWith('resize') || type.startsWith('core') || type === 'free_vertex') {
+            const { idx, anchor, pairIdx, constraint } = this.dragState;
+            if (type === 'resize_rect') {
+                const minX = Math.min(anchor.x, pos.x); const maxX = Math.max(anchor.x, pos.x);
+                const minY = Math.min(anchor.y, pos.y); const maxY = Math.max(anchor.y, pos.y);
+                target.points = [{x: minX, y: minY}, {x: maxX, y: minY}, {x: maxX, y: maxY}, {x: minX, y: maxY}];
+            } else if (type === 'resize_trapezoid') {
+                target.points[idx] = {x: pos.x, y: pos.y}; target.points[pairIdx].y = pos.y;
+            } else if (type === 'resize_parallelogram') {
+                let newPos = pos;
+                if (this.snapEnabled) { const snap = this.getSnap(pos, target); if(snap) { newPos = snap.pt; this.snapTarget = snap.pt; } }
+                target.resizeParallelogram(idx, newPos);
+            } else if (type === 'free_vertex' || type === 'core_vertex') {
+                let newPos = pos;
+                if (this.snapEnabled) { 
+                    const snap = this.getSnap(pos, target); 
+                    if(snap) { 
+                         if (constraint) newPos = Geo.projectToParallel(snap.pt, constraint.anchor, constraint.p1, constraint.p2);
+                         else newPos = snap.pt;
+                         this.snapTarget = snap.pt; 
+                    } else if (constraint) {
+                         newPos = Geo.projectToParallel(pos, constraint.anchor, constraint.p1, constraint.p2);
+                    }
+                } else if (constraint) {
+                    newPos = Geo.projectToParallel(pos, constraint.anchor, constraint.p1, constraint.p2);
+                }
+                target.points[idx].x = newPos.x; target.points[idx].y = newPos.y;
+            } else if (type === 'core_edge') {
+                 const dx = pos.x - this.dragState.lastPos.x; const dy = pos.y - this.dragState.lastPos.y;
+                 const lenSq = this.dragState.dir.x**2 + this.dragState.dir.y**2;
+                 const dot = (dx * this.dragState.dir.x + dy * this.dragState.dir.y) / lenSq;
+                 const moveX = dot * this.dragState.dir.x; const moveY = dot * this.dragState.dir.y;
+                 target.points[this.dragState.p1Idx].x += moveX; target.points[this.dragState.p1Idx].y += moveY;
+                 target.points[this.dragState.p2Idx].x += moveX; target.points[this.dragState.p2Idx].y += moveY;
+                 this.dragState.lastPos = pos;
+            }
+            target.calcParams();
+        }
+        else if (type === 'smart_para') {
+            target.points = this.dragState.initialPoints.map(p => ({...p}));
+            const anchor = this.dragState.startVertexPos;
+            const initPts = this.dragState.initialPoints;
+            const getDir = (indices) => {
+                const p1 = initPts[indices[0]]; const p2 = initPts[indices[1]]; return { x: p2.x - p1.x, y: p2.y - p1.y };
+            };
+            const dir1 = getDir(this.dragState.candidates[0]);
+            const dir2 = getDir(this.dragState.candidates[1]);
+            const d1 = Geo.distToLine(pos, anchor, dir1);
+            const d2 = Geo.distToLine(pos, anchor, dir2);
+            const chosenBaseIdx = d1 < d2 ? 0 : 1;
+            const chosenBase = this.dragState.candidates[chosenBaseIdx];
+            this.dragState.baseIndices = chosenBase; 
+            const baseP1 = initPts[chosenBase[0]]; const baseP2 = initPts[chosenBase[1]];
+            let newPos = Geo.projectToParallel(pos, anchor, baseP1, baseP2);
+            if (this.snapEnabled) {
+                const snap = this.getSnap(pos, target);
+                if(snap) { newPos = Geo.projectToParallel(snap.pt, anchor, baseP1, baseP2); this.snapTarget = snap.pt; }
+            }
+            const allIndices = [0,1,2,3];
+            const movingIndices = allIndices.filter(i => !chosenBase.includes(i));
+            const partnerIdx = movingIndices.find(i => i !== this.dragState.idx);
+            const pIdx = initPts[this.dragState.idx]; const pPartner = initPts[partnerIdx];
+            const currentOffset = { x: pPartner.x - pIdx.x, y: pPartner.y - pIdx.y };
+            target.resizeArbitraryParallelogram(this.dragState.idx, newPos, chosenBase, currentOffset);
+        }
+        
+        this.updateUI();
+        this.draw();
+    }
+    
+    onEnd() { this.isDrawingStroke = false; this.dragState = null; this.draw(); }
+    finishTrace() { if(this.tracePoints.length < 3) return; this.saveState(); const ghost = new Shape('polygon', this.tracePoints.map(p => ({x:p.x,y:p.y}))); ghost.isGhost = true; this.ghosts.push(ghost); this.activeCore = new Shape('polygon', this.tracePoints.map(p => ({x:p.x,y:p.y}))); this.activeCore.id = 'core_active'; this.tracePoints = []; this.mode = 'core_manipulate'; this.setStatus('✅ 切割完成', true); this.draw(); }
+    commitCore() { if (!this.activeCore) return; this.saveState(); this.results.forEach(r => { r.isPastResult = true; r.isLast = false; }); this.activeCore.id = 'core_result'; this.activeCore.keepFill = this.keepPastFill; this.activeCore.isPastResult = true; this.activeCore.isLast = true; this.results.push(this.activeCore); this.activeCore = null; this.mode = 'core_select'; this.setStatus('★ 等积变形', true); this.draw(); }
+    
+    draw(mousePos) { 
+        const ctx = this.ctx; ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.shapes.forEach(s => s.draw(ctx, this.showData, this.rotateEnabled && s.selected));
+        this.ghosts.forEach(g => g.draw(ctx, false));
+        this.results.forEach(r => r.draw(ctx, this.showData, this.rotateEnabled && r.selected));
+        if (this.activeCore) this.activeCore.draw(ctx, this.showData);
+        if(this.tracePoints.length > 0) { ctx.beginPath(); ctx.moveTo(this.tracePoints[0].x, this.tracePoints[0].y); this.tracePoints.forEach(p => ctx.lineTo(p.x, p.y)); if(mousePos) ctx.lineTo(mousePos.x, mousePos.y); ctx.strokeStyle = '#FF9800'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); this.tracePoints.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2); ctx.fillStyle = '#FF9800'; ctx.fill(); }); }
+        if (this.strokes && this.strokes.length > 0) { ctx.lineCap = 'round'; ctx.lineJoin = 'round'; this.strokes.forEach(stroke => { if (stroke.points.length < 2) return; ctx.beginPath(); ctx.moveTo(stroke.points[0].x, stroke.points[0].y); for (let i = 1; i < stroke.points.length; i++) { ctx.lineTo(stroke.points[i].x, stroke.points[i].y); } ctx.strokeStyle = stroke.color; ctx.lineWidth = stroke.width; ctx.setLineDash([]); ctx.stroke(); }); }
+        if(this.snapTarget && !this.dragState?.constraint && !this.drawMode) { const {x, y} = this.snapTarget; ctx.save(); ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.strokeStyle = '#00E676'; ctx.lineWidth = 4; ctx.stroke(); ctx.restore(); }
+        else if (this.snapTarget && this.dragState?.constraint) { const {x, y} = this.snapTarget; ctx.save(); ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.strokeStyle = '#00E676'; ctx.lineWidth = 4; ctx.stroke(); ctx.restore(); }
+        if(this.dragState && this.dragState.type === 'smart_para') { const indices = this.dragState.baseIndices; if(indices) { const initPts = this.dragState.initialPoints; const p1 = initPts[indices[0]]; const p2 = initPts[indices[1]]; const anchor = this.dragState.startVertexPos; const dx = p2.x - p1.x, dy = p2.y - p1.y; ctx.save(); ctx.beginPath(); ctx.moveTo(anchor.x - dx*50, anchor.y - dy*50); ctx.lineTo(anchor.x + dx*50, anchor.y + dy*50); ctx.strokeStyle = '#2979FF'; ctx.lineWidth = 1; ctx.setLineDash([10, 5]); ctx.stroke(); ctx.restore(); } }
+        
+        // --- Triangle Equivalent Deformation Trajectory Line Fix ---
+        if(this.dragState && this.dragState.constraint) {
+             const { anchor, p1, p2 } = this.dragState.constraint;
+             ctx.save();
+             const dx = p2.x - p1.x, dy = p2.y - p1.y;
+             ctx.beginPath(); 
+             ctx.moveTo(anchor.x - dx*50, anchor.y - dy*50); 
+             ctx.lineTo(anchor.x + dx*50, anchor.y + dy*50);
+             ctx.strokeStyle = '#FF5722'; 
+             ctx.lineWidth = 2; 
+             ctx.setLineDash([10, 5]); 
+             ctx.stroke();
+             ctx.restore();
+        }
+        
+        // --- Smart Parallelogram Base Highlight Fix ---
+        if (this.dragState && this.dragState.type === 'smart_para') {
+            const indices = this.dragState.baseIndices;
+            if(indices && this.dragState.target) { // Ensure target exists
+                const targetPts = this.dragState.target.points;
+                const p1 = targetPts[indices[0]];
+                const p2 = targetPts[indices[1]];
+                
+                ctx.save();
+                ctx.beginPath(); 
+                ctx.moveTo(p1.x, p1.y); 
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = '#D500F9'; // Purple highlight
+                ctx.lineWidth = 4; 
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    }
+    
+    loop() {
+        requestAnimationFrame(() => this.loop());
+    }
+}
+
+const app = new App();
+</script>
+</body>
+</html>

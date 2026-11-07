@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>探索正比例与反比例的奥秘</title>
+    <script src="_site/math/daohang/ku/tailwindcss.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        macaron: { 
+                            pink: '#FFB6C1', 
+                            blue: '#40E0D0', 
+                            green: '#98FB98', 
+                            yellow: '#FFEA00', 
+                            purple: '#E6E6FA', 
+                            red: '#FF6B81',
+                            dark: '#5A6270'
+                        }
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+                        'glass-sm': '0 4px 16px 0 rgba(31, 38, 135, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            /* 马卡龙渐变背景 */
+            background: linear-gradient(135deg, #FFB6C1 0%, #E6E6FA 50%, #40E0D0 100%);
+            background-attachment: fixed;
+            font-family: 'Comic Sans MS', 'Microsoft YaHei', sans-serif;
+            color: #4A4A4A;
+            touch-action: manipulation; /* 优化触摸体验 */
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 rgba(31, 38, 135, 0.2);
+        }
+
+        .glass-btn.active-direct {
+            background: linear-gradient(135deg, #FFB6C1, #FF9AAB);
+            color: white;
+            border-color: #FFB6C1;
+        }
+
+        .glass-btn.active-inverse {
+            background: linear-gradient(135deg, #40E0D0, #2CCFC0);
+            color: white;
+            border-color: #40E0D0;
+        }
+
+        .glass-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 2px solid #5A6270; /* 明显的外边框 */
+        }
+
+        .glass-table th, .glass-table td {
+            padding: 0.75rem;
+            text-align: center;
+            border-bottom: 2px solid #5A6270; /* 明显的内边框 */
+            border-right: 2px solid #5A6270; /* 明显的内边框 */
+        }
+        
+        .glass-table th { background: rgba(255, 255, 255, 0.8); font-weight: bold; font-size: 1.1em; }
+        .glass-table td { background: rgba(255, 255, 255, 0.5); transition: background 0.3s; font-size: 1.5em; font-weight: bold;}
+        .glass-table tr:last-child th, .glass-table tr:last-child td { border-bottom: none; }
+        .glass-table th:last-child, .glass-table td:last-child { border-right: none; }
+        
+        .plotted-cell {
+            background: rgba(152, 251, 152, 0.6) !important; /* 马卡龙绿高亮 */
+            animation: pulse-green 1s;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* 修复Canvas紧缩的核心逻辑：绝对定位脱离Flex流挤压 */
+        #canvasContainer {
+            position: relative;
+        }
+
+        #graphCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* 气泡提示动画 */
+        .feedback-bubble {
+            position: absolute;
+            pointer-events: none;
+            background: #FFEA00;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #D35400;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: float-up 1s forwards;
+            opacity: 0;
+            z-index: 50;
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(0.5); opacity: 1; }
+            80% { transform: translateY(-30px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1); opacity: 0; }
+        }
+
+        /* 弹窗动画 */
+        .modal-enter { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .modal-leave { opacity: 0; transform: scale(0.95); pointer-events: none; }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,182,193,0.8); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,107,129,0.8); }
+        
+        /* 分数样式 */
+        .math-fraction {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            line-height: 1;
+        }
+        .math-fraction span:first-child {
+            border-bottom: 2px solid currentColor;
+            padding: 0 0.2rem;
+        }
+        .math-fraction span:last-child {
+            padding: 0.1rem 0.2rem 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center box-border">
+
+    <!-- 标题栏 -->
+    <header class="w-full max-w-6xl glass-panel p-4 mb-6 flex flex-col md:flex-row justify-between items-center z-10 relative shrink-0">
+        <div class="flex items-center mb-4 md:mb-0">
+            <span class="text-4xl mr-3">🧭</span>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-macaron-dark tracking-wide">比例的奥秘</h1>
+                <p class="text-sm text-gray-600 mt-1">正比例与反比例</p>
+            </div>
+            <!-- 新增：核心概念弹窗按钮 -->
+            <button onclick="openModal()" class="ml-6 glass-btn px-4 py-2 rounded-xl font-bold text-macaron-dark hover:bg-white transition-all flex items-center shadow-sm">
+                <span class="mr-2 text-xl">📖</span> <span class="tracking-widest">核心概念</span>
+            </button>
+        </div>
+        
+        <!-- 模式切换 -->
+        <div class="flex space-x-3 bg-white/30 p-2 rounded-2xl border border-white/50">
+            <button id="btnDirect" class="glass-btn active-direct px-6 py-2 rounded-xl font-bold text-lg" onclick="switchType('direct')">
+                📈 正比例 (直线)
+            </button>
+            <button id="btnInverse" class="glass-btn px-6 py-2 rounded-xl font-bold text-lg text-gray-600" onclick="switchType('inverse')">
+                📉 反比例 (曲线)
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <main class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 flex-grow min-h-[750px]">
+        
+        <!-- 左侧：例子选择与数据表 -->
+        <div class="w-full lg:w-[55%] flex flex-col gap-6 h-[750px] lg:h-full">
+
+            <!-- 数据表格面板 (调整到上方, 占比45%) -->
+            <div class="glass-panel p-5 flex flex-col" style="flex: 45;">
+                <h2 id="tableTitle" class="text-xl font-bold mb-3 text-macaron-dark shrink-0">数据表格</h2>
+                
+                <div class="overflow-x-auto rounded-xl flex-grow flex items-center">
+                    <table class="glass-table" id="dataTable">
+                        <!-- 动态生成表格 -->
+                    </table>
+                </div>
+                
+                <!-- 结果总结提示框 -->
+                <div id="conclusionBox" class="mt-4 p-4 rounded-xl bg-macaron-green/30 border border-macaron-green hidden transform transition-all duration-500 scale-95 shrink-0">
+                    <h3 class="font-bold text-green-800 flex items-center"><span class="text-2xl mr-2">🎉</span> 验证成功！</h3>
+                    <p id="conclusionText" class="text-sm mt-1 text-green-900 font-medium"></p>
+                </div>
+            </div>
+
+            <!-- 实例选择器 (调整到下方, 占比55%) -->
+            <div class="glass-panel p-5 flex flex-col overflow-hidden" style="flex: 55;">
+                <h2 class="text-xl font-bold mb-3 flex items-center shrink-0"><span class="mr-2">📚</span> 选择一个生活实例</h2>
+                <div id="exampleList" class="flex flex-col gap-2 overflow-y-auto pr-2 flex-grow">
+                    <!-- 动态生成列表 -->
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- 右侧：交互坐标系Canvas + 定义总结 -->
+        <div class="w-full lg:w-[45%] glass-panel p-4 md:p-6 flex flex-col gap-4 relative h-[750px] lg:h-full">
+            
+            <!-- 坐标系标题控制台 -->
+            <div class="flex justify-between items-center shrink-0">
+                <h2 class="text-xl font-bold text-macaron-dark flex items-center">
+                    <span class="mr-2">🎯</span> 交互坐标系 <span id="plotStatus" class="ml-3 text-sm font-normal text-macaron-red bg-white/50 px-3 py-1 rounded-full">(已描点: 0/5)</span>
+                </h2>
+                <button onclick="revealLine()" class="glass-btn px-4 py-2 rounded-lg text-sm font-bold text-indigo-600 hover:text-indigo-800 shrink-0">
+                    🪄 直接看连线
+                </button>
+            </div>
+            
+            <!-- Canvas 容器 (增加 min-h-[450px] 防止高度塌陷导致画布不可见，给 canvas 加上 absolute 类) -->
+            <div id="canvasContainer" class="flex-grow w-full rounded-xl overflow-hidden shadow-inner border-2 border-white/80 bg-white/60 relative min-h-[450px]">
+                <canvas id="graphCanvas" class="absolute top-0 left-0 w-full h-full cursor-crosshair"></canvas>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 新增：核心概念弹窗 (Modal) -->
+    <div id="conceptModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-300 modal-leave">
+        <!-- 将 max-w-[40rem] 放大为 max-w-[50rem] 以适应更大的文字排版 -->
+        <div class="glass-panel p-8 md:p-10 w-11/12 max-w-[50rem] bg-white/95 transform transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-extrabold text-gray-800 flex items-center">
+                    <span class="mr-2 text-4xl">💡</span> 概念解析
+                </h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-macaron-red text-4xl font-bold transition-colors leading-none">&times;</button>
+            </div>
+            <div id="modalContent" class="py-2">
+                <!-- JS动态注入对应概念的内容 -->
+            </div>
+            <div class="mt-10 flex justify-end">
+                <button onclick="closeModal()" class="glass-btn px-8 py-3 rounded-xl font-bold text-lg text-gray-700 hover:bg-white tracking-widest">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 1. 教学数据设计 (10个例子) ===
+        const curriculumData = {
+            direct: [
+                {
+                    title: "1. 购物消费 (单价一定)",
+                    xLabel: "数量 (支)", yLabel: "总价 (元)",
+                    data: [{x: 1, y: 2}, {x: 2, y: 4}, {x: 3, y: 6}, {x: 4, y: 8}, {x: 5, y: 10}],
+                    maxX: 6, maxY: 12, stepX: 1, stepY: 2,
+                    conclusion: "所有点连起来是一条经过原点的直线！总价和数量的【比值（单价）】一定，成正比例。"
+                },
+                {
+                    title: "2. 交通出行 (速度一定)",
+                    xLabel: "时间 (小时)", yLabel: "路程 (km)",
+                    data: [{x: 1, y: 300}, {x: 2, y: 600}, {x: 3, y: 900}, {x: 4, y: 1200}, {x: 5, y: 1500}],
+                    maxX: 6, maxY: 1800, stepX: 1, stepY: 300,
+                    conclusion: "所有点都在一条直线上！路程和时间的【比值（速度）】一定，成正比例。"
+                },
+                {
+                    title: "3. 几何图形 (常数比例)",
+                    xLabel: "正方形边长", yLabel: "周长 (cm)",
+                    data: [{x: 2, y: 8}, {x: 4, y: 16}, {x: 6, y: 24}, {x: 8, y: 32}, {x: 10, y: 40}],
+                    maxX: 12, maxY: 48, stepX: 2, stepY: 8,
+                    conclusion: "直线经过原点！正方形周长与边长的【比值（恒为4）】一定，成正比例。"
+                },
+                {
+                    title: "4. 工程制造 (效率一定)",
+                    xLabel: "时间 (天)", yLabel: "产量 (个)",
+                    data: [{x: 2, y: 10}, {x: 4, y: 20}, {x: 6, y: 30}, {x: 8, y: 40}, {x: 10, y: 50}],
+                    maxX: 12, maxY: 60, stepX: 2, stepY: 10,
+                    conclusion: "是一条倾斜的直线。工作总量与工作时间的【比值（工作效率）】一定，成正比例。"
+                },
+                {
+                    title: "5. 光影测量 (角度一定)",
+                    xLabel: "影长 (m)", yLabel: "树高 (m)",
+                    data: [{x: 1.5, y: 3}, {x: 3, y: 6}, {x: 4.5, y: 9}, {x: 6, y: 12}, {x: 7.5, y: 15}],
+                    maxX: 9, maxY: 18, stepX: 1.5, stepY: 3,
+                    conclusion: "影长按比例增加，高度也按比例增加。同一时刻它们的【比值一定】，成正比例。"
+                },
+                {
+                    title: "6. 车辆耗油 (百公里油耗一定)",
+                    xLabel: "行驶路程 (km)", yLabel: "耗油量 (升)",
+                    data: [{x: 10, y: 1}, {x: 20, y: 2}, {x: 30, y: 3}, {x: 40, y: 4}, {x: 50, y: 5}],
+                    maxX: 60, maxY: 6, stepX: 10, stepY: 1,
+                    conclusion: "跑得越远，耗油越多！耗油量与行驶路程的【比值（每公里油耗）】一定，成正比例。"
+                },
+                {
+                    title: "7. 每日阅读 (每天阅读页数一定)",
+                    xLabel: "阅读天数 (天)", yLabel: "已读页数 (页)",
+                    data: [{x: 2, y: 30}, {x: 4, y: 60}, {x: 6, y: 90}, {x: 8, y: 120}, {x: 10, y: 150}],
+                    maxX: 12, maxY: 180, stepX: 2, stepY: 30,
+                    conclusion: "坚持阅读，页数稳步增加。已读页数与天数的【比值（每天阅读量）】一定，成正比例。"
+                },
+                {
+                    title: "8. 物理弹力 (劲度系数一定)",
+                    xLabel: "拉力 (千克)", yLabel: "弹簧伸长量 (cm)",
+                    data: [{x: 2, y: 1}, {x: 4, y: 2}, {x: 6, y: 3}, {x: 8, y: 4}, {x: 10, y: 5}],
+                    maxX: 12, maxY: 6, stepX: 2, stepY: 1,
+                    conclusion: "拉力越大，弹簧被拉得越长。弹簧伸长量与拉力的【比值】一定，成正比例。"
+                }
+            ],
+            inverse: [
+                {
+                    title: "1. 几何拼图 (面积一定)",
+                    xLabel: "矩形的长 (cm)", yLabel: "矩形的宽 (cm)",
+                    data: [{x: 3, y: 8}, {x: 4, y: 6}, {x: 6, y: 4}, {x: 8, y: 3}, {x: 12, y: 2}],
+                    maxX: 14, maxY: 10, stepX: 2, stepY: 2,
+                    conclusion: "点连起来是一条平滑的曲线！长和宽的【乘积（面积=24）】一定，成反比例。"
+                },
+                {
+                    title: "2. 交通行程 (路程一定)",
+                    xLabel: "速度 (km/h)", yLabel: "时间 (小时)",
+                    data: [{x: 60, y: 20}, {x: 80, y: 15}, {x: 100, y: 12}, {x: 120, y: 10}, {x: 150, y: 8}],
+                    maxX: 180, maxY: 24, stepX: 30, stepY: 4,
+                    conclusion: "速度越快，时间越短，连线是曲线。速度和时间的【乘积（路程=1200）】一定，成反比例。"
+                },
+                {
+                    title: "3. 经济预算 (总价一定)",
+                    xLabel: "商品单价 (元)", yLabel: "购买数量 (个)",
+                    data: [{x: 4, y: 30}, {x: 5, y: 24}, {x: 6, y: 20}, {x: 8, y: 15}, {x: 10, y: 12}],
+                    maxX: 12, maxY: 35, stepX: 2, stepY: 5,
+                    conclusion: "单价变贵，能买的数量就减少。它们的【乘积（总预算=120）】一定，成反比例。"
+                },
+                {
+                    title: "4. 工作任务 (工作总量一定)",
+                    xLabel: "每天看书 (页)", yLabel: "需要天数 (天)",
+                    data: [{x: 10, y: 12}, {x: 12, y: 10}, {x: 15, y: 8}, {x: 20, y: 6}, {x: 30, y: 4}],
+                    maxX: 35, maxY: 15, stepX: 5, stepY: 3,
+                    conclusion: "每天看得越多，用掉的天数越少。效率与天数的【乘积（总页数=120）】一定，成反比例。"
+                },
+                {
+                    title: "5. 阵列排队 (总人数一定)",
+                    xLabel: "每行人数", yLabel: "排成行数",
+                    data: [{x: 4, y: 12}, {x: 6, y: 8}, {x: 8, y: 6}, {x: 12, y: 4}, {x: 16, y: 3}],
+                    maxX: 20, maxY: 15, stepX: 4, stepY: 3,
+                    conclusion: "每行站的人越多，排出的行数越少。每行人数与行数的【乘积（总人数=48）】一定，成反比例。"
+                },
+                {
+                    title: "6. 工厂包装 (总货物量一定)",
+                    xLabel: "每箱装 (个)", yLabel: "需要箱数 (个)",
+                    data: [{x: 10, y: 36}, {x: 12, y: 30}, {x: 15, y: 24}, {x: 18, y: 20}, {x: 24, y: 15}],
+                    maxX: 30, maxY: 40, stepX: 5, stepY: 5,
+                    conclusion: "每个箱子装得越多，需要的箱子越少。每箱个数与箱数的【乘积（总数=360）】一定，成反比例。"
+                },
+                {
+                    title: "7. 容器装水 (水体积一定)",
+                    xLabel: "底面积 (c㎡)", yLabel: "水面高度 (cm)",
+                    data: [{x: 10, y: 24}, {x: 12, y: 20}, {x: 15, y: 16}, {x: 20, y: 12}, {x: 24, y: 10}],
+                    maxX: 30, maxY: 30, stepX: 5, stepY: 4,
+                    conclusion: "把同样多的水倒入不同容器，底面积越大水越浅。底面积与高度的【乘积（水体积=240）】一定，成反比例。"
+                },
+                {
+                    title: "8. 分配问题 (总物品数一定)",
+                    xLabel: "小朋友人数", yLabel: "每人分到糖果",
+                    data: [{x: 2, y: 30}, {x: 3, y: 20}, {x: 4, y: 15}, {x: 5, y: 12}, {x: 6, y: 10}],
+                    maxX: 8, maxY: 35, stepX: 1, stepY: 5,
+                    conclusion: "分享的人越多，每个人分到的越少。人数与每人糖果数的【乘积（糖果总数=60）】一定，成反比例。"
+                }
+            ]
+        };
+
+        // 核心概念总结模板 (人教版标准定义)
+        // 放大标题字号和描述正文字号（继续放大20%左右，升级至 text-3xl）
+        const mathDefinitions = {
+            direct: `
+                <h3 class="text-3xl font-extrabold text-macaron-red mb-4 flex items-center"><span class="mr-2 text-5xl">📖</span> 核心概念：成正比例的量</h3>
+                <p class="text-3xl text-gray-700 mb-6 leading-relaxed tracking-wide">
+                    两种相关联的量，一种量变化，另一种量也随着变化，如果这两种量中相对应的两个数的<strong class="text-macaron-red bg-red-100 px-1 rounded">比值</strong>一定，这两种量就叫做<strong class="text-macaron-red">成正比例的量</strong>，它们的关系叫做<strong>正比例关系</strong>。
+                </p>
+                <div class="bg-macaron-pink/20 py-4 px-6 rounded-xl flex items-center font-bold text-macaron-red border border-macaron-pink/50">
+                    <span class="mr-3 text-2xl">字母表达式：</span>
+                    <span class="math-fraction text-5xl font-mono mr-2">
+                        <span>y</span>
+                        <span>x</span>
+                    </span>
+                    <span class="text-4xl font-mono"> = k (一定)</span>
+                </div>
+            `,
+            inverse: `
+                <h3 class="text-3xl font-extrabold text-teal-700 mb-4 flex items-center"><span class="mr-2 text-5xl">📖</span> 核心概念：成反比例的量</h3>
+                <p class="text-3xl text-gray-700 mb-6 leading-relaxed tracking-wide">
+                    两种相关联的量，一种量变化，另一种量也随着变化，如果这两种量中相对应的两个数的<strong class="text-teal-700 bg-teal-100 px-1 rounded">乘积</strong>一定，这两种量就叫做<strong class="text-teal-700">成反比例的量</strong>，它们的关系叫做<strong>反比例关系</strong>。
+                </p>
+                <div class="bg-macaron-blue/20 py-4 px-6 rounded-xl flex items-center font-bold text-teal-800 border border-macaron-blue/50">
+                    <span class="mr-3 text-2xl">字母表达式：</span>
+                    <span class="text-4xl font-mono tracking-widest">xy = k (一定)</span>
+                </div>
+            `
+        };
+
+        // === 2. 状态管理 ===
+        let state = {
+            currentType: 'direct', // 'direct' or 'inverse'
+            currentIndex: 0,
+            plottedPoints: [false, false, false, false, false], // 记录5个点是否已被描出
+            lineRevealed: false
+        };
+
+        // DOM 元素
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvasContainer');
+        const conceptModal = document.getElementById('conceptModal');
+        const modalContent = document.getElementById('modalContent');
+
+        // 坐标系布局参数 (增大 top/right 解决溢出，减小 bottom/left 将图表向左下移动)
+        const padding = { top: 60, right: 80, bottom: 50, left: 60 };
+
+        // === 3. 核心初始化与渲染 ===
+        function init() {
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 交互事件：支持鼠标点击和触摸屏点按
+            canvas.addEventListener('mousedown', handlePlotting);
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // 防止滚动
+                handlePlotting(e.touches[0]);
+            }, {passive: false});
+
+            renderUI();
+
+            // 修复画布不可见问题：延迟执行重绘，确保Flexbox完成容器实际宽高的计算
+            setTimeout(resizeCanvas, 100);
+            setTimeout(resizeCanvas, 500);
+        }
+
+        function switchType(type) {
+            state.currentType = type;
+            state.currentIndex = 0;
+            resetPlotState();
+            
+            // 更新按钮样式
+            document.getElementById('btnDirect').className = `glass-btn px-6 py-2 rounded-xl font-bold text-lg ${type === 'direct' ? 'active-direct' : 'text-gray-600'}`;
+            document.getElementById('btnInverse').className = `glass-btn px-6 py-2 rounded-xl font-bold text-lg ${type === 'inverse' ? 'active-inverse' : 'text-gray-600'}`;
+            
+            renderUI();
+        }
+
+        function switchExample(index) {
+            state.currentIndex = index;
+            resetPlotState();
+            renderUI();
+        }
+
+        function resetPlotState() {
+            state.plottedPoints = [false, false, false, false, false];
+            state.lineRevealed = false;
+            document.getElementById('conclusionBox').classList.add('hidden');
+            document.getElementById('conclusionBox').classList.remove('scale-100');
+            document.getElementById('conclusionBox').classList.add('scale-95');
+        }
+
+        function renderUI() {
+            renderExampleList();
+            renderTable();
+            // 不再调用 renderDefinition，改为在弹窗中渲染
+            updateStatus();
+            resizeCanvas(); // 内部会调用 drawGraph()
+        }
+
+        // 新增：弹窗控制逻辑
+        function openModal() {
+            modalContent.innerHTML = mathDefinitions[state.currentType];
+            conceptModal.classList.remove('modal-leave');
+            conceptModal.classList.add('modal-enter');
+        }
+
+        function closeModal() {
+            conceptModal.classList.remove('modal-enter');
+            conceptModal.classList.add('modal-leave');
+        }
+
+        function renderExampleList() {
+            const list = document.getElementById('exampleList');
+            list.innerHTML = '';
+            const examples = curriculumData[state.currentType];
+            
+            examples.forEach((ex, idx) => {
+                const btn = document.createElement('button');
+                const isActive = idx === state.currentIndex;
+                const activeClasses = isActive 
+                    ? (state.currentType === 'direct' ? 'bg-macaron-pink/40 border-macaron-pink font-bold shadow-sm' : 'bg-macaron-blue/40 border-macaron-blue font-bold shadow-sm')
+                    : 'bg-white/40 border-white/50 text-gray-600 hover:bg-white/60';
+                
+                btn.className = `text-left px-4 py-3 rounded-xl border transition-all ${activeClasses}`;
+                btn.innerHTML = ex.title;
+                btn.onclick = () => switchExample(idx);
+                list.appendChild(btn);
+            });
+        }
+
+        function renderTable() {
+            const ex = curriculumData[state.currentType][state.currentIndex];
+            const table = document.getElementById('dataTable');
+            document.getElementById('tableTitle').innerText = `📊 数据表：${ex.title}`;
+            
+            let html = `
+                <tr>
+                    <th>${ex.xLabel} (X)</th>
+                    ${ex.data.map((d, i) => `<td class="${state.plottedPoints[i] ? 'plotted-cell' : ''}" id="td-x-${i}">${d.x}</td>`).join('')}
+                </tr>
+                <tr>
+                    <th>${ex.yLabel} (Y)</th>
+                    ${ex.data.map((d, i) => `<td class="${state.plottedPoints[i] ? 'plotted-cell' : ''}" id="td-y-${i}">${d.y}</td>`).join('')}
+                </tr>
+            `;
+            table.innerHTML = html;
+        }
+
+        function updateStatus() {
+            const plottedCount = state.plottedPoints.filter(p => p).length;
+            const statusEl = document.getElementById('plotStatus');
+            statusEl.innerText = `(已描点: ${plottedCount}/5)`;
+            
+            if (plottedCount === 5) {
+                statusEl.innerText = `(描点完成 🌟)`;
+                statusEl.className = "ml-3 text-sm font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full";
+                
+                // 显示连线和总结
+                if (!state.lineRevealed) {
+                    setTimeout(() => {
+                        state.lineRevealed = true;
+                        drawGraph();
+                        showConclusion();
+                    }, 500);
+                }
+            } else {
+                statusEl.className = "ml-3 text-sm font-normal text-macaron-red bg-white/50 px-3 py-1 rounded-full";
+            }
+        }
+
+        function showConclusion() {
+            const ex = curriculumData[state.currentType][state.currentIndex];
+            const box = document.getElementById('conclusionBox');
+            document.getElementById('conclusionText').innerText = ex.conclusion;
+            box.classList.remove('hidden');
+            setTimeout(() => {
+                box.classList.remove('scale-95');
+                box.classList.add('scale-100');
+            }, 50);
+        }
+
+        function revealLine() {
+            state.plottedPoints = [true, true, true, true, true]; // 自动填满点
+            state.lineRevealed = true;
+            renderTable();
+            updateStatus();
+            drawGraph();
+            showConclusion();
+        }
+
+        // === 4. Canvas 绘图与交互数学逻辑 ===
+
+        function resizeCanvas() {
+            // 支持高分屏 (Retina)
+            const dpr = window.devicePixelRatio || 1;
+            const rect = container.getBoundingClientRect();
+            
+            // 修复画布不可见：防御性检查，如果容器宽高为0，则直接跳过避免报错
+            if (rect.width === 0 || rect.height === 0) return;
+            
+            // 依据容器的实际物理像素设定 Canvas 内部尺寸
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            ctx.scale(dpr, dpr);
+            
+            // 不再动态设置 canvas.style.width 和 height，完全交由 CSS 绝对定位处理
+            canvas._cssWidth = rect.width;
+            canvas._cssHeight = rect.height;
+
+            drawGraph();
+        }
+
+        // 核心坐标映射函数：数学数据 (dx, dy) 转换为 Canvas 像素坐标 (px, py)
+        function getPxFromData(dx, dy, ex, plotW, plotH) {
+            const px = padding.left + (dx / ex.maxX) * plotW;
+            const py = canvas._cssHeight - padding.bottom - (dy / ex.maxY) * plotH;
+            return { x: px, y: py };
+        }
+
+        // 将 Canvas 像素坐标 (px, py) 转换为 数学数据 (dx, dy)
+        function getDataFromPx(px, py, ex, plotW, plotH) {
+            const dx = ((px - padding.left) / plotW) * ex.maxX;
+            const dy = ((canvas._cssHeight - padding.bottom - py) / plotH) * ex.maxY;
+            return { x: dx, y: dy };
+        }
+
+        function drawGraph() {
+            const w = canvas._cssWidth;
+            const h = canvas._cssHeight;
+            // 确保宽度和高度有效，避免在隐藏或缩小时引发错误
+            if (w === 0 || h === 0) return;
+
+            const ex = curriculumData[state.currentType][state.currentIndex];
+            
+            const plotW = w - padding.left - padding.right;
+            const plotH = h - padding.top - padding.bottom;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. 绘制网格线
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "rgba(200, 200, 200, 0.4)";
+            ctx.beginPath();
+            
+            // 垂直网格线 (X轴刻度)
+            for (let i = 0; i <= ex.maxX; i += ex.stepX) {
+                const px = getPxFromData(i, 0, ex, plotW, plotH).x;
+                ctx.moveTo(px, padding.top);
+                ctx.lineTo(px, h - padding.bottom);
+            }
+            // 水平网格线 (Y轴刻度)
+            for (let i = 0; i <= ex.maxY; i += ex.stepY) {
+                const py = getPxFromData(0, i, ex, plotW, plotH).y;
+                ctx.moveTo(padding.left, py);
+                ctx.lineTo(w - padding.right, py);
+            }
+            ctx.stroke();
+
+            // 2. 绘制坐标轴 (加粗)
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#5A6270"; // macaron-dark
+            ctx.beginPath();
+            // Y轴
+            ctx.moveTo(padding.left, padding.top - 10);
+            ctx.lineTo(padding.left, h - padding.bottom);
+            // X轴
+            ctx.lineTo(w - padding.right + 10, h - padding.bottom);
+            ctx.stroke();
+
+            // 绘制箭头
+            ctx.fillStyle = "#5A6270";
+            // Y箭头
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top - 15);
+            ctx.lineTo(padding.left - 5, padding.top);
+            ctx.lineTo(padding.left + 5, padding.top);
+            ctx.fill();
+            // X箭头
+            ctx.beginPath();
+            ctx.moveTo(w - padding.right + 15, h - padding.bottom);
+            ctx.lineTo(w - padding.right, h - padding.bottom - 5);
+            ctx.lineTo(w - padding.right, h - padding.bottom + 5);
+            ctx.fill();
+
+            // 3. 绘制文字刻度与标签 (将字号从12px放大至20px，加粗)
+            ctx.font = "bold 20px 'Microsoft YaHei'";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            
+            // X轴刻度
+            for (let i = 0; i <= ex.maxX; i += ex.stepX) {
+                const px = getPxFromData(i, 0, ex, plotW, plotH).x;
+                // 解决0点重合问题，增加文字间距
+                if(i !== 0) ctx.fillText(i, px, h - padding.bottom + 15);
+            }
+            ctx.fillText(ex.xLabel, w - padding.right + 10, h - padding.bottom + 35);
+
+            // Y轴刻度
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            for (let i = 0; i <= ex.maxY; i += ex.stepY) {
+                const py = getPxFromData(0, i, ex, plotW, plotH).y;
+                // 解决Y轴的0点重合问题，增加文字间距
+                if(i !== 0) ctx.fillText(i, padding.left - 12, py);
+            }
+            ctx.textAlign = "center";
+            ctx.fillText(ex.yLabel, padding.left, padding.top - 25);
+
+            // 补充唯一原点 O
+            ctx.textAlign = "right";
+            ctx.textBaseline = "top";
+            ctx.fillText("0", padding.left - 12, h - padding.bottom + 12);
+
+            // 4. 绘制连线 (仅当 state.lineRevealed 为 true 时)
+            if (state.lineRevealed) {
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = state.currentType === 'direct' ? '#FF6B81' : '#40E0D0'; // 正红，反蓝
+                ctx.beginPath();
+                
+                if (state.currentType === 'direct') {
+                    // 正比例：y = kx，直线穿过原点
+                    const p1 = ex.data[0];
+                    const k = p1.y / p1.x;
+                    const startPx = getPxFromData(0, 0, ex, plotW, plotH);
+                    const endPx = getPxFromData(ex.maxX, k * ex.maxX, ex, plotW, plotH);
+                    ctx.moveTo(startPx.x, startPx.y);
+                    ctx.lineTo(endPx.x, endPx.y);
+                } else {
+                    // 反比例：xy = k (曲线)
+                    const p1 = ex.data[0];
+                    const k = p1.x * p1.y;
+                    
+                    // 为了平滑，从很小的x开始画
+                    let started = false;
+                    const step = ex.maxX / 100; // 采样100个点
+                    for (let x = 0.1; x <= ex.maxX + step; x += step) {
+                        const y = k / x;
+                        if (y <= ex.maxY * 1.5) { // 限制在视口内稍微出头
+                            const p = getPxFromData(x, y, ex, plotW, plotH);
+                            if (!started) {
+                                ctx.moveTo(p.x, p.y);
+                                started = true;
+                            } else {
+                                ctx.lineTo(p.x, p.y);
+                            }
+                        }
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // 5. 绘制学生描出的点
+            ex.data.forEach((d, i) => {
+                if (state.plottedPoints[i]) {
+                    const p = getPxFromData(d.x, d.y, ex, plotW, plotH);
+                    
+                    // 画点外圈光晕
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = state.currentType === 'direct' ? "rgba(255, 107, 129, 0.3)" : "rgba(64, 224, 208, 0.3)";
+                    ctx.fill();
+                    
+                    // 画实心点
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = state.currentType === 'direct' ? "#FF6B81" : "#0097a7";
+                    ctx.fill();
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = "#fff";
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // 交互逻辑：点击/触摸描点
+        function handlePlotting(e) {
+            if (state.plottedPoints.every(v => v)) return; // 已经全部描完
+
+            const rect = canvas.getBoundingClientRect();
+            // 计算鼠标/触点在canvas上的像素坐标
+            const clickPx = e.clientX - rect.left;
+            const clickPy = e.clientY - rect.top;
+
+            const ex = curriculumData[state.currentType][state.currentIndex];
+            const w = canvas._cssWidth;
+            const h = canvas._cssHeight;
+            const plotW = w - padding.left - padding.right;
+            const plotH = h - padding.top - padding.bottom;
+
+            // 允许的误差半径 (像素) - 放宽一点方便触屏小学生操作
+            const toleranceRadius = 25; 
+
+            let hitIndex = -1;
+
+            // 遍历未描出的数据点，检查距离
+            ex.data.forEach((d, i) => {
+                if (!state.plottedPoints[i]) {
+                    const target = getPxFromData(d.x, d.y, ex, plotW, plotH);
+                    const dist = Math.sqrt(Math.pow(clickPx - target.x, 2) + Math.pow(clickPy - target.y, 2));
+                    
+                    if (dist < toleranceRadius) {
+                        hitIndex = i;
+                    }
+                }
+            });
+
+            if (hitIndex !== -1) {
+                // 击中！更新状态
+                state.plottedPoints[hitIndex] = true;
+                
+                // 播放动画效果
+                showBubbleBubble(clickPx, clickPy);
+                
+                renderTable(); // 更新表格背景色
+                updateStatus(); // 检查是否完成
+                drawGraph();    // 重新绘制
+            }
+        }
+
+        // 在点击位置显示气泡反馈
+        function showBubbleBubble(x, y) {
+            const bubble = document.createElement('div');
+            bubble.className = 'feedback-bubble';
+            bubble.innerText = '👍 准确!';
+            bubble.style.left = `${x}px`;
+            bubble.style.top = `${y}px`;
+            container.appendChild(bubble);
+            
+            setTimeout(() => {
+                if(container.contains(bubble)) container.removeChild(bubble);
+            }, 1000);
+        }
+
+        // 页面加载完毕执行
+        window.onload = init;
+
+    </script>
+</body>
+</html>
