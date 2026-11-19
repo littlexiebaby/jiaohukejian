@@ -1,0 +1,39 @@
+.area-instructions {
+  padding-left: 1.6em;
+  margin: 8px 0;
+  font-size: 23px;
+  line-height: 1.8;
+}
+.area-instructions li { padding-left: 0.35em; margin-bottom: 14px; }
+.area-instructions strong { color: #238f83; }
+.compact-ui .area-instructions { font-size: 19px; line-height: 1.65; }
+.head-tools #demoPause,
+.head-tools #demoReturn { color: #177e73; border-color: #94bdb8; }
+#demoSpeedLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 17px;
+}
+#demoSpeed {
+  font-size: 17px;
+  min-height: 37px;
+  padding: 4px 2px 4px 6px;
+  border: 1px solid #dbe4e9;
+  border-radius: 7px;
+  background: white;
+  touch-action: manipulation;
+}
+.compact-ui header { padding-left: 8px; padding-right: 8px; gap: 5px; }
+.compact-ui .head-tools { gap: 4px; }
+.compact-ui .head-tools button { padding: 3px 6px; font-size: 14px; }
+.compact-ui #demoSpeedLabel,
+.compact-ui #demoSpeed { font-size: 14px; }
+.compact-ui #demoSpeed { min-height: 29px; }
+.embedded-ui .head-tools { flex-wrap: wrap; }
+.embedded-ui.two-bank-columns { --head: 74px; }
+.embedded-ui.two-bank-columns header { height: var(--head); }
+.embedded-ui.two-bank-columns #stage,
+.embedded-ui.two-bank-columns #params { top: var(--head); }
+.comparing #demoSpeedLabel { display: none; }
