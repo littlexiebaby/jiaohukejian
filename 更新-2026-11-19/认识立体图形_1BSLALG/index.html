@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>认识立体图形</title>
+<link rel="icon" href="data:,">
+<script src="assets/vendor/three.min.js"></script>
+<script src="assets/narration.js"></script>
+<style>
+@font-face{font-family:LessonKai;src:url('assets/fonts/kaiti.ttf') format('truetype');font-display:swap}
+:root{--paper:#f5faff;--surface:#fff;--ink:#17345d;--muted:#58708f;--teal:#3478f6;--line:#c6ddf7;--coral:#ff656d;--yellow:#ffd65a;--mint:#29c9a0;--lilac:#a16cec}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--paper);touch-action:none}
+body,button{font-family:LessonKai,KaiTi,STKaiti,'楷体',serif;color:var(--ink)}
+button{cursor:pointer;border:0;background:none;font-size:26px;touch-action:none;padding:0}button:disabled{cursor:default;opacity:.4}button:focus-visible{outline:4px solid #235dce;outline-offset:4px}img{pointer-events:none;-webkit-user-drag:none;object-fit:contain}svg{display:block;width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#stage{position:fixed;left:50%;top:50%;width:1600px;height:900px;transform-origin:center;background:var(--paper) url('assets/images/background-dopamine.webp') center/cover no-repeat;overflow:hidden}
+.header{position:absolute;inset:0 0 auto;height:184px}.title{position:absolute;left:82px;top:13px;margin:0;font-size:72px;font-weight:700;letter-spacing:3px;line-height:1.25;white-space:nowrap}
+.tools{position:absolute;right:28px;top:19px;display:flex;gap:12px;z-index:53}.tool{height:46px;border:2px solid var(--line);border-radius:13px;padding:0 15px;display:flex;align-items:center;gap:8px;font-size:25px;background:#ffffffed;box-shadow:0 2px 0 #dce9f6}.tool svg{font-size:25px;color:var(--teal)}#penBtn svg{color:var(--coral)}.tool.active{background:#e6f0ff;border-color:var(--teal)}.tool:hover:not(:disabled){border-color:#7baaff}
+.steps{position:absolute;left:356px;top:104px;display:flex;align-items:center;gap:22px}.step{position:relative;width:280px;height:64px;border-radius:27px;font-size:38px;font-weight:700;line-height:1;background:#fff0b9;color:var(--ink);transition:background .18s,box-shadow .18s}.step:first-child{background:#ffe1e5}.step:last-child{background:#d4f6eb}.step.active{background:var(--coral);color:#fff;box-shadow:inset 0 -4px 0 #df405a22}.step.active:after{content:'';position:absolute;left:calc(50% - 11px);bottom:-10px;width:22px;height:22px;border-radius:3px;background:inherit;transform:rotate(45deg)}.step:nth-child(2).active{background:var(--yellow);color:var(--ink)}.step:nth-child(3).active{background:var(--mint);color:var(--ink)}
+#sortView{position:absolute;inset:194px 36px 20px}.zones{position:absolute;inset:0 0 auto;height:334px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.zone{position:relative;min-width:0;border-radius:27px;background:var(--zone-bg);border:2px solid transparent;transition:border-color .15s,box-shadow .15s}.zone:after{content:'';position:absolute;inset:76px 12px 12px;border:2px dashed var(--zone-stroke);border-radius:19px;pointer-events:none;opacity:.65}.zone.hovered{border-color:var(--zone-stroke);box-shadow:0 0 0 5px #ffffffdd}.group-heading{position:absolute;top:13px;left:50%;transform:translateX(-50%);margin:0;min-width:268px;padding:9px 25px;border-radius:26px;font-size:37px;line-height:1.1;text-align:center;white-space:nowrap;background:var(--zone-head);font-weight:700}.zone-items{position:absolute;inset:84px 16px 18px;z-index:1}.zone .object{position:absolute;max-height:none}
+.action-row{position:absolute;left:8px;right:8px;top:342px;height:62px;display:flex;align-items:center;justify-content:space-between;gap:20px}.hint{font-size:33px;margin:0;line-height:1.25}.primary{background:var(--teal);color:#fff;border-radius:23px;height:60px;min-width:220px;padding:0 31px;font-size:37px;line-height:1;box-shadow:inset 0 -4px 0 #1455c42b;transition:background .15s}.primary:hover{background:#2568e6}.primary:active{transform:translateY(1px)}.secondary{height:50px;padding:0 24px;border:2px solid var(--line);border-radius:21px;font-size:28px;background:#fff}.secondary:hover{background:#edf5ff;border-color:#7baaff}
+.object-tray{position:absolute;left:0;right:0;top:408px;bottom:0;border:2px solid #b9d7ff;border-radius:28px;background:#fffffff2;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:6px 12px;padding:12px 18px}.object{display:flex;align-items:center;justify-content:center;position:relative;min-height:0;min-width:0;touch-action:none;border-radius:16px;cursor:grab}.object img,.zone .object img{width:var(--object-width);height:var(--object-height);max-width:none;max-height:none;flex:none}.object:hover{background:#3478f609}.object:active{cursor:grabbing}.object.is-dragging{opacity:.18}.drag-ghost{position:absolute;z-index:30;pointer-events:none;display:flex;justify-content:center;align-items:center}.drag-ghost img{width:100%;height:100%;object-fit:contain}.tray-slot{min-width:0;min-height:0;display:flex}.tray-slot>.object{width:100%;height:100%}
+#abstractView{display:none;position:absolute;inset:194px 36px 25px}.abstract-panel{position:absolute;inset:0 0 160px;border-radius:28px;border:2px solid var(--line);background:#fffffff2;overflow:hidden}.abstract-title{position:absolute;left:0;right:0;top:20px;font-size:40px;line-height:1.15;text-align:center;margin:0;font-weight:700}.abstract-grid{position:absolute;inset:80px 30px 24px;display:grid;gap:12px 22px;align-items:center;justify-items:center}.abstract-object{width:100%;height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;border-radius:20px}.abstract-object:hover{background:#eef5ff}.abstract-object .art{position:absolute;left:50%;top:calc(50% - 17px);width:var(--art-width);height:var(--art-height);transform:translate(-50%,-50%)}.abstract-object img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .65s}.abstract-object .life-art{transition:opacity .18s}.abstract-object .solid-art{opacity:0;transition:opacity .36s;transition-delay:.68s}.abstract-object.converted .life-art{opacity:0}.abstract-object.converted .solid-art{opacity:1}.abstract-object .sphere-art{position:absolute;inset:0;width:100%;height:100%;stroke:none;pointer-events:none}.sphere-object .edge-drawing{stroke:#556984;stroke-width:1.4}.shape-label{position:absolute;bottom:0;left:0;right:0;font-size:29px;height:34px;line-height:34px}.zoom-hint{position:absolute;right:10px;bottom:38px;width:30px;height:30px;opacity:0;color:var(--teal);background:#e7f1ff;border-radius:50%;padding:4px}.converted .zoom-hint{opacity:1}.group-nav{position:absolute;left:260px;right:260px;bottom:78px;height:60px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px}.group-tab{border-radius:22px;background:var(--zone-bg);border:2px solid transparent;font-size:31px}.group-tab.active{border-color:var(--zone-stroke);box-shadow:0 3px 0 var(--zone-stroke);font-weight:700}.abstract-footer{position:absolute;left:4px;right:4px;bottom:0;display:flex;justify-content:space-between;align-items:center;height:60px}.abstract-footer .hint{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap}
+.edge-drawing{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#000;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}.edge-drawing .edge-path{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .66s linear}.abstract-object.converted .edge-path{stroke-dashoffset:0}
+.overlay{display:none;position:absolute;inset:0;z-index:40;background:#17345d40;align-items:center;justify-content:center}.overlay.open{display:flex}.dialog{position:relative;background:#fff;border:2px solid var(--line);border-radius:30px;box-shadow:0 18px 65px #17345d22}.help-dialog{width:1050px;padding:35px 46px}.dialog-title{margin:0 0 23px;font-size:42px}.help-dialog p{font-size:30px;line-height:1.65;margin:15px 0}.help-dialog .primary{display:block;margin:25px auto 0}.close-top{position:absolute;right:22px;top:21px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);background:#f1f6ff;font-size:24px}.model-dialog{position:absolute;left:60px;right:60px;top:194px;bottom:36px}.model-dialog .dialog-title{position:absolute;left:35px;top:20px;margin:0;font-size:41px}.model-viewport{position:absolute;left:20px;top:70px;right:355px;bottom:89px;cursor:grab;border-radius:24px;overflow:hidden;background:radial-gradient(ellipse at center,#edf5ff 0,#fff 70%)}.model-viewport:active{cursor:grabbing}.model-viewport canvas{display:block;width:100%;height:100%;touch-action:none}.observation{position:absolute;right:29px;top:92px;width:285px;text-align:center}.face-title{font-size:33px;margin:0}.face-count{font-size:90px;line-height:1.2;color:var(--teal);margin:9px 0 13px}.face-caption{font-size:31px;line-height:1.5;margin:10px 0}.color-caption{font-size:26px;color:var(--muted);line-height:1.5;margin-top:25px}.face-dots{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:20px 0}.face-dot{border-radius:50%;background:transparent;width:32px;height:32px;font-size:32px;line-height:32px;color:#b7c9df}.face-dot.counted{color:var(--ink)}.model-footer{position:absolute;left:35px;right:29px;bottom:20px;display:flex;align-items:center;gap:13px}.model-footer .model-tip{font-size:25px;margin-left:15px;flex:1;color:var(--muted)}.model-footer button{height:48px}.model-footer .primary{min-width:144px;font-size:31px}.model-error{font-size:30px;line-height:1.8;padding:80px 70px}.reset-dialog{width:650px;padding:40px}.reset-dialog p{font-size:32px;margin:10px 0 32px;text-align:center}.confirm-buttons{display:flex;justify-content:center;gap:25px}
+#inkCanvas{position:absolute;inset:0;width:1600px;height:900px;z-index:50;pointer-events:none}#inkCanvas.enabled{pointer-events:auto;cursor:crosshair}.pen-tools{display:none;position:absolute;right:38px;top:80px;z-index:52;background:#fff;border:2px solid var(--line);box-shadow:0 5px 20px #17345d16;border-radius:18px;padding:10px 14px;align-items:center;gap:13px;height:56px}.pen-tools.open{display:flex}.pen-color{width:30px;height:30px;border:3px solid transparent;border-radius:50%;background:var(--pen);box-shadow:0 0 0 1px #c4d6eb}.pen-color.active{border-color:#fff;box-shadow:0 0 0 2px var(--ink)}.pen-tools .pen-action{font-size:23px;padding:0 6px}#toast{position:absolute;z-index:80;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);padding:12px 28px;border:2px solid #bad5ff;border-radius:22px;background:#fff;box-shadow:0 4px 20px #17345d1a;font-size:29px;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .16s,transform .16s}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="stylesheet" href="assets/practice.css">
+</head>
+<body>
+<main id="stage" aria-label="认识立体图形互动课件">
+  <header class="header">
+    <h1 class="title">认识立体图形</h1>
+    <nav class="tools" aria-label="课件工具">
+      <button class="tool" id="helpBtn"><span data-icon="info"></span>说明</button>
+      <button class="tool" id="penBtn" aria-pressed="false"><span data-icon="pen"></span>批注</button>
+      <button class="tool" id="undoBtn"><span data-icon="undo"></span>撤销</button>
+      <button class="tool" id="resetBtn"><span data-icon="reset"></span>重置</button>
+      <button class="tool" id="fullBtn"><span data-icon="full"></span><span id="fullLabel">全屏</span></button>
+    </nav>
+    <nav class="steps" aria-label="学习步骤">
+      <button id="sortStep" class="step active">分一分</button>
+      <button id="abstractStep" class="step">变一变</button>
+      <button id="observeStep" class="step">看一看</button>
+      <button id="practiceStep" class="step">练一练</button>
+    </nav>
+  </header>
+  <section id="sortView" aria-label="自由分类">
+    <div class="zones" id="zones"></div>
+    <div class="action-row"><p class="hint">拖一拖，分一分</p><button class="primary" id="finishBtn">分好了</button></div>
+    <div id="objectTray" class="object-tray" aria-label="待分类物品"></div>
+  </section>
+  <section id="abstractView" aria-label="逐件抽象">
+    <div class="abstract-panel"><h2 class="abstract-title" id="abstractTitle"></h2><div class="abstract-grid" id="abstractGrid"></div></div>
+    <nav class="group-nav" id="groupNav" aria-label="选择分类组"></nav>
+    <div class="abstract-footer"><button class="secondary" id="backSortBtn">返回分类</button><p class="hint" id="abstractHint">点一点，变一变</p><button class="primary" id="nextGroupBtn">下一组</button></div>
+  </section>
+  <section id="practiceView" aria-label="立体图形收集大赛"></section>
+  <div id="helpOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="dialog help-dialog"><h2 class="dialog-title" id="helpTitle">课件说明</h2>
+      <p>分一分：把下方物品拖入上方四个区域。可以分成2～4组，空着的区域不用管。物品可以拖回，也可以换组。</p>
+      <p>变一变：点击“分好了”，选一组，逐件点击物品，看看它们变成什么立体图形。</p>
+      <p>看一看：再点已经变好的图形，放大观察。拖动可以自由旋转，点面可以编号；同一个面重复点击不重复数。</p>
+      <p>先描黑线，再填中性色。数面时，点到的面才着色，相同形状、相同大小的面同色。圆柱和球观察平面、曲面。</p>
+      <p>右上角可批注、撤销、重置和全屏。批注可选3种颜色，支持撤笔和清空。</p>
+      <button class="primary" data-close="helpOverlay">知道了</button>
+    </div>
+  </div>
+  <div id="modelOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="modelTitle">
+    <div class="dialog model-dialog"><h2 class="dialog-title" id="modelTitle"></h2><button class="close-top" id="closeModelTop" aria-label="关闭观察"><span data-icon="close"></span></button>
+      <div class="model-viewport" id="modelViewport"></div>
+      <aside class="observation" id="observation"></aside>
+      <div class="model-footer"><button class="secondary" id="zoomInBtn">放大</button><button class="secondary" id="zoomOutBtn">缩小</button><button class="secondary" id="homeModelBtn">复位</button><button class="secondary" id="clearFacesBtn">清除编号</button><span class="model-tip">拖动旋转 · 点面编号</span><button class="primary" id="closeModelBtn">返回</button></div>
+    </div>
+  </div>
+  <div id="resetOverlay" class="overlay" role="dialog" aria-modal="true" aria-label="重新开始"><div class="dialog reset-dialog"><p>重新开始分一分？</p><div class="confirm-buttons"><button class="secondary" data-close="resetOverlay">继续学习</button><button class="primary" id="confirmResetBtn">重新开始</button></div></div></div>
+  <canvas id="inkCanvas" width="1600" height="900" aria-label="批注画布"></canvas>
+  <div id="penTools" class="pen-tools"><button class="pen-color active" style="--pen:#f23d64" data-color="#f23d64" aria-label="玫红色批注"></button><button class="pen-color" style="--pen:#0b9dff" data-color="#0b9dff" aria-label="亮蓝色批注"></button><button class="pen-color" style="--pen:#f1a900" data-color="#f1a900" aria-label="金黄色批注"></button><button class="pen-action" id="inkUndoBtn">撤笔</button><button class="pen-action" id="inkClearBtn">清空</button><button class="pen-action" id="penDoneBtn">完成</button></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</main>
+<script>
+(function(){
+'use strict';
+var DATA = [
+  {
+    "id": "battery",
+    "name": "易拉罐",
+    "type": "cylinder",
+    "dims": [
+      1,
+      2.65,
+      1
+    ],
+    "width": 199,
+    "height": 504,
+    "outlinePaths": [
+      "M13.00,35.49 A86.50,22.49 0 1 1 186.00,35.49 A86.50,22.49 0 1 1 13.00,35.49",
+      "M13.00,35.49 L13.00,468.51 A86.50,22.49 0 0 0 186.00,468.51 L186.00,35.49"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "soccer",
+    "name": "足球",
+    "type": "sphere",
+    "dims": [
+      1,
+      1,
+      1
+    ],
+    "width": 497,
+    "height": 504,
+    "outlinePaths": [
+      "M13.00,252.00 A235.50,235.50 0 1 1 484.00,252.00 A235.50,235.50 0 1 1 13.00,252.00"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "toothpaste",
+    "name": "牙膏盒",
+    "type": "cuboid",
+    "dims": [
+      4.2,
+      1,
+      0.9
+    ],
+    "width": 504,
+    "height": 145,
+    "hull": [
+      [
+        0.09722,
+        0.08276
+      ],
+      [
+        0.96032,
+        0.21379
+      ],
+      [
+        0.97421,
+        0.77931
+      ],
+      [
+        0.90476,
+        0.91034
+      ],
+      [
+        0.02381,
+        0.75172
+      ],
+      [
+        0.02381,
+        0.22069
+      ]
+    ],
+    "outlinePaths": [
+      "M115.91,29.51 L143.22,13.00 L388.09,53.10 L388.09,115.49 L360.78,132.00 L115.91,91.90 Z",
+      "M115.91,29.51 L360.78,69.61 L360.78,132.00",
+      "M360.78,69.61 L388.09,53.10"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "crate",
+    "name": "木箱",
+    "type": "cube",
+    "dims": [
+      1,
+      1,
+      1
+    ],
+    "width": 504,
+    "height": 498,
+    "hull": [
+      [
+        0.37103,
+        0.0241
+      ],
+      [
+        0.97421,
+        0.08233
+      ],
+      [
+        0.97421,
+        0.72289
+      ],
+      [
+        0.66468,
+        0.96988
+      ],
+      [
+        0.02381,
+        0.83133
+      ],
+      [
+        0.02381,
+        0.18675
+      ]
+    ],
+    "outlinePaths": [
+      "M20.25,108.88 L178.94,13.00 L483.75,62.92 L483.75,389.12 L325.06,485.00 L20.25,435.08 Z",
+      "M20.25,108.88 L325.06,158.80 L325.06,485.00",
+      "M325.06,158.80 L483.75,62.92"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "graybox",
+    "name": "灰色盒子",
+    "type": "cuboid",
+    "dims": [
+      1,
+      1.25,
+      0.5
+    ],
+    "width": 417,
+    "height": 504,
+    "hull": [
+      [
+        0.27578,
+        0.02579
+      ],
+      [
+        0.96643,
+        0.06548
+      ],
+      [
+        0.96643,
+        0.85317
+      ],
+      [
+        0.753,
+        0.97421
+      ],
+      [
+        0.02878,
+        0.90873
+      ],
+      [
+        0.02878,
+        0.125
+      ]
+    ],
+    "outlinePaths": [
+      "M26.91,58.32 L101.92,13.00 L390.09,60.19 L390.09,445.68 L315.08,491.00 L26.91,443.81 Z",
+      "M26.91,58.32 L315.08,105.52 L315.08,491.00",
+      "M315.08,105.52 L390.09,60.19"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "block",
+    "name": "黄色方块",
+    "type": "cube",
+    "dims": [
+      1,
+      1,
+      1
+    ],
+    "width": 455,
+    "height": 504,
+    "hull": [
+      [
+        0.41538,
+        0.02381
+      ],
+      [
+        0.97143,
+        0.20635
+      ],
+      [
+        0.95824,
+        0.67063
+      ],
+      [
+        0.62637,
+        0.97024
+      ],
+      [
+        0.02857,
+        0.75198
+      ],
+      [
+        0.02637,
+        0.31944
+      ]
+    ],
+    "outlinePaths": [
+      "M13.00,122.31 L159.88,33.57 L442.00,79.77 L442.00,381.69 L295.12,470.43 L13.00,424.23 Z",
+      "M13.00,122.31 L295.12,168.51 L295.12,470.43",
+      "M295.12,168.51 L442.00,79.77"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "rubik",
+    "name": "魔方",
+    "type": "cube",
+    "dims": [
+      1,
+      1,
+      1
+    ],
+    "width": 496,
+    "height": 504,
+    "hull": [
+      [
+        0.40524,
+        0.02381
+      ],
+      [
+        0.96371,
+        0.12302
+      ],
+      [
+        0.97177,
+        0.71627
+      ],
+      [
+        0.56048,
+        0.97421
+      ],
+      [
+        0.02419,
+        0.78968
+      ],
+      [
+        0.02419,
+        0.22222
+      ]
+    ],
+    "outlinePaths": [
+      "M13.31,110.10 L174.01,13.00 L482.69,63.55 L482.69,393.90 L321.99,491.00 L13.31,440.45 Z",
+      "M13.31,110.10 L321.99,160.65 L321.99,491.00",
+      "M321.99,160.65 L482.69,63.55"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "eraser",
+    "name": "红色积木",
+    "type": "cuboid",
+    "dims": [
+      3.5,
+      0.85,
+      1.25
+    ],
+    "width": 504,
+    "height": 156,
+    "hull": [
+      [
+        0.11905,
+        0.07692
+      ],
+      [
+        0.97222,
+        0.19231
+      ],
+      [
+        0.97421,
+        0.69231
+      ],
+      [
+        0.89286,
+        0.91667
+      ],
+      [
+        0.02778,
+        0.80128
+      ],
+      [
+        0.02381,
+        0.30769
+      ]
+    ],
+    "outlinePaths": [
+      "M108.19,40.25 L153.28,13.00 L395.81,52.72 L395.81,115.75 L350.72,143.00 L108.19,103.28 Z",
+      "M108.19,40.25 L350.72,79.97 L350.72,143.00",
+      "M350.72,79.97 L395.81,52.72"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "soap",
+    "name": "香皂盒",
+    "type": "cuboid",
+    "dims": [
+      2,
+      1.15,
+      0.65
+    ],
+    "width": 504,
+    "height": 287,
+    "hull": [
+      [
+        0.17262,
+        0.04181
+      ],
+      [
+        0.97421,
+        0.1324
+      ],
+      [
+        0.97421,
+        0.80139
+      ],
+      [
+        0.86905,
+        0.9547
+      ],
+      [
+        0.02381,
+        0.83972
+      ],
+      [
+        0.02381,
+        0.17422
+      ]
+    ],
+    "outlinePaths": [
+      "M78.88,43.28 L128.98,13.00 L425.12,61.50 L425.12,243.72 L375.02,274.00 L78.88,225.50 Z",
+      "M78.88,43.28 L375.02,91.77 L375.02,274.00",
+      "M375.02,91.77 L425.12,61.50"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "can",
+    "name": "罐头",
+    "type": "cylinder",
+    "dims": [
+      1.5,
+      1,
+      1.5
+    ],
+    "width": 504,
+    "height": 370,
+    "outlinePaths": [
+      "M13.00,68.04 A239.00,55.04 0 1 1 491.00,68.04 A239.00,55.04 0 1 1 13.00,68.04",
+      "M13.00,68.04 L13.00,301.96 A239.00,55.04 0 0 0 491.00,301.96 L491.00,68.04"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "basketball",
+    "name": "篮球",
+    "type": "sphere",
+    "dims": [
+      1,
+      1,
+      1
+    ],
+    "width": 504,
+    "height": 502,
+    "outlinePaths": [
+      "M14.00,251.00 A238.00,238.00 0 1 1 490.00,251.00 A238.00,238.00 0 1 1 14.00,251.00"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "milk",
+    "name": "牛奶盒",
+    "type": "cuboid",
+    "dims": [
+      1,
+      2.2,
+      0.65
+    ],
+    "width": 271,
+    "height": 504,
+    "hull": [
+      [
+        0.30996,
+        0.02381
+      ],
+      [
+        0.94834,
+        0.07738
+      ],
+      [
+        0.95203,
+        0.89484
+      ],
+      [
+        0.70849,
+        0.97421
+      ],
+      [
+        0.04428,
+        0.8869
+      ],
+      [
+        0.04428,
+        0.07937
+      ]
+    ],
+    "outlinePaths": [
+      "M18.01,48.90 L77.42,13.00 L252.99,41.75 L252.99,455.10 L193.58,491.00 L18.01,462.25 Z",
+      "M18.01,48.90 L193.58,77.65 L193.58,491.00",
+      "M193.58,77.65 L252.99,41.75"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "pinkball",
+    "name": "小皮球",
+    "type": "sphere",
+    "dims": [
+      1,
+      1,
+      1
+    ],
+    "width": 440,
+    "height": 438,
+    "outlinePaths": [
+      "M14.00,219.00 A206.00,206.00 0 1 1 426.00,219.00 A206.00,206.00 0 1 1 14.00,219.00"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "thermos",
+    "name": "保温杯",
+    "type": "cylinder",
+    "dims": [
+      1,
+      3.6,
+      1
+    ],
+    "width": 143,
+    "height": 504,
+    "outlinePaths": [
+      "M13.00,28.21 A58.50,15.21 0 1 1 130.00,28.21 A58.50,15.21 0 1 1 13.00,28.21",
+      "M13.00,28.21 L13.00,475.79 A58.50,15.21 0 0 0 130.00,475.79 L130.00,28.21"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "tissue",
+    "name": "纸巾盒",
+    "type": "cuboid",
+    "dims": [
+      2.8,
+      0.9,
+      1.5
+    ],
+    "width": 504,
+    "height": 338,
+    "hull": [
+      [
+        0.25992,
+        0.0355
+      ],
+      [
+        0.97421,
+        0.34024
+      ],
+      [
+        0.97421,
+        0.63314
+      ],
+      [
+        0.73214,
+        0.96154
+      ],
+      [
+        0.02778,
+        0.56213
+      ],
+      [
+        0.02381,
+        0.28402
+      ]
+    ],
+    "outlinePaths": [
+      "M13.00,105.60 L117.24,42.62 L491.00,103.83 L491.00,232.40 L386.76,295.38 L13.00,234.17 Z",
+      "M13.00,105.60 L386.76,166.81 L386.76,295.38",
+      "M386.76,166.81 L491.00,103.83"
+    ],
+    "outlineMode": "regular-geometry"
+  },
+  {
+    "id": "board",
+    "name": "木板",
+    "type": "cuboid",
+    "dims": [
+      4,
+      0.13,
+      2
+    ],
+    "width": 504,
+    "height": 194,
+    "hull": [
+      [
+        0.25198,
+        0.06701
+      ],
+      [
+        0.96627,
+        0.36598
+      ],
+      [
+        0.97421,
+        0.4433
+      ],
+      [
+        0.78571,
+        0.93299
+      ],
+      [
+        0.02381,
+        0.50515
+      ],
+      [
+        0.02778,
+        0.42784
+      ]
+    ],
+    "outlinePaths": [
+      "M13.00,89.17 L111.73,29.52 L491.00,91.63 L491.00,104.83 L392.27,164.48 L13.00,102.37 Z",
+      "M13.00,89.17 L392.27,151.29 L392.27,164.48",
+      "M392.27,151.29 L491.00,91.63"
+    ],
+    "outlineMode": "regular-geometry"
+  }
+];
+var typeNames={cuboid:'长方体',cube:'正方体',cylinder:'圆柱',sphere:'球'};
+var faceNumbers=['①','②','③','④','⑤','⑥'];
+var groupColors=[['#fff7d8','#edb523','#ffd65a'],['#ddf9f0','#23bd97','#53dcb5'],['#ffe8ee','#ff7c96','#ff9ab0'],['#f0e8ff','#a16cec','#c3a0f4']];
+var icons={info:'<circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 6.5v.2"/>',pen:'<path d="m4 16 11-11 4 4L8 20l-5 1zM13 7l4 4"/>',undo:'<path d="m9 5-6 5 6 5M4 10h10a6 6 0 0 1 0 12"/>',reset:'<path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/>',full:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',close:'<path d="m5 5 14 14M19 5 5 19"/>',zoom:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6M10 7v6m-3-3h6"/>'};
+function icon(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[name]+'</svg>';}
+Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'),function(el){el.innerHTML=icon(el.dataset.icon);});
+function $(id){return document.getElementById(id);} function clone(v){return JSON.parse(JSON.stringify(v));}
+var stage=$('stage'), state={phase:'sort',locations:{},abstracted:{},activeGroup:0,modelId:null,faces:{},poses:{},zooms:{},curves:{}};
+var history=[],layout={scale:1,rotated:false,w:1600,h:900},drag=null,modelDrag=null;
+var ink={on:false,color:'#f23d64',strokes:[],redoClear:[],current:null},inkHistory=[];
+var renderer=null,scene=null,camera=null,ambientLight=null,keyLight=null,modelRoot=null,modelMesh=null,raycaster=null,markers=[],renderPending=false,modelError=false;
+var toastTimer=null;
+function initial(){return {phase:'sort',locations:{},abstracted:{},activeGroup:0,modelId:null,faces:{},poses:{},zooms:{},curves:{}};}
+function push(){history.push({state:clone(state),strokes:clone(ink.strokes)});if(history.length>120)history.shift();}
+function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){$('toast').classList.remove('show');},2400);}
+function fit(){var w=window.innerWidth,h=window.innerHeight;layout.w=w;layout.h=h;layout.rotated=h>w;layout.scale=Math.min((layout.rotated?h:w)/1600,(layout.rotated?w:h)/900);stage.style.transform='translate(-50%,-50%) rotate('+(layout.rotated?90:0)+'deg) scale('+layout.scale+')';if(state.modelId&&!modelError)resizeRenderer();}
+function point(cx,cy){var dx=cx-layout.w/2,dy=cy-layout.h/2,s=layout.scale;return layout.rotated?{x:800+dy/s,y:450-dx/s}:{x:800+dx/s,y:450+dy/s};}
+function box(el){var r=el.getBoundingClientRect(),a=point(r.left,r.top),b=point(r.right,r.bottom);return {x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};}
+function inside(p,r){return p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;}
+function byId(id){return DATA.find(function(o){return o.id===id;});}
+function members(g){return DATA.filter(function(o){return state.locations[o.id]===g;});}
+function usedGroups(){return [0,1,2,3].filter(function(g){return members(g).length>0;});}
+function ready(){return DATA.every(function(o){return state.locations[o.id]!==undefined;})&&usedGroups().length>=2;}
+function fullyAbstract(g){var list=members(g);return list.length>0&&list.every(function(o){return !!state.abstracted[o.id];});}
+function groupTitle(g){if(!fullyAbstract(g))return '第'+(g+1)+'组';var types=[];members(g).forEach(function(o){if(types.indexOf(typeNames[o.type])<0)types.push(typeNames[o.type]);});return types.join(' · ');}
+// One shared visual size per object, retaining the textbook's relative scale.
+var objectSizes={battery:{h:93},soccer:{h:92},toothpaste:{w:114},crate:{h:112},graybox:{h:90},block:{h:57},rubik:{h:72},eraser:{w:80},soap:{w:84},can:{w:80},basketball:{h:110},milk:{h:93},pinkball:{h:34},thermos:{h:118},tissue:{w:104},board:{w:150}};
+function objectSize(o){var size=objectSizes[o.id];return size.w?{w:size.w,h:size.w*o.height/o.width}:{w:size.h*o.width/o.height,h:size.h};}
+function setObjectSize(button,o,scale){var size=objectSize(o);button.style.setProperty('--object-width',(size.w*scale)+'px');button.style.setProperty('--object-height',(size.h*scale)+'px');}
+function makeObject(o){var b=document.createElement('button');b.className='object';b.dataset.id=o.id;b.setAttribute('aria-label','拖动物品：'+o.name);setObjectSize(b,o,1);b.innerHTML='<img src="assets/images/'+o.id+'.png" alt="'+o.name+'" draggable="false">';return b;}
+// Pack natural-size objects into shelves; only crowded free-form groups shrink together.
+function packGroup(items,list){
+  var width=items.clientWidth,height=items.clientHeight,rows=[],scale=1,gap=8,total=0;
+  var sorted=list.slice().sort(function(a,b){return objectSize(b).h-objectSize(a).h;});
+  for(var attempt=0;attempt<30;attempt++){
+    rows=[];
+    sorted.forEach(function(o){var size=objectSize(o),w=Math.max(44,size.w*scale+8),h=Math.max(44,size.h*scale+8),row=null;
+      for(var i=0;i<rows.length;i++){if(rows[i].w+gap+w<=width){row=rows[i];break;}}
+      if(!row){row={w:0,h:h,objects:[]};rows.push(row);}
+      row.w+=row.objects.length?gap+w:w;row.h=Math.max(row.h,h);row.objects.push({data:o,w:w,h:h});
+    });
+    total=rows.reduce(function(sum,row){return sum+row.h;},0)+Math.max(0,rows.length-1)*gap;
+    if(total<=height&&rows.every(function(row){return row.w<=width;}))break;
+    scale*=.94;
+  }
+  var y=Math.max(0,height-total);
+  rows.forEach(function(row){var x=(width-row.w)/2;row.objects.forEach(function(item){var b=makeObject(item.data);setObjectSize(b,item.data,scale);b.style.width=item.w+'px';b.style.height=item.h+'px';b.style.left=x+'px';b.style.top=(y+row.h-item.h)+'px';items.appendChild(b);x+=item.w+gap;});y+=row.h+gap;});
+}
+function paintSort(){
+  var zones=$('zones');zones.innerHTML='';
+  for(var g=0;g<4;g++){
+    var zone=document.createElement('div');zone.className='zone';zone.dataset.group=g;zone.setAttribute('aria-label','第'+(g+1)+'组');
+    zone.style.setProperty('--zone-bg',groupColors[g][0]);zone.style.setProperty('--zone-stroke',groupColors[g][1]);zone.style.setProperty('--zone-head',groupColors[g][2]);
+    zone.innerHTML='<h2 class="group-heading">第'+(g+1)+'组</h2><div class="zone-items"></div>';
+    var list=members(g),items=zone.lastElementChild;zones.appendChild(zone);packGroup(items,list);
+  }
+  var tray=$('objectTray');tray.innerHTML='';DATA.forEach(function(o){var slot=document.createElement('div');slot.className='tray-slot';if(state.locations[o.id]===undefined)slot.appendChild(makeObject(o));tray.appendChild(slot);});
+}
+function edgeMarkup(o){return '<svg class="edge-drawing" viewBox="0 0 '+o.width+' '+o.height+'" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path class="edge-path" pathLength="1" d="'+o.outlinePaths.join(' ')+'"/></svg>';}
+function solidMarkup(o){
+  if(o.type!=='sphere')return '<img class="solid-art" src="assets/images/'+o.id+'-solid.png" alt="'+typeNames[o.type]+'">';
+  var cx=o.width/2,cy=o.height/2,r=(Math.min(o.width,o.height)-26)/2,id='solid-sphere-'+o.id;
+  return '<svg class="solid-art sphere-art" viewBox="0 0 '+o.width+' '+o.height+'" role="img" aria-label="球"><defs><radialGradient id="'+id+'" gradientUnits="userSpaceOnUse" cx="'+(cx-r*.30)+'" cy="'+(cy-r*.38)+'" r="'+(r*1.4)+'"><stop stop-color="#ffffff"/><stop offset=".18" stop-color="#f8fbff"/><stop offset=".42" stop-color="#dce4ef"/><stop offset=".65" stop-color="#b2c0d3"/><stop offset=".82" stop-color="#8598b5"/><stop offset="1" stop-color="#5d7394"/></radialGradient><radialGradient id="'+id+'-shine"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="url(#'+id+')"/><ellipse cx="'+(cx-r*.32)+'" cy="'+(cy-r*.42)+'" rx="'+(r*.30)+'" ry="'+(r*.19)+'" fill="url(#'+id+'-shine)" transform="rotate(-28 '+(cx-r*.32)+' '+(cy-r*.42)+')"/></svg>';
+}
+function paintAbstract(){var g=state.activeGroup,list=members(g),grid=$('abstractGrid');$('abstractTitle').textContent=groupTitle(g);grid.innerHTML='';var n=list.length,cols=n<=1?1:n<=3?n:n<=8?4:n<=12?4:5;grid.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';var rows=Math.max(1,Math.ceil(n/cols));grid.style.gridTemplateRows='repeat('+rows+',minmax(0,1fr))';var maxW=1,maxH=1;list.forEach(function(o){var size=objectSize(o);maxW=Math.max(maxW,size.w);maxH=Math.max(maxH,size.h);});var artScale=Math.min(2.5,((grid.clientWidth-22*(cols-1))/cols-24)/maxW,((grid.clientHeight-12*(rows-1))/rows-44)/maxH);list.forEach(function(o){var b=document.createElement('button'),size=objectSize(o);b.style.setProperty('--art-width',(size.w*artScale)+'px');b.style.setProperty('--art-height',(size.h*artScale)+'px');b.className='abstract-object'+(o.type==='sphere'?' sphere-object':'')+(state.abstracted[o.id]?' converted':'');b.dataset.id=o.id;b.setAttribute('aria-label',state.abstracted[o.id]?'放大观察'+typeNames[o.type]+'：'+o.name:'抽象'+o.name);b.innerHTML='<span class="art"><img class="life-art" src="assets/images/'+o.id+'.png" alt="'+o.name+'">'+solidMarkup(o)+edgeMarkup(o)+'</span><span class="shape-label">'+(fullyAbstract(g)?typeNames[o.type]:'')+'</span><span class="zoom-hint">'+icon('zoom')+'</span>';b.addEventListener('click',function(){if(ink.on)return;if(state.abstracted[o.id]){openModel(o.id);return;}push();state.abstracted[o.id]=true;b.classList.add('converted');b.setAttribute('aria-label','放大观察'+typeNames[o.type]+'：'+o.name);updateAbstractLabels();});grid.appendChild(b);});var nav=$('groupNav');nav.innerHTML='';for(var j=0;j<4;j++){var tab=document.createElement('button');tab.className='group-tab'+(g===j?' active':'');tab.textContent='第'+(j+1)+'组';tab.style.setProperty('--zone-bg',groupColors[j][0]);tab.style.setProperty('--zone-stroke',groupColors[j][1]);tab.disabled=!members(j).length;tab.dataset.group=j;tab.addEventListener('click',function(){state.activeGroup=Number(this.dataset.group);paintAbstract();});nav.appendChild(tab);}updateAbstractLabels();}
+function updateAbstractLabels(){var g=state.activeGroup,done=fullyAbstract(g);$('abstractTitle').textContent=groupTitle(g);$('abstractHint').textContent=done?'点图形，看一看':'点一点，变一变';Array.prototype.forEach.call($('abstractGrid').children,function(b){b.querySelector('.shape-label').textContent=done?typeNames[byId(b.dataset.id).type]:'';});var groups=usedGroups();$('nextGroupBtn').textContent=groups.indexOf(g)===groups.length-1?'回到首组':'下一组';}
+function paint(){var sort=state.phase==='sort';$('sortView').style.display=sort?'block':'none';$('abstractView').style.display=sort?'none':'block';$('sortStep').classList.toggle('active',sort&&!state.modelId);$('abstractStep').classList.toggle('active',!sort&&!state.modelId);$('observeStep').classList.toggle('active',!!state.modelId);$('modelOverlay').classList.toggle('open',!!state.modelId);if(sort)paintSort();else paintAbstract();if(state.modelId)buildModel(byId(state.modelId));$('undoBtn').disabled=!history.length;}
+function finish(){if(!ready()){var remaining=DATA.filter(function(o){return state.locations[o.id]===undefined;}).length;toast(remaining?'还有'+remaining+'件物品，继续分一分':'试着分成2～4组');return;}push();state.phase='abstract';if(!members(state.activeGroup).length)state.activeGroup=usedGroups()[0];paint();}
+function returnSort(){if(state.phase==='sort')return;if(window.LessonNarration)window.LessonNarration.stop();push();state.phase='sort';state.modelId=null;paint();}
+function beginDrag(e){if(state.phase!=='sort'||ink.on||e.button>0)return;var target=e.target.closest('.object');if(!target)return;var p=point(e.clientX,e.clientY),r=box(target.querySelector('img'));drag={id:target.dataset.id,start:p,last:p,origin:target,w:r.w,h:r.h,offset:{x:p.x-r.x,y:p.y-r.y},ghost:null};e.preventDefault();return true;}
+function moveDrag(e){if(!drag)return;var p=point(e.clientX,e.clientY);drag.last=p;if(!drag.ghost&&Math.hypot(p.x-drag.start.x,p.y-drag.start.y)<7)return;if(!drag.ghost){var ghost=document.createElement('div');ghost.className='drag-ghost';ghost.style.width=drag.w+'px';ghost.style.height=drag.h+'px';ghost.innerHTML='<img src="assets/images/'+drag.id+'.png" alt="">';stage.appendChild(ghost);drag.ghost=ghost;drag.origin.classList.add('is-dragging');}drag.ghost.style.left=(p.x-drag.offset.x)+'px';drag.ghost.style.top=(p.y-drag.offset.y)+'px';Array.prototype.forEach.call(document.querySelectorAll('.zone'),function(z){z.classList.toggle('hovered',inside(p,box(z)));});e.preventDefault();}
+function endDrag(e,cancel){if(!drag)return;var d=drag,p=point(e.clientX,e.clientY);if(d.ghost&&!cancel){var zones=document.querySelectorAll('.zone'),group=null;Array.prototype.forEach.call(zones,function(z){if(inside(p,box(z)))group=Number(z.dataset.group);});if(group!==null&&state.locations[d.id]!==group){push();state.locations[d.id]=group;state.abstracted={};}else if(group===null&&inside(p,box($('objectTray')))&&state.locations[d.id]!==undefined){push();delete state.locations[d.id];state.abstracted={};}}if(d.ghost)d.ghost.remove();drag=null;if(e.pointerType==='touch'||(!window.PointerEvent&&!e.type))requestAnimationFrame(function(){paintSort();});else paintSort();$('undoBtn').disabled=!history.length;}
+function undo(){if(ink.on&&inkHistory.length){undoInk();return;}if(!history.length){toast('已经是最初的状态');return;}var item=history.pop();state=item.state;ink.strokes=item.strokes;drawInk();paint();}
+function setPen(on){ink.on=on;$('inkCanvas').classList.toggle('enabled',on);$('penTools').classList.toggle('open',on);$('penBtn').classList.toggle('active',on);$('penBtn').setAttribute('aria-pressed',String(on));$('undoBtn').disabled=!(history.length||(on&&inkHistory.length));}
+function drawInk(){var ctx=$('inkCanvas').getContext('2d');ctx.clearRect(0,0,1600,900);var strokes=ink.strokes.slice();if(ink.current)strokes.push(ink.current);strokes.forEach(function(s){ctx.lineWidth=4;ctx.strokeStyle=s.color;ctx.fillStyle=s.color;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();if(s.points.length===1){ctx.arc(s.points[0].x,s.points[0].y,2,0,Math.PI*2);ctx.fill();return;}s.points.forEach(function(p,i){if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});ctx.stroke();});}
+function undoInk(){if(!inkHistory.length)return;ink.strokes=inkHistory.pop();drawInk();$('undoBtn').disabled=!(history.length||(ink.on&&inkHistory.length));}
+function beginInk(e){if(!ink.on||e.button>0)return;ink.current={color:ink.color,points:[point(e.clientX,e.clientY)]};e.preventDefault();drawInk();return true;}
+function moveInk(e){if(!ink.current)return;ink.current.points.push(point(e.clientX,e.clientY));drawInk();e.preventDefault();}
+function endInk(){if(!ink.current)return;inkHistory.push(clone(ink.strokes));ink.strokes.push(ink.current);ink.current=null;drawInk();$('undoBtn').disabled=false;}
+function openModel(id){push();state.modelId=id;if(!state.faces[id])state.faces[id]=[];$('modelOverlay').classList.add('open');$('modelTitle').textContent=typeNames[byId(id).type];$('sortStep').classList.remove('active');$('abstractStep').classList.remove('active');$('observeStep').classList.add('active');buildModel(byId(id),true);if(window.LessonNarration)window.LessonNarration.stop();$('undoBtn').disabled=false;}
+function closeModel(){if(!state.modelId)return;if(window.LessonNarration)window.LessonNarration.stop();push();state.modelId=null;$('modelOverlay').classList.remove('open');$('observeStep').classList.remove('active');$('abstractStep').classList.add('active');}
+function initRenderer(){if(renderer)return true;if(modelError)return false;try{if(!window.THREE)throw new Error('three');renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.4));renderer.setClearColor(0xffffff,0);$('modelViewport').appendChild(renderer.domElement);scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-3,3,3,-3,.1,100);camera.position.set(0,0,12);camera.lookAt(0,0,0);ambientLight=new THREE.AmbientLight(0xffffff,1.05);scene.add(ambientLight);keyLight=new THREE.DirectionalLight(0xffffff,2.25);keyLight.position.set(-3,6,8);scene.add(keyLight);raycaster=new THREE.Raycaster();return true;}catch(err){modelError=true;$('modelViewport').innerHTML='<div class="model-error">当前浏览器未开启3D显示，<br>请用Chrome或Edge打开课件。</div>';return false;}}
+function releaseModel(){if(!modelRoot)return;modelRoot.traverse(function(child){if(child.geometry)child.geometry.dispose();if(child.material){var mats=Array.isArray(child.material)?child.material:[child.material];mats.forEach(function(m){if(m.map)m.map.dispose();m.dispose();});}});scene.remove(modelRoot);markers=[];modelRoot=null;modelMesh=null;}
+function material(color){return new THREE.MeshLambertMaterial({color:color||'#f1f2ed'});}
+function makeSphereTexture(){
+  var cv=document.createElement('canvas');cv.width=256;cv.height=128;var ctx=cv.getContext('2d'),pixels=ctx.createImageData(256,128);
+  for(var y=0;y<128;y++)for(var x=0;x<256;x++){
+    var lon=x/256*Math.PI*2,lat=(y/127-.5)*Math.PI,c=Math.cos(lat);
+    var soft=.985+.009*Math.sin(2*lon+Math.sin(2*lat))*c+.006*Math.cos(3*lon-2*lat)*c*c;
+    var grain=Math.sin(x*19.7+y*31.9)*.0015,idx=(y*256+x)*4;
+    pixels.data[idx]=Math.round(248*(soft+grain));pixels.data[idx+1]=Math.round(250*(soft+grain));pixels.data[idx+2]=Math.round(255*(soft+grain));pixels.data[idx+3]=255;
+  }
+  ctx.putImageData(pixels,0,0);var texture=new THREE.CanvasTexture(cv);texture.colorSpace=THREE.SRGBColorSpace;return texture;
+}
+function addInkStroke(start,end){
+  var delta=end.clone().sub(start),length=delta.length(),mesh=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,6,1),new THREE.MeshBasicMaterial({color:0x000000}));
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.clone().normalize());mesh.renderOrder=2;modelRoot.add(mesh);
+  var stroke={mesh:mesh,start:start,delta:delta,length:length};modelRoot.userData.edgeStrokes.push(stroke);return stroke;
+}
+function addInkCurve(geometry){
+  var mesh=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0x000000}));mesh.renderOrder=2;modelRoot.add(mesh);
+  modelRoot.userData.edgeCurves.push({mesh:mesh,count:geometry.index?geometry.index.count:geometry.attributes.position.count});return mesh;
+}
+function applyModelColors(){
+  if(!modelRoot||!modelMesh||!state.modelId)return;
+  var data=modelRoot.userData,faces=state.faces[state.modelId]||[],mats=Array.isArray(modelMesh.material)?modelMesh.material:[modelMesh.material];
+  mats.forEach(function(m,i){var painted=data.type==='sphere'||data.type==='cylinder'&&i===0?!!(state.curves&&state.curves[state.modelId]):faces.indexOf(i)>=0;m.color.set(painted?data.faceColors[i]:data.type==='sphere'?'#eef4ff':'#f1f2ed');});
+  requestRender();
+}
+function buildModel(o,animate){
+  $('modelTitle').textContent=typeNames[o.type];paintObservation();if(!initRenderer())return;releaseModel();ambientLight.intensity=o.type==='sphere'?.55:1.05;keyLight.intensity=o.type==='sphere'?1.4:2.25;modelRoot=new THREE.Group();scene.add(modelRoot);
+  var dims=o.dims,max=Math.max.apply(Math,dims),d=dims.map(function(x){return x/max*4;}),geo,mats,faceColors;
+  if(o.type==='cuboid'||o.type==='cube'){
+    geo=new THREE.BoxGeometry(d[0],d[1],d[2]);var pairs=[[dims[1],dims[2]],[dims[0],dims[2]],[dims[0],dims[1]]],seen={},palette=['#ffd65a','#ff969d','#77bbff'],count=0;
+    var cs=pairs.map(function(pair){var key=pair.slice().sort(function(a,b){return a-b;}).join(':');if(!seen[key])seen[key]=o.type==='cube'?'#56d8b2':palette[count++];return seen[key];});
+    faceColors=[cs[0],cs[0],cs[1],cs[1],cs[2],cs[2]];mats=faceColors.map(function(){return material();});
+  }else if(o.type==='cylinder'){
+    geo=new THREE.CylinderGeometry(d[0]/2,d[0]/2,d[1],64,1,false);faceColors=['#77bbff','#ffd65a','#ffd65a'];mats=faceColors.map(function(){return material();});
+  }else{
+    geo=new THREE.SphereGeometry(2,64,48);faceColors=['#ff969d'];mats=new THREE.MeshPhongMaterial({color:'#f1f2ed',map:makeSphereTexture(),specular:0xdee8ff,shininess:60});
+  }
+  modelMesh=new THREE.Mesh(geo,mats);modelMesh.renderOrder=0;modelRoot.add(modelMesh);
+  var diameter=o.type==='sphere'?4:o.type==='cylinder'?Math.hypot(d[0],d[1]):Math.hypot(d[0],d[1],d[2]);
+  modelRoot.userData={dims:d,type:o.type,faceColors:faceColors,projectionSpan:diameter/.85,edgeStrokes:[],edgeCurves:[],revealStart:animate?performance.now():0};
+  if(o.type==='cuboid'||o.type==='cube'){
+    var edges=new THREE.EdgesGeometry(geo),positions=edges.attributes.position;
+    for(var i=0;i<positions.count;i+=2)addInkStroke(new THREE.Vector3().fromBufferAttribute(positions,i),new THREE.Vector3().fromBufferAttribute(positions,i+1));
+    edges.dispose();
+  }else if(o.type==='cylinder'){
+    [1,-1].forEach(function(sign){var ring=new THREE.TorusGeometry(d[0]/2,.012,6,96);ring.rotateX(Math.PI/2);ring.translate(0,sign*d[1]/2,0);addInkCurve(ring);});
+    modelRoot.userData.contourStrokes=[addInkStroke(new THREE.Vector3(d[0]/2,-d[1]/2,0),new THREE.Vector3(d[0]/2,d[1]/2,0)),addInkStroke(new THREE.Vector3(-d[0]/2,-d[1]/2,0),new THREE.Vector3(-d[0]/2,d[1]/2,0))];
+  }else{
+    var silhouette=addInkCurve(new THREE.TorusGeometry(2.002,.008,6,128));silhouette.material.depthTest=false;silhouette.material.color.set(0x5b6c85);silhouette.material.transparent=true;silhouette.material.opacity=.65;modelRoot.userData.sphereContour=silhouette;
+  }
+  if(state.poses[o.id])modelRoot.quaternion.fromArray(state.poses[o.id]);else modelRoot.rotation.set(.32,-.48,0);
+  applyModelColors();makeMarkers();resizeRenderer();
+}
+function resizeRenderer(){if(!renderer||!camera||!state.modelId)return;var viewport=$('modelViewport'),w=viewport.clientWidth,h=viewport.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);requestRender();}
+function fitProjection(){
+  var viewport=$('modelViewport'),aspect=viewport.clientWidth/viewport.clientHeight,zoom=state.zooms[state.modelId]||1;
+  var half=modelRoot.userData.projectionSpan/Math.min(1,aspect)/zoom/2;
+  camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();
+}
+function updateRevealAndOutline(){
+  var data=modelRoot.userData,now=performance.now(),elapsed=data.revealStart?now-data.revealStart:1400;
+  var lineProgress=Math.max(0,Math.min(1,elapsed/660)),fill=Math.max(0,Math.min(1,(elapsed-660)/360));
+  if(data.sphereContour)data.sphereContour.quaternion.copy(modelRoot.quaternion).invert();
+  if(data.contourStrokes){
+    var view=new THREE.Vector3(0,0,1).applyQuaternion(modelRoot.quaternion.clone().invert()),length=Math.hypot(view.x,view.z)||1;
+    data.contourStrokes.forEach(function(s,i){var sign=i===0?1:-1,x=-view.z/length*data.dims[0]/2*sign,z=view.x/length*data.dims[0]/2*sign;s.start.set(x,-data.dims[1]/2,z);s.delta.set(0,data.dims[1],0);});
+  }
+  data.edgeStrokes.forEach(function(s,i){var progress=data.type==='cuboid'||data.type==='cube'?Math.max(0,Math.min(1,lineProgress*data.edgeStrokes.length-i)):lineProgress;s.mesh.visible=progress>0;s.mesh.scale.y=s.length*progress;s.mesh.position.copy(s.start).addScaledVector(s.delta,progress/2);});
+  data.edgeCurves.forEach(function(c){c.mesh.geometry.setDrawRange(0,Math.floor(c.count*lineProgress/3)*3);});
+  modelMesh.visible=fill>0;var mats=Array.isArray(modelMesh.material)?modelMesh.material:[modelMesh.material];
+  mats.forEach(function(m){if(m.transparent!==(fill<1)){m.transparent=fill<1;m.needsUpdate=true;}m.opacity=fill;});
+  markers.forEach(function(m){var normal=m.userData.normal.clone().applyQuaternion(modelRoot.quaternion);m.visible=fill>.8&&normal.z>.08;});
+  return elapsed<1020;
+}
+function requestRender(){
+  if(renderPending)return;renderPending=true;requestAnimationFrame(function(){renderPending=false;if(!renderer||!state.modelId||!modelRoot)return;var animating=updateRevealAndOutline();modelRoot.updateMatrixWorld(true);fitProjection();renderer.render(scene,camera);if(animating)requestRender();});
+}
+
+function markerSpec(face){var d=modelRoot.userData.dims,t=modelRoot.userData.type;if(t==='cylinder'){return {normal:new THREE.Vector3(0,face===1?1:-1,0),position:new THREE.Vector3(0,(face===1?1:-1)*(d[1]/2+.025),0)};}var normals=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],n=new THREE.Vector3().fromArray(normals[face]),pos=n.clone();pos.set(pos.x*(d[0]/2+.025),pos.y*(d[1]/2+.025),pos.z*(d[2]/2+.025));return {normal:n,position:pos};}
+function clearMarkerMeshes(){markers.forEach(function(m){modelRoot.remove(m);if(m.material.map)m.material.map.dispose();m.material.dispose();});markers=[];}
+function makeMarkers(){
+  if(!modelRoot)return;clearMarkerMeshes();var faces=state.faces[state.modelId]||[],data=modelRoot.userData,d=data.dims;
+  faces.forEach(function(face,i){
+    var cv=document.createElement('canvas');cv.width=cv.height=256;var ctx=cv.getContext('2d');ctx.clearRect(0,0,256,256);ctx.fillStyle='#000000';ctx.font='184px LessonKai, KaiTi, serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(faceNumbers[i],128,137);
+    var texture=new THREE.CanvasTexture(cv),size=data.type==='cube'?1.15:data.type==='cylinder'?Math.min(.72,d[0]*.65):Math.min(.72,(face<2?Math.min(d[1],d[2]):face<4?Math.min(d[0],d[2]):Math.min(d[0],d[1]))*.76);
+    var label=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+    var spec=markerSpec(face);label.position.copy(spec.position).addScaledVector(spec.normal,-.024);label.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),spec.normal);label.userData.normal=spec.normal;label.renderOrder=10;modelRoot.add(label);markers.push(label);
+  });requestRender();
+}
+function paintObservation(currentFace){var o=byId(state.modelId);if(!o)return;var faces=state.faces[o.id]||[],poly=o.type==='cube'||o.type==='cuboid';$('clearFacesBtn').style.display=o.type==='sphere'?'none':'block';document.querySelector('.model-tip').textContent=poly?'拖动旋转 · 点面编号':o.type==='cylinder'?'拖动旋转 · 点面观察':'拖动旋转，自由观察';var html='';if(poly){html='<p class="face-title">'+(faces.length===6?'一共有':'已找到')+'</p><p class="face-count">'+faces.length+'<span class="face-count-unit"> 个面</span></p>';}else if(o.type==='cylinder'){html='<p class="face-title">仔细看一看</p><div class="cylinder-face-summary"><div class="cylinder-flat"><p class="face-count">2<span class="face-count-unit"> 个</span></p><p class="face-caption">平平的圆面</p></div><div class="cylinder-curved"><p class="face-count">1<span class="face-count-unit"> 个</span></p><p class="face-caption">弯弯的面</p></div></div>';}else{html='<p class="face-title">仔细看一看</p><p class="face-caption">表面弯弯的</p><p class="face-caption">没有平平的面</p>';} $('observation').setAttribute('data-shape',o.type);$('observation').innerHTML=html+(window.LessonNarration?window.LessonNarration.markup(o.type):'');}
+function beginModel(e){if(!state.modelId||ink.on||!modelRoot||e.button>0)return;var p=point(e.clientX,e.clientY);modelDrag={start:p,last:p,moved:false,before:clone(state),strokes:clone(ink.strokes)};e.preventDefault();return true;}
+function moveModel(e){if(!modelDrag||!modelRoot)return;var p=point(e.clientX,e.clientY),dx=p.x-modelDrag.last.x,dy=p.y-modelDrag.last.y;if(Math.hypot(p.x-modelDrag.start.x,p.y-modelDrag.start.y)>5)modelDrag.moved=true;if(modelDrag.moved){var len=Math.hypot(dx,dy);if(len){var axis=new THREE.Vector3(dy,dx,0).normalize(),q=new THREE.Quaternion().setFromAxisAngle(axis,len*.009);modelRoot.quaternion.premultiply(q).normalize();state.poses[state.modelId]=modelRoot.quaternion.toArray();requestRender();}}modelDrag.last=p;e.preventDefault();}
+function endModel(e,cancel){if(!modelDrag)return;var m=modelDrag;modelDrag=null;if(cancel){state.poses=m.before.poses;buildModel(byId(state.modelId));return;}if(m.moved){history.push({state:m.before,strokes:m.strokes});return;}if(!modelMesh)return;var p=point(e.clientX,e.clientY),r=box($('modelViewport')),ndc=new THREE.Vector2((p.x-r.x)/r.w*2-1,-(p.y-r.y)/r.h*2+1);modelRoot.updateMatrixWorld(true);raycaster.setFromCamera(ndc,camera);var hits=raycaster.intersectObject(modelMesh,false);if(!hits.length)return;var o=byId(state.modelId);if(o.type==='sphere'){if(!state.curves[o.id]){push();state.curves[o.id]=true;applyModelColors();}paintObservation();return;}var face=hits[0].face.materialIndex;if(o.type==='cylinder'&&face===0){if(!state.curves[o.id]){push();state.curves[o.id]=true;applyModelColors();}paintObservation(0);return;}var list=state.faces[state.modelId]||[];if(list.indexOf(face)>=0){paintObservation(face);return;}push();list.push(face);state.faces[state.modelId]=list;applyModelColors();makeMarkers();paintObservation(face);$('undoBtn').disabled=false;}
+function bindInput(el,down,move,up,cancel){if(window.PointerEvent){var activePointer=null;el.addEventListener('pointerdown',function(e){if(e.isPrimary===false||activePointer!==null)return;var started=down(e);if(started){activePointer=e.pointerId;if(el.setPointerCapture)try{el.setPointerCapture(e.pointerId);}catch(ignore){}}});el.addEventListener('pointermove',function(e){if(e.pointerId===activePointer)move(e);});el.addEventListener('pointerup',function(e){if(e.pointerId===activePointer){activePointer=null;up(e,false);}});el.addEventListener('pointercancel',function(e){if(e.pointerId===activePointer){activePointer=null;(cancel||up)(e,true);}});}else{var active=false;el.addEventListener('mousedown',function(e){active=!!down(e);});window.addEventListener('mousemove',function(e){if(active)move(e);});window.addEventListener('mouseup',function(e){if(active){active=false;up(e,false);}});function touchEvent(e){var t=e.changedTouches[0];return {clientX:t.clientX,clientY:t.clientY,button:0,target:e.target,preventDefault:function(){e.preventDefault();}};}el.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;active=!!down(touchEvent(e));},{passive:false});el.addEventListener('touchmove',function(e){if(active)move(touchEvent(e));},{passive:false});el.addEventListener('touchend',function(e){if(active){active=false;up(touchEvent(e),false);}},{passive:false});el.addEventListener('touchcancel',function(e){if(active){active=false;(cancel||up)(touchEvent(e),true);}},{passive:false});}}
+bindInput($('sortView'),beginDrag,moveDrag,endDrag);bindInput($('modelViewport'),beginModel,moveModel,endModel);bindInput($('inkCanvas'),beginInk,moveInk,endInk);
+$('finishBtn').onclick=finish;$('abstractStep').onclick=function(){if(state.phase==='sort')finish();};$('sortStep').onclick=returnSort;$('backSortBtn').onclick=returnSort;$('observeStep').onclick=function(){var candidates=members(state.activeGroup).filter(function(o){return state.abstracted[o.id];});if(!candidates.length)candidates=DATA.filter(function(o){return state.abstracted[o.id];});if(candidates.length&&state.phase!=='sort')openModel(candidates[0].id);else toast('先选一组，把物品变成立体图形');};
+$('nextGroupBtn').onclick=function(){var groups=usedGroups();state.activeGroup=groups[(groups.indexOf(state.activeGroup)+1)%groups.length];paintAbstract();};
+$('helpBtn').onclick=function(){setPen(false);$('helpOverlay').classList.add('open');};Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){b.onclick=function(){$(b.dataset.close).classList.remove('open');};});$('penBtn').onclick=function(){setPen(!ink.on);};$('penDoneBtn').onclick=function(){setPen(false);};$('undoBtn').onclick=undo;$('resetBtn').onclick=function(){setPen(false);$('resetOverlay').classList.add('open');};$('confirmResetBtn').onclick=function(){push();state=initial();ink.strokes=[];inkHistory=[];drawInk();$('resetOverlay').classList.remove('open');paint();};
+$('inkUndoBtn').onclick=undoInk;$('inkClearBtn').onclick=function(){if(ink.strokes.length){inkHistory.push(clone(ink.strokes));ink.strokes=[];drawInk();}};Array.prototype.forEach.call(document.querySelectorAll('.pen-color'),function(b){b.onclick=function(){ink.color=b.dataset.color;Array.prototype.forEach.call(document.querySelectorAll('.pen-color'),function(c){c.classList.toggle('active',c===b);});};});
+$('closeModelBtn').onclick=closeModel;$('closeModelTop').onclick=closeModel;$('zoomInBtn').onclick=function(){if(!state.modelId)return;push();state.zooms[state.modelId]=Math.min(1.45,(state.zooms[state.modelId]||1)*1.12);resizeRenderer();};$('zoomOutBtn').onclick=function(){if(!state.modelId)return;push();state.zooms[state.modelId]=Math.max(.6,(state.zooms[state.modelId]||1)/1.12);resizeRenderer();};$('homeModelBtn').onclick=function(){if(!state.modelId)return;push();delete state.poses[state.modelId];delete state.zooms[state.modelId];buildModel(byId(state.modelId));};$('clearFacesBtn').onclick=function(){if(!state.modelId||(!(state.faces[state.modelId]||[]).length&&!state.curves[state.modelId]))return;push();state.faces[state.modelId]=[];delete state.curves[state.modelId];applyModelColors();makeMarkers();paintObservation();};
+function fullElement(){return document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement;}
+function fullChanged(){$('fullLabel').textContent=fullElement()?'退出':'全屏';fit();}
+$('fullBtn').onclick=function(){var promise;if(fullElement()){var exit=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen;if(exit)promise=exit.call(document);}else{var enter=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||document.documentElement.msRequestFullscreen;if(enter)promise=enter.call(document.documentElement);else toast('可使用浏览器菜单进入全屏');}if(promise&&promise.catch)promise.catch(function(){toast('可使用浏览器菜单进入全屏');});};
+['fullscreenchange','webkitfullscreenchange','MSFullscreenChange'].forEach(function(ev){document.addEventListener(ev,fullChanged);});window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,100);});window.addEventListener('contextmenu',function(e){e.preventDefault();});window.addEventListener('dragstart',function(e){e.preventDefault();});window.addEventListener('keydown',function(e){if(e.key==='Escape'){if(ink.on)setPen(false);else if($('helpOverlay').classList.contains('open'))$('helpOverlay').classList.remove('open');else if($('resetOverlay').classList.contains('open'))$('resetOverlay').classList.remove('open');else closeModel();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();}});
+// Activate touch buttons directly; some classroom WebViews suppress the first
+// compatibility click after a drag. Suppress a later native click on that button.
+var touchButton=null,lastTouchButton=null,lastTouchTime=0;
+function touchButtonDown(target,x,y){var b=target.closest?target.closest('button'):null;touchButton=b&&!b.disabled&&!b.classList.contains('object')?{button:b,x:x,y:y}:null;}
+function touchButtonUp(x,y,e){if(!touchButton)return;var t=touchButton;touchButton=null;var r=t.button.getBoundingClientRect();if(t.button.disabled||!document.documentElement.contains(t.button)||Math.hypot(x-t.x,y-t.y)>12||x<r.left||x>r.right||y<r.top||y>r.bottom)return;lastTouchButton=t.button;lastTouchTime=Date.now();e.preventDefault();t.button.click();}
+document.addEventListener('click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(e.isTrusted&&b===lastTouchButton&&Date.now()-lastTouchTime<700){e.preventDefault();e.stopImmediatePropagation();}},true);
+if(window.PointerEvent){document.addEventListener('pointerdown',function(e){if(e.pointerType==='touch'&&e.isPrimary!==false)touchButtonDown(e.target,e.clientX,e.clientY);});document.addEventListener('pointerup',function(e){if(e.pointerType==='touch'&&e.isPrimary!==false)touchButtonUp(e.clientX,e.clientY,e);});document.addEventListener('pointercancel',function(){touchButton=null;});}
+else{document.addEventListener('touchstart',function(e){if(e.touches.length===1){var t=e.touches[0];touchButtonDown(e.target,t.clientX,t.clientY);}},{passive:true});document.addEventListener('touchend',function(e){var t=e.changedTouches[0];if(t)touchButtonUp(t.clientX,t.clientY,e);},{passive:false});document.addEventListener('touchcancel',function(){touchButton=null;});}
+// Public read-only snapshot for accessibility and classroom QA; no storage or network is used.
+window.lessonSnapshot=function(){return clone(state);};
+window.lessonViewSnapshot=function(){var mats=modelMesh?(Array.isArray(modelMesh.material)?modelMesh.material:[modelMesh.material]):[];return {projection:camera?[camera.left,camera.right,camera.top,camera.bottom]:null,colors:mats.map(function(m){return m.color.getHexString();}),opacity:mats.length?mats[0].opacity:null,faceTargets:modelRoot?modelRoot.userData.faceColors:null,labels:markers.map(function(m){return {type:m.type,position:m.position.toArray(),normal:m.userData.normal.toArray(),direction:new THREE.Vector3(0,0,1).applyQuaternion(m.quaternion).toArray(),depthTest:m.material.depthTest};})};};
+fit();paint();
+})();
+</script>
+<script src="assets/practice/questions.js"></script>
+<script src="assets/practice/sampler.js"></script>
+<script src="assets/practice.js"></script>
+<div id="removed_wm" style="position:fixed;bottom:35px;right:35px;z-index:9999;pointer-events:none;font-weight:bold;font-size:36px;color:#000;opacity:0.5;text-shadow:0 1px 3px rgba(255,255,255,0.8);user-select:none;-webkit-user-select:none;">徐老师交互课件</div>
+</body>
+</html>
+
