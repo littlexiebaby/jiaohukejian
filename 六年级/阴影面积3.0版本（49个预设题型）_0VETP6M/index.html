@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html data-shadow-release="pending" lang="zh-CN">
+  <head>
+  <base href="assets/">
+  <script>document.addEventListener("DOMContentLoaded",function(){if(window.parent!==window&&typeof window.parent.__coursewareReady==="function")window.parent.__coursewareReady(window);});</script>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>阴影面积</title>
+    <!-- Offline geometry engine: polygon-clipping 0.15.7, MIT license. Embedded below. -->
+    <link rel="stylesheet" href="shadow-area-assets/courseware.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="head-left"><h1 class="brand">阴影面积</h1></div>
+        <div class="head-tools">
+          <button id="compareBankBtn" hidden>选题</button>
+          <button id="exitCompareBtn" hidden>单题</button>
+          <button id="helpBtn">说明</button>
+          <button id="penBtn">批注</button>
+          <button id="undoBtn" disabled>撤销</button>
+          <button id="clearBtn">清空</button>
+          <button id="resetBtn">重置</button>
+          <button id="fullBtn">全屏</button>
+        </div>
+      </header>
+      <main id="stage">
+        <svg id="board" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="可操作的数学图形">
+          <g id="world">
+            <g id="backgroundLayer"></g>
+            <g id="referenceLayer"></g>
+            <g id="pieceLayer"></g>
+            <g id="guideLayer"></g>
+            <g id="inkLayer"></g>
+            <g id="selectionLayer"></g>
+          </g>
+          <g id="gestureLayer"></g>
+        </svg>
+      </main>
+      <section id="compareView" hidden aria-label="左右对比">
+        <div class="compare-pane" id="comparePane0"></div>
+        <div class="compare-pane" id="comparePane1"></div>
+      </section>
+      <nav id="dock" aria-label="图形操作">
+        <button id="bankBtn" class="tool">选题</button>
+        <button id="shapesBtn" class="tool">图形</button>
+        <div id="zoom">
+          <button id="zoomOut" aria-label="缩小">−</button>
+          <span class="zoom-label" id="zoomLabel">100%</span>
+          <button id="zoomIn" aria-label="放大">+</button>
+        </div>
+      </nav>
+      <aside id="params" hidden></aside>
+      <div id="popover" class="popover" hidden></div>
+      <div id="bankOverlay" class="overlay" hidden>
+        <section class="dialog" role="dialog" aria-modal="true" aria-label="选择图形">
+          <div class="dialog-head">
+            <div class="tabs">
+              <button data-bank="example" class="active">例题</button>
+              <button data-bank="extension">拓展题</button>
+            </div>
+            <button id="compareToggle">双题对比</button>
+            <span id="bankCount" class="bank-count"></span>
+            <button class="close" data-close="bankOverlay" aria-label="关闭">×</button>
+          </div>
+          <div class="bank-grid" id="bankGrid"></div>
+          <div id="compareChoices" class="compare-selection" hidden>
+            <button id="compareSlot0" class="compare-slot">左侧</button>
+            <button id="compareSlot1" class="compare-slot">右侧</button>
+            <button id="compareStart" class="primary" disabled>开始对比</button>
+          </div>
+          <div class="pager">
+            <button id="bankPrev">上一页</button>
+            <span id="bankPage"></span>
+            <button id="bankNext">下一页</button>
+          </div>
+        </section>
+      </div>
+      <div id="textOverlay" class="overlay" hidden>
+        <section class="dialog text-dialog" role="dialog" aria-modal="true">
+          <div class="dialog-head">
+            <h2 id="textTitle"></h2>
+            <button class="close" data-close="textOverlay" aria-label="关闭">×</button>
+          </div>
+          <div id="textContent"></div>
+        </section>
+      </div>
+      <div id="numberOverlay" class="overlay" hidden>
+        <section class="dialog number-dialog" role="dialog" aria-modal="true" aria-label="数字键盘">
+          <div class="number-head">
+            <span id="numberTitle"></span>
+            <button id="numberClose" class="close" aria-label="取消数字输入">×</button>
+          </div>
+          <div id="numberValue" role="status" aria-live="polite"></div>
+          <div class="number-grid">
+            <button data-number-key="7">7</button>
+            <button data-number-key="8">8</button>
+            <button data-number-key="9">9</button>
+            <button data-number-key="4">4</button>
+            <button data-number-key="5">5</button>
+            <button data-number-key="6">6</button>
+            <button data-number-key="1">1</button>
+            <button data-number-key="2">2</button>
+            <button data-number-key="3">3</button>
+            <button id="numberSign" data-number-key="sign">±</button>
+            <button data-number-key="0">0</button>
+            <button data-number-key=".">.</button>
+            <button data-number-key="clear">清空</button>
+            <button data-number-key="back" aria-label="退格">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 5h12v14H9L2 12zM12 9l6 6M18 9l-6 6" />
+              </svg>
+            </button>
+            <button data-number-key="ok" class="primary">确定</button>
+          </div>
+        </section>
+      </div>
+      <div id="toast" hidden></div>
+    </div>
+    <script src="shadow-area-assets/guard.js"></script>
+    <script src="shadow-area-assets/geometry.js"></script>
+    <script src="shadow-area-assets/lesson.js"></script>
+</body>
+</html>
