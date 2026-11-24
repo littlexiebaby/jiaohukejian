@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>等周定理交互动画：为什么周长相等时圆的面积最大？</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-alt: #162032;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-bg: rgba(56, 189, 248, 0.16);
+      --success: #34d399;
+      --success-bg: rgba(52, 211, 153, 0.14);
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    html.light {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-alt: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #0284c7;
+      --primary-bg: rgba(2, 132, 199, 0.12);
+      --success: #059669;
+      --success-bg: rgba(5, 150, 105, 0.1);
+      --warning: #d97706;
+      --danger: #dc2626;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 24px 36px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn:hover { border-color: var(--primary); }
+    .btn.primary {
+      background: var(--primary);
+      color: #0b1120;
+      border-color: var(--primary);
+    }
+    html.light .btn.primary { color: #ffffff; }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--text); border-color: var(--primary); }
+    .tab-btn.active {
+      background: var(--primary-bg);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    canvas#mainCanvas {
+      display: block;
+      width: 100%;
+      height: 390px;
+    }
+
+    .canvas-overlay-top {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .slider-group input[type="range"] { flex: 1; }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .kpi {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .kpi .label { font-size: 12px; color: var(--muted); }
+    .kpi .val { font-size: 20px; font-weight: 700; margin-top: 2px; }
+    .kpi .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .bar-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      padding: 12px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 76px 1fr 56px;
+      align-items: center;
+      gap: 10px;
+      font-size: 12.5px;
+    }
+    .bar-track {
+      height: 10px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.08s linear;
+    }
+
+    canvas#subChart {
+      display: block;
+      width: 100%;
+      height: 135px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .insight-box {
+      background: var(--primary-bg);
+      border: 1px solid var(--primary);
+      border-radius: 10px;
+      padding: 11px 13px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .insight-box strong { color: var(--primary); }
+
+    .formula-box {
+      background: var(--panel-alt);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--muted);
+      user-select: none;
+    }
+    .checkbox-label input { accent-color: var(--primary); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>等周定理辨析动画：为何周长相等时圆的面积最大？</h1>
+        <p>用同一根固定长度的绳子围成不同平面图形，从“微元剖分、矩形误区、凹凸对称、全景对比”四个视角揭示本质。</p>
+      </div>
+      <div class="header-controls">
+        <label class="pill-control">
+          <span>总周长 L</span>
+          <input id="globalL" type="range" min="12" max="48" step="2" value="24" />
+          <span id="globalLVal" class="mono">24 cm</span>
+        </label>
+        <button id="btnPlay" class="btn primary">暂停动画 (Space)</button>
+        <button id="btnTheme" class="btn">浅色模式</button>
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" data-mode="poly">1. 正多边形逼近圆 (n → ∞)</button>
+      <button class="tab-btn" data-mode="rect">2. 矩形拉扁误区辨析</button>
+      <button class="tab-btn" data-mode="concave">3. 凹陷与尖角损耗 (等周商)</button>
+      <button class="tab-btn" data-mode="arena">4. 同一根绳子全景擂台</button>
+    </div>
+
+    <div class="main-grid">
+      <!-- 左侧主画布 -->
+      <section class="card">
+        <div class="canvas-wrap">
+          <canvas id="mainCanvas"></canvas>
+          <div class="canvas-overlay-top">
+            <span id="shapeBadge" class="badge">正 4 边形（正方形）</span>
+            <div class="legend" id="canvasLegend">
+              <span><i class="legend-dot" style="background: var(--primary);"></i>当前图形</span>
+              <span><i class="legend-dot" style="background: var(--success);"></i>等周长圆对照</span>
+              <span><i class="legend-dot" style="background: var(--warning);"></i>辅助证明线</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-bar">
+          <div class="slider-group" id="paramControlWrap">
+            <span id="paramLabel" style="white-space:nowrap; font-weight:600;">边数 n</span>
+            <input id="paramSlider" type="range" min="3" max="48" step="1" value="4" />
+            <span id="paramReadout" class="mono" style="min-width:74px; text-align:right;">n = 4</span>
+          </div>
+          <label class="checkbox-label" id="auxToggleWrap">
+            <input id="chkAux" type="checkbox" checked />
+            <span id="auxLabel">显示中心剖分与边心距</span>
+          </label>
+          <button id="btnReset" class="btn">重置 / 极限对比</button>
+        </div>
+
+        <div class="formula-box" id="formulaBox">
+          几何推导：将正 <span class="mono">n</span> 边形从中心分成 <span class="mono">n</span> 个全等三角形，总面积 <span class="mono">S = ½ · (n · a) · h = ½ · L · h</span>。当 <span class="mono">L</span> 固定时，面积完全取决于边心距 <span class="mono">h</span>；随着 <span class="mono">n → ∞</span>，<span class="mono">h → R = L/(2π)</span>，故 <span class="mono">S → L²/(4π)</span>。
+        </div>
+      </section>
+
+      <!-- 右侧数据分析与辨析面板 -->
+      <aside class="card">
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="label">恒定周长 L</div>
+            <div id="kpiL" class="val mono">24.00 cm</div>
+            <div id="kpiCircleMax" class="sub mono">圆面积上限: 45.84 cm²</div>
+          </div>
+          <div class="kpi">
+            <div class="label">当前图形面积 S</div>
+            <div id="kpiArea" class="val mono" style="color: var(--primary);">36.00 cm²</div>
+            <div id="kpiRatio" class="sub mono">等周商 Q = 78.54%</div>
+          </div>
+        </div>
+
+        <div class="bar-list">
+          <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--muted); margin-bottom:2px;">
+            <span>同周长面积占比榜单</span>
+            <span class="mono">Q = 4πS / L²</span>
+          </div>
+          <div class="bar-row">
+            <span>细长矩形</span>
+            <div class="bar-track"><div class="bar-fill" style="width:28.27%; background:var(--danger);"></div></div>
+            <span class="mono" style="text-align:right;">28.3%</span>
+          </div>
+          <div class="bar-row">
+            <span>等边三角</span>
+            <div class="bar-track"><div class="bar-fill" style="width:60.46%; background:var(--warning);"></div></div>
+            <span class="mono" style="text-align:right;">60.5%</span>
+          </div>
+          <div class="bar-row">
+            <span>正方形</span>
+            <div class="bar-track"><div class="bar-fill" style="width:78.54%; background:#818cf8;"></div></div>
+            <span class="mono" style="text-align:right;">78.5%</span>
+          </div>
+          <div class="bar-row">
+            <span>正六边形</span>
+            <div class="bar-track"><div class="bar-fill" style="width:90.69%; background:#2dd4bf;"></div></div>
+            <span class="mono" style="text-align:right;">90.7%</span>
+          </div>
+          <div class="bar-row" style="font-weight:700;">
+            <span style="color:var(--primary);">当前图形</span>
+            <div class="bar-track"><div id="barCurrent" class="bar-fill" style="width:78.54%; background:var(--primary);"></div></div>
+            <span id="barCurrentVal" class="mono" style="text-align:right; color:var(--primary);">78.5%</span>
+          </div>
+          <div class="bar-row">
+            <span style="color:var(--success);">圆形极值</span>
+            <div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--success);"></div></div>
+            <span class="mono" style="text-align:right; color:var(--success);">100%</span>
+          </div>
+        </div>
+
+        <canvas id="subChart"></canvas>
+
+        <div class="insight-box" id="insightBox">
+          <strong>核心辨析：</strong>在所有正多边形中，边数越多“折角”越平缓，同样长的绳子能把图形撑得更远（边心距更大）。圆形相当于“无穷多条边”，没有任何尖角浪费周长，因此面积达到绝对上限。
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const mainCanvas = document.getElementById('mainCanvas');
+      const mctx = mainCanvas.getContext('2d');
+      const subCanvas = document.getElementById('subChart');
+      const sctx = subCanvas.getContext('2d');
+
+      const state = {
+        mode: 'poly', // 'poly' | 'rect' | 'concave' | 'arena'
+        L: 24,
+        playing: true,
+        showAux: true,
+        t: 0,
+        nFloat: 4,
+        rectU: 0.25,     // width = u*L, height = (0.5-u)*L, u in [0.03, 0.25]
+        concavity: 0.55, // k in [0.25, 1.0]
+        arenaProgress: 1, // 0 -> 1 rope wrapping animation
+        lastTime: performance.now()
+      };
+
+      const dom = {
+        globalL: document.getElementById('globalL'),
+        globalLVal: document.getElementById('globalLVal'),
+        btnPlay: document.getElementById('btnPlay'),
+        btnTheme: document.getElementById('btnTheme'),
+        tabs: document.querySelectorAll('.tab-btn'),
+        shapeBadge: document.getElementById('shapeBadge'),
+        paramControlWrap: document.getElementById('paramControlWrap'),
+        paramLabel: document.getElementById('paramLabel'),
+        paramSlider: document.getElementById('paramSlider'),
+        paramReadout: document.getElementById('paramReadout'),
+        auxToggleWrap: document.getElementById('auxToggleWrap'),
+        chkAux: document.getElementById('chkAux'),
+        auxLabel: document.getElementById('auxLabel'),
+        btnReset: document.getElementById('btnReset'),
+        formulaBox: document.getElementById('formulaBox'),
+        kpiL: document.getElementById('kpiL'),
+        kpiCircleMax: document.getElementById('kpiCircleMax'),
+        kpiArea: document.getElementById('kpiArea'),
+        kpiRatio: document.getElementById('kpiRatio'),
+        barCurrent: document.getElementById('barCurrent'),
+        barCurrentVal: document.getElementById('barCurrentVal'),
+        insightBox: document.getElementById('insightBox')
+      };
+
+      function colors() {
+        const cs = getComputedStyle(document.documentElement);
+        const get = (v) => cs.getPropertyValue(v).trim();
+        return {
+          text: get('--text'),
+          muted: get('--muted'),
+          border: get('--border'),
+          panel: get('--panel'),
+          panelAlt: get('--panel-alt'),
+          primary: get('--primary'),
+          success: get('--success'),
+          warning: get('--warning'),
+          danger: get('--danger')
+        };
+      }
+
+      function withAlpha(color, alpha) {
+        if (color.startsWith('#')) {
+          let h = color.slice(1);
+          if (h.length === 3) h = h.split('').map(c => c + c).join('');
+          const n = parseInt(h, 16);
+          return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+        }
+        const m = color.match(/[\d.]+/g);
+        if (m && m.length >= 3) return `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${alpha})`;
+        return color;
+      }
+
+      function setupCanvas(canvas, ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        const r = canvas.getBoundingClientRect();
+        const w = Math.max(100, Math.floor(r.width));
+        const h = Math.max(80, Math.floor(r.height));
+        if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        return { w, h };
+      }
+
+      function updateModeUI() {
+        dom.tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === state.mode));
+        dom.paramControlWrap.style.display = 'flex';
+        dom.auxToggleWrap.style.display = 'inline-flex';
+
+        if (state.mode === 'poly') {
+          dom.paramLabel.textContent = '边数 n';
+          dom.paramSlider.min = '3';
+          dom.paramSlider.max = '48';
+          dom.paramSlider.step = '1';
+          dom.paramSlider.value = Math.round(state.nFloat);
+          dom.auxLabel.textContent = '显示中心剖分与边心距 h';
+          dom.btnReset.textContent = '切到圆形极限 (n=48)';
+          dom.formulaBox.innerHTML = '几何推导：将正 <span class="mono">n</span> 边形从中心分成 <span class="mono">n</span> 个全等三角形，总面积 <span class="mono">S = ½ · (n · a) · h = ½ · L · h</span>。当 <span class="mono">L</span> 固定时，面积完全取决于边心距 <span class="mono">h</span>；随着 <span class="mono">n → ∞</span>，<span class="mono">h → R = L/(2π)</span>，故 <span class="mono">S → L²/(4π)</span>。';
+          dom.insightBox.innerHTML = '<strong>核心辨析：</strong>在所有正多边形中，边数越多“折角”越平缓，同样长的绳子能把图形撑得更远（边心距更大）。圆形相当于“无穷多条边”，没有任何尖角浪费周长，因此面积达到绝对上限。';
+        } else if (state.mode === 'rect') {
+          dom.paramLabel.textContent = '短边占比 u';
+          dom.paramSlider.min = '0.03';
+          dom.paramSlider.max = '0.25';
+          dom.paramSlider.step = '0.005';
+          dom.paramSlider.value = state.rectU;
+          dom.auxLabel.textContent = '显示等周长正方形对照';
+          dom.btnReset.textContent = '设为正方形 (u=0.25)';
+          dom.formulaBox.innerHTML = '代数证明：设矩形半周长为 <span class="mono">p = L/2</span>，宽为 <span class="mono">x</span>，长为 <span class="mono">p - x</span>，则面积 <span class="mono">S(x) = x(p - x) = -(x - p/2)² + p²/4</span>。当且仅当 <span class="mono">x = p/2 = L/4</span>（即正方形）时取矩形最大值，仍只占圆的 <span class="mono">π/4 ≈ 78.54%</span>。';
+          dom.insightBox.innerHTML = '<strong>常见误区辨析：</strong>很多同学误以为“周长相等，面积就差不多”。但当矩形被拉成 <span class="mono">1:15</span> 的细长条时，周长一分不少，面积却暴跌至圆的 <span class="mono">19%</span>！长宽越悬殊，围合效率越低。';
+        } else if (state.mode === 'concave') {
+          dom.paramLabel.textContent = '饱满度 k';
+          dom.paramSlider.min = '0.25';
+          dom.paramSlider.max = '1.00';
+          dom.paramSlider.step = '0.01';
+          dom.paramSlider.value = state.concavity;
+          dom.auxLabel.textContent = '显示凸包虚线对照';
+          dom.btnReset.textContent = '一键膨胀凸化 (k=1)';
+          dom.formulaBox.innerHTML = '施泰纳对称化思想：若图形存在向内凹陷（如星形），只需将凹陷部分沿连线向外“翻折”凸出，可以在<strong>减小周长</strong>的同时<strong>增大面积</strong>；等周长放缩后，凸且对称的图形面积必然碾压凹陷图形。';
+          dom.insightBox.innerHTML = '<strong>深层辨析：</strong>为什么不规则锯齿或海星形状总面积那么小？因为大量绳长耗费在了“折返跑”上，没有用来向外扩张疆域。消除凹陷、拉平曲率，最终就会得到圆。';
+        } else {
+          dom.paramLabel.textContent = '绳子围合进度';
+          dom.paramSlider.min = '0.05';
+          dom.paramSlider.max = '1.00';
+          dom.paramSlider.step = '0.01';
+          dom.paramSlider.value = state.arenaProgress;
+          dom.auxLabel.textContent = '显示周长刻度点';
+          dom.btnReset.textContent = '重放绕绳动画';
+          dom.formulaBox.innerHTML = '同比例擂台对比：下方五个图形均由<strong>完全等长</strong>的 <span class="mono">L = ' + state.L + ' cm</span> 绳子围成。注意观察最左侧 <span class="mono">1:7</span> 细长矩形虽然看着“很长”，内部空间却极小；而圆的内部空间最为饱满。';
+          dom.insightBox.innerHTML = '<strong>教学总结：</strong>“周长”是一维边界的长度，“面积”是二维内部的容量。想要用最短的篱笆圈出最大的草地（等周问题），就要避免尖角和狭长通道，让边界处处远离中心且曲率均匀——这就是圆。';
+        }
+      }
+
+      function computeCurrentMetrics() {
+        const L = state.L;
+        const S_circle = (L * L) / (4 * Math.PI);
+        let S = S_circle;
+        let badge = '';
+        let readout = '';
+
+        if (state.mode === 'poly') {
+          const n = Math.max(3, Math.round(state.nFloat));
+          const h = L / (2 * n * Math.tan(Math.PI / n));
+          S = 0.5 * L * h;
+          badge = n >= 45 ? `正 ${n} 边形（视觉已等同圆）` : `正 ${n} 边形`;
+          readout = `n = ${n}`;
+        } else if (state.mode === 'rect') {
+          const u = state.rectU;
+          const w = u * L;
+          const h = (0.5 - u) * L;
+          S = w * h;
+          const ratio = (h / w).toFixed(1);
+          badge = Math.abs(u - 0.25) < 0.006 ? '正方形（长宽比 1 : 1）' : `扁长方形（长宽比 ${ratio} : 1）`;
+          readout = `${w.toFixed(1)}×${h.toFixed(1)}`;
+        } else if (state.mode === 'concave') {
+          const spikes = 6;
+          const k = state.concavity;
+          const stepA = Math.PI / spikes;
+          const unitEdge = Math.sqrt(1 + k * k - 2 * k * Math.cos(stepA));
+          const R1 = L / (2 * spikes * unitEdge);
+          const R2 = k * R1;
+          S = spikes * R1 * R2 * Math.sin(stepA);
+          const convexThresh = Math.cos(stepA);
+          badge = k < convexThresh - 0.02 ? '凹陷六角星（周长被折返消耗）' : (k > 0.96 ? '正十二边形（完全饱满）' : '凸十二边形');
+          readout = `k = ${(k * 100).toFixed(0)}%`;
+        } else {
+          S = S_circle;
+          badge = `等周长全景对比（L = ${L} cm）`;
+          readout = `${Math.round(state.arenaProgress * 100)}%`;
+        }
+
+        const Q = Math.min(100, (S / S_circle) * 100);
+        return { L, S_circle, S, Q, badge, readout };
+      }
+
+      function drawPolyLineProgress(ctx, pts, progress, closed = true) {
+        if (pts.length < 2) return;
+        const segments = [];
+        let total = 0;
+        const count = closed ? pts.length : pts.length - 1;
+        for (let i = 0; i < count; i++) {
+          const a = pts[i];
+          const b = pts[(i + 1) % pts.length];
+          const len = Math.hypot(b.x - a.x, b.y - a.y);
+          segments.push({ a, b, len });
+          total += len;
+        }
+        let remain = total * Math.max(0, Math.min(1, progress));
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (const seg of segments) {
+          if (remain <= 0) break;
+          if (remain >= seg.len) {
+            ctx.lineTo(seg.b.x, seg.b.y);
+            remain -= seg.len;
+          } else {
+            const f = remain / seg.len;
+            ctx.lineTo(seg.a.x + (seg.b.x - seg.a.x) * f, seg.a.y + (seg.b.y - seg.a.y) * f);
+            remain = 0;
+          }
+        }
+        ctx.stroke();
+      }
+
+      function drawMain() {
+        const { w, h } = setupCanvas(mainCanvas, mctx);
+        const c = colors();
+        const { L, S_circle, S, Q, badge, readout } = computeCurrentMetrics();
+
+        // Update DOM stats
+        dom.shapeBadge.textContent = badge;
+        dom.paramReadout.textContent = readout;
+        dom.kpiL.textContent = `${L.toFixed(2)} cm`;
+        dom.kpiCircleMax.textContent = `圆面积上限: ${S_circle.toFixed(2)} cm²`;
+        dom.kpiArea.textContent = `${S.toFixed(2)} cm²`;
+        dom.kpiRatio.textContent = `等周商 Q = ${Q.toFixed(2)}%`;
+        dom.barCurrent.style.width = `${Q.toFixed(2)}%`;
+        dom.barCurrentVal.textContent = `${Q.toFixed(1)}%`;
+
+        if (state.mode === 'arena') {
+          drawArenaMode(w, h, c, L);
+          return;
+        }
+
+        const cx = w * 0.5;
+        const cy = h * 0.54;
+        const rCircleCm = L / (2 * Math.PI);
+        const cmToPx = state.mode === 'rect'
+          ? (Math.min(w * 0.44, h * 0.40) / (0.25 * L)) * 0.56
+          : (Math.min(w, h) * 0.34 / rCircleCm) * 0.94;
+        const rCirclePx = rCircleCm * cmToPx;
+
+        // Dashed Reference Circle
+        mctx.save();
+        mctx.beginPath();
+        mctx.arc(cx, cy, rCirclePx, 0, Math.PI * 2);
+        mctx.fillStyle = withAlpha(c.success, 0.08);
+        mctx.fill();
+        mctx.setLineDash([6, 5]);
+        mctx.lineWidth = 1.8;
+        mctx.strokeStyle = withAlpha(c.success, 0.8);
+        mctx.stroke();
+        mctx.restore();
+
+        // Build current polygon vertices
+        const pts = [];
+        let apothemPx = 0;
+
+        if (state.mode === 'poly') {
+          const n = Math.max(3, Math.round(state.nFloat));
+          const sideCm = L / n;
+          const Rpx = (sideCm / (2 * Math.sin(Math.PI / n))) * cmToPx;
+          apothemPx = (sideCm / (2 * Math.tan(Math.PI / n))) * cmToPx;
+          const startAngle = -Math.PI / 2 - Math.PI / n;
+          for (let i = 0; i < n; i++) {
+            const ang = startAngle + (i * 2 * Math.PI) / n;
+            pts.push({ x: cx + Rpx * Math.cos(ang), y: cy + Rpx * Math.sin(ang) });
+          }
+        } else if (state.mode === 'rect') {
+          const u = state.rectU;
+          const rw = (0.5 - u) * L * cmToPx;
+          const rh = u * L * cmToPx;
+          pts.push(
+            { x: cx - rw / 2, y: cy - rh / 2 },
+            { x: cx + rw / 2, y: cy - rh / 2 },
+            { x: cx + rw / 2, y: cy + rh / 2 },
+            { x: cx - rw / 2, y: cy + rh / 2 }
+          );
+        } else if (state.mode === 'concave') {
+          const spikes = 6;
+          const k = state.concavity;
+          const stepA = Math.PI / spikes;
+          const unitEdge = Math.sqrt(1 + k * k - 2 * k * Math.cos(stepA));
+          const R1px = (L / (2 * spikes * unitEdge)) * cmToPx;
+          const R2px = k * R1px;
+          for (let i = 0; i < spikes * 2; i++) {
+            const r = i % 2 === 0 ? R1px : R2px;
+            const ang = -Math.PI / 2 + i * stepA;
+            pts.push({ x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) });
+          }
+        }
+
+        // Fill Shape
+        mctx.save();
+        mctx.beginPath();
+        pts.forEach((p, idx) => (idx === 0 ? mctx.moveTo(p.x, p.y) : mctx.lineTo(p.x, p.y)));
+        mctx.closePath();
+        mctx.fillStyle = withAlpha(c.primary, 0.24);
+        mctx.fill();
+
+        // Auxiliary proofs
+        if (state.showAux) {
+          if (state.mode === 'poly') {
+            mctx.strokeStyle = withAlpha(c.primary, 0.32);
+            mctx.lineWidth = 1;
+            pts.forEach(p => {
+              mctx.beginPath();
+              mctx.moveTo(cx, cy);
+              mctx.lineTo(p.x, p.y);
+              mctx.stroke();
+            });
+            // Apothem line
+            mctx.beginPath();
+            mctx.moveTo(cx, cy);
+            mctx.lineTo(cx, cy + apothemPx);
+            mctx.strokeStyle = c.warning;
+            mctx.lineWidth = 2.5;
+            mctx.stroke();
+
+            mctx.fillStyle = c.warning;
+            mctx.font = '600 12px sans-serif';
+            mctx.fillText(`边心距 h = ${(L / (2 * Math.round(state.nFloat) * Math.tan(Math.PI / Math.round(state.nFloat)))).toFixed(2)} cm`, cx + 8, cy + apothemPx * 0.56);
+          } else if (state.mode === 'rect') {
+            // Square reference outline
+            const sqSide = 0.25 * L * cmToPx;
+            mctx.setLineDash([4, 4]);
+            mctx.strokeStyle = c.warning;
+            mctx.lineWidth = 1.6;
+            mctx.strokeRect(cx - sqSide / 2, cy - sqSide / 2, sqSide, sqSide);
+            mctx.setLineDash([]);
+            mctx.fillStyle = c.warning;
+            mctx.font = '12px sans-serif';
+            mctx.fillText('虚线框：等周正方形', cx - sqSide / 2, cy - sqSide / 2 - 7);
+          } else if (state.mode === 'concave') {
+            mctx.setLineDash([4, 4]);
+            mctx.strokeStyle = c.warning;
+            mctx.lineWidth = 1.6;
+            mctx.beginPath();
+            for (let i = 0; i < pts.length; i += 2) {
+              if (i === 0) mctx.moveTo(pts[i].x, pts[i].y);
+              else mctx.lineTo(pts[i].x, pts[i].y);
+            }
+            mctx.closePath();
+            mctx.stroke();
+            mctx.setLineDash([]);
+          }
+        }
+
+        // Stroke outline
+        mctx.beginPath();
+        pts.forEach((p, idx) => (idx === 0 ? mctx.moveTo(p.x, p.y) : mctx.lineTo(p.x, p.y)));
+        mctx.closePath();
+        mctx.lineWidth = 3;
+        mctx.lineJoin = 'round';
+        mctx.strokeStyle = c.primary;
+        mctx.stroke();
+        mctx.restore();
+
+        // Center point
+        mctx.beginPath();
+        mctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+        mctx.fillStyle = c.text;
+        mctx.fill();
+      }
+
+      function drawArenaMode(w, h, c, L) {
+        const items = [
+          { name: '1:7 矩形', type: 'rect', u: 0.0625, color: c.danger },
+          { name: '等边三角形', type: 'poly', n: 3, color: c.warning },
+          { name: '正方形', type: 'poly', n: 4, color: '#818cf8' },
+          { name: '正六边形', type: 'poly', n: 6, color: '#2dd4bf' },
+          { name: '圆形', type: 'circle', color: c.success }
+        ];
+
+        const cols = items.length;
+        const slotW = w / cols;
+        const cy = h * 0.46;
+        const S_circle = (L * L) / (4 * Math.PI);
+        const rCircleCm = L / (2 * Math.PI);
+        const cmToPx = Math.min(slotW * 0.38, h * 0.25) / rCircleCm;
+        const prog = state.arenaProgress;
+
+        // Top unrolled rope indicator
+        const ropeY = h * 0.84;
+        const ropeLeft = w * 0.1;
+        const ropeWidth = w * 0.8;
+        mctx.strokeStyle = withAlpha(c.muted, 0.35);
+        mctx.lineWidth = 3;
+        mctx.beginPath();
+        mctx.moveTo(ropeLeft, ropeY);
+        mctx.lineTo(ropeLeft + ropeWidth, ropeY);
+        mctx.stroke();
+
+        // Remaining unrolled rope
+        const remainFrac = Math.max(0, 1 - prog);
+        if (remainFrac > 0.01) {
+          mctx.strokeStyle = c.primary;
+          mctx.lineWidth = 4;
+          mctx.beginPath();
+          mctx.moveTo(ropeLeft, ropeY);
+          mctx.lineTo(ropeLeft + ropeWidth * remainFrac, ropeY);
+          mctx.stroke();
+        }
+        mctx.fillStyle = c.muted;
+        mctx.font = '12px sans-serif';
+        mctx.textAlign = 'center';
+        mctx.fillText(`五位选手使用的绳子长度完全相同：L = ${L} cm（上方图形同比例绘制）`, w * 0.5, ropeY + 22);
+
+        items.forEach((item, idx) => {
+          const cx = slotW * (idx + 0.5);
+          let pts = [];
+          let area = 0;
+
+          if (item.type === 'rect') {
+            const rw = (0.5 - item.u) * L * cmToPx;
+            const rh = item.u * L * cmToPx;
+            area = item.u * (0.5 - item.u) * L * L;
+            pts = [
+              { x: cx - rw / 2, y: cy - rh / 2 },
+              { x: cx + rw / 2, y: cy - rh / 2 },
+              { x: cx + rw / 2, y: cy + rh / 2 },
+              { x: cx - rw / 2, y: cy + rh / 2 }
+            ];
+          } else if (item.type === 'poly') {
+            const n = item.n;
+            const sideCm = L / n;
+            const Rpx = (sideCm / (2 * Math.sin(Math.PI / n))) * cmToPx;
+            const apCm = sideCm / (2 * Math.tan(Math.PI / n));
+            area = 0.5 * L * apCm;
+            const start = -Math.PI / 2 - Math.PI / n;
+            for (let i = 0; i < n; i++) {
+              const a = start + (i * 2 * Math.PI) / n;
+              pts.push({ x: cx + Rpx * Math.cos(a), y: cy + Rpx * Math.sin(a) });
+            }
+          } else {
+            area = S_circle;
+            const segs = 60;
+            const Rpx = rCircleCm * cmToPx;
+            for (let i = 0; i < segs; i++) {
+              const a = -Math.PI / 2 + (i * 2 * Math.PI) / segs;
+              pts.push({ x: cx + Rpx * Math.cos(a), y: cy + Rpx * Math.sin(a) });
+            }
+          }
+
+          // Fill fades in once rope finishes wrapping
+          const fillAlpha = Math.max(0, (prog - 0.5) * 2) * 0.25;
+          if (fillAlpha > 0) {
+            mctx.beginPath();
+            pts.forEach((p, i) => (i === 0 ? mctx.moveTo(p.x, p.y) : mctx.lineTo(p.x, p.y)));
+            mctx.closePath();
+            mctx.fillStyle = withAlpha(item.color, fillAlpha);
+            mctx.fill();
+          }
+
+          mctx.strokeStyle = item.color;
+          mctx.lineWidth = 2.6;
+          mctx.lineJoin = 'round';
+          drawPolyLineProgress(mctx, pts, prog, true);
+
+          if (state.showAux && prog > 0.95 && item.type !== 'circle') {
+            pts.forEach(p => {
+              mctx.beginPath();
+              mctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+              mctx.fillStyle = c.text;
+              mctx.fill();
+            });
+          }
+
+          const pct = ((area / S_circle) * 100).toFixed(1);
+          mctx.fillStyle = c.text;
+          mctx.font = '600 13px sans-serif';
+          mctx.textAlign = 'center';
+          mctx.fillText(item.name, cx, cy + 88);
+
+          mctx.fillStyle = item.color;
+          mctx.font = '700 12.5px ui-monospace, monospace';
+          mctx.fillText(`${area.toFixed(1)} (${pct}%)`, cx, cy + 107);
+        });
+      }
+
+      function drawSubChart() {
+        const { w, h } = setupCanvas(subCanvas, sctx);
+        const c = colors();
+        const padL = 38, padR = 14, padT = 22, padB = 22;
+        const pw = w - padL - padR;
+        const ph = h - padT - padB;
+
+        // Axes
+        sctx.strokeStyle = c.border;
+        sctx.lineWidth = 1;
+        sctx.beginPath();
+        sctx.moveTo(padL, padT);
+        sctx.lineTo(padL, h - padB);
+        sctx.lineTo(w - padR, h - padB);
+        sctx.stroke();
+
+        // 100% dashed ceiling
+        sctx.setLineDash([4, 4]);
+        sctx.strokeStyle = withAlpha(c.success, 0.7);
+        sctx.beginPath();
+        sctx.moveTo(padL, padT);
+        sctx.lineTo(w - padR, padT);
+        sctx.stroke();
+        sctx.setLineDash([]);
+
+        sctx.fillStyle = c.muted;
+        sctx.font = '11px sans-serif';
+        sctx.textAlign = 'left';
+
+        let title = '';
+        let curXFrac = 0;
+        let curYFrac = 0;
+
+        sctx.beginPath();
+        sctx.strokeStyle = c.primary;
+        sctx.lineWidth = 2;
+
+        if (state.mode === 'poly' || state.mode === 'arena') {
+          title = '面积随正多边形边数 n 的收敛曲线 (极限 = 100%)';
+          for (let n = 3; n <= 48; n++) {
+            const x = padL + ((n - 3) / 45) * pw;
+            const ratio = Math.PI / (n * Math.tan(Math.PI / n));
+            const y = (h - padB) - ratio * ph;
+            if (n === 3) sctx.moveTo(x, y);
+            else sctx.lineTo(x, y);
+          }
+          const nCur = state.mode === 'arena' ? 48 : Math.max(3, Math.round(state.nFloat));
+          curXFrac = (nCur - 3) / 45;
+          curYFrac = Math.PI / (nCur * Math.tan(Math.PI / nCur));
+        } else if (state.mode === 'rect') {
+          title = '矩形面积随短边占比 u 变化的抛物线 (顶点在 u=0.25 正方形)';
+          for (let i = 0; i <= 44; i++) {
+            const u = 0.03 + (i / 44) * (0.25 - 0.03);
+            const x = padL + (i / 44) * pw;
+            const ratio = 4 * Math.PI * u * (0.5 - u);
+            const y = (h - padB) - ratio * ph;
+            if (i === 0) sctx.moveTo(x, y);
+            else sctx.lineTo(x, y);
+          }
+          curXFrac = (state.rectU - 0.03) / (0.25 - 0.03);
+          curYFrac = 4 * Math.PI * state.rectU * (0.5 - state.rectU);
+        } else {
+          title = '面积随饱满度 k 变化曲线 (从凹六角星到凸十二边形)';
+          const spikes = 6;
+          const stepA = Math.PI / spikes;
+          for (let i = 0; i <= 50; i++) {
+            const k = 0.25 + (i / 50) * 0.75;
+            const unitEdge = Math.sqrt(1 + k * k - 2 * k * Math.cos(stepA));
+            const ratio = (4 * Math.PI * spikes * k * Math.sin(stepA)) / Math.pow(2 * spikes * unitEdge, 2);
+            const x = padL + (i / 50) * pw;
+            const y = (h - padB) - ratio * ph;
+            if (i === 0) sctx.moveTo(x, y);
+            else sctx.lineTo(x, y);
+          }
+          const k = state.concavity;
+          const unitEdge = Math.sqrt(1 + k * k - 2 * k * Math.cos(stepA));
+          curXFrac = (k - 0.25) / 0.75;
+          curYFrac = (4 * Math.PI * spikes * k * Math.sin(stepA)) / Math.pow(2 * spikes * unitEdge, 2);
+        }
+        sctx.stroke();
+
+        // Current point marker
+        const dotX = padL + curXFrac * pw;
+        const dotY = (h - padB) - curYFrac * ph;
+        sctx.beginPath();
+        sctx.arc(dotX, dotY, 4.5, 0, Math.PI * 2);
+        sctx.fillStyle = c.warning;
+        sctx.fill();
+
+        sctx.fillStyle = c.muted;
+        sctx.fillText(title, padL, 14);
+        sctx.fillText('100%', 4, padT + 4);
+        sctx.fillText('0%', 14, h - padB);
+      }
+
+      function tick(now) {
+        const dt = Math.min(0.05, (now - state.lastTime) / 1000);
+        state.lastTime = now;
+
+        if (state.playing) {
+          state.t += dt;
+          if (state.mode === 'poly') {
+            const wave = 0.5 - 0.5 * Math.cos(state.t * 0.65);
+            state.nFloat = 3 + Math.pow(wave, 1.45) * 45;
+            dom.paramSlider.value = Math.round(state.nFloat);
+          } else if (state.mode === 'rect') {
+            const wave = 0.5 - 0.5 * Math.cos(state.t * 0.85);
+            state.rectU = 0.03 + wave * (0.25 - 0.03);
+            dom.paramSlider.value = state.rectU.toFixed(3);
+          } else if (state.mode === 'concave') {
+            const wave = 0.5 - 0.5 * Math.cos(state.t * 0.85);
+            state.concavity = 0.25 + wave * 0.75;
+            dom.paramSlider.value = state.concavity.toFixed(2);
+          } else if (state.mode === 'arena') {
+            const cycle = (state.t * 0.35) % 1.4;
+            state.arenaProgress = Math.min(1, cycle);
+            dom.paramSlider.value = state.arenaProgress.toFixed(2);
+          }
+        }
+
+        drawMain();
+        drawSubChart();
+        requestAnimationFrame(tick);
+      }
+
+      // Bindings
+      dom.tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          state.mode = tab.dataset.mode;
+          state.t = 0.6;
+          if (state.mode === 'arena') state.t = 0;
+          updateModeUI();
+        });
+      });
+
+      dom.globalL.addEventListener('input', (e) => {
+        state.L = Number(e.target.value);
+        dom.globalLVal.textContent = `${state.L} cm`;
+        if (state.mode === 'arena') updateModeUI();
+      });
+
+      dom.btnPlay.addEventListener('click', () => {
+        state.playing = !state.playing;
+        dom.btnPlay.textContent = state.playing ? '暂停动画 (Space)' : '播放动画 (Space)';
+      });
+
+      dom.btnTheme.addEventListener('click', () => {
+        const isLight = document.documentElement.classList.toggle('light');
+        dom.btnTheme.textContent = isLight ? '深色模式' : '浅色模式';
+      });
+
+      dom.paramSlider.addEventListener('input', (e) => {
+        state.playing = false;
+        dom.btnPlay.textContent = '播放动画 (Space)';
+        const v = Number(e.target.value);
+        if (state.mode === 'poly') state.nFloat = v;
+        else if (state.mode === 'rect') state.rectU = v;
+        else if (state.mode === 'concave') state.concavity = v;
+        else state.arenaProgress = v;
+      });
+
+      dom.chkAux.addEventListener('change', (e) => {
+        state.showAux = e.target.checked;
+      });
+
+      dom.btnReset.addEventListener('click', () => {
+        if (state.mode === 'poly') {
+          state.playing = false;
+          state.nFloat = 48;
+          dom.paramSlider.value = 48;
+        } else if (state.mode === 'rect') {
+          state.playing = false;
+          state.rectU = 0.25;
+          dom.paramSlider.value = 0.25;
+        } else if (state.mode === 'concave') {
+          state.playing = false;
+          state.concavity = 1.0;
+          dom.paramSlider.value = 1.0;
+        } else {
+          state.playing = true;
+          state.t = 0;
+          state.arenaProgress = 0.05;
+        }
+        dom.btnPlay.textContent = state.playing ? '暂停动画 (Space)' : '播放动画 (Space)';
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+          e.preventDefault();
+          dom.btnPlay.click();
+        }
+      });
+
+      updateModeUI();
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
